@@ -1,0 +1,5 @@
+tmp/
+config/
+*.swp
+*.DS_Store
+tests/integration/processed/
