@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Mysql.php 6109 2012-03-24 11:49:29Z vipsoft $
+ * @version $Id: Mysql.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -23,9 +23,11 @@ class Piwik_Tracker_Db_Pdo_Mysql extends Piwik_Tracker_Db
 	private $username;
 	private $password;
 	private $charset;
-	
+
 	/**
 	 * Builds the DB object
+	 * @param array $dbInfo
+	 * @param string $driverName
 	 */
 	public function __construct( $dbInfo, $driverName = 'mysql') 
 	{
@@ -94,14 +96,15 @@ class Piwik_Tracker_Db_Pdo_Mysql extends Piwik_Tracker_Db
 	{
 		$this->connection = null;
 	}
-	
+
 	/**
 	 * Returns an array containing all the rows of a query result, using optional bound parameters.
-	 * 
-	 * @param string Query 
-	 * @param array Parameters to bind
+	 *
+	 * @param string $query Query
+	 * @param array $parameters Parameters to bind
+	 * @return array|bool
 	 * @see also query()
-	 * @throws Exception if an exception occured
+	 * @throws Exception|Piwik_Tracker_Db_Exception if an exception occurred
 	 */
 	public function fetchAll( $query, $parameters = array() )
 	{
@@ -120,11 +123,12 @@ class Piwik_Tracker_Db_Pdo_Mysql extends Piwik_Tracker_Db
 	/**
 	 * Returns the first row of a query result, using optional bound parameters.
 	 * 
-	 * @param string Query 
-	 * @param array Parameters to bind
+	 * @param string $query Query
+	 * @param array $parameters Parameters to bind
+	 * @return bool|mixed
 	 * @see also query()
 	 * 
-	 * @throws Exception if an exception occured
+	 * @throws Exception|Piwik_Tracker_Db_Exception if an exception occurred
 	 */
 	public function fetch( $query, $parameters = array() )
 	{
@@ -143,11 +147,10 @@ class Piwik_Tracker_Db_Pdo_Mysql extends Piwik_Tracker_Db
 	/**
 	 * Executes a query, using optional bound parameters.
 	 * 
-	 * @param string Query 
-	 * @param array|string Parameters to bind array('idsite'=> 1)
-	 * 
-	 * @return PDOStatement or false if failed
-	 * @throws Exception if an exception occured
+	 * @param string        $query       Query
+	 * @param array|string  $parameters  Parameters to bind array('idsite'=> 1)
+	 * @return PDOStatement|bool  PDOStatement or false if failed
+	 * @throws Piwik_Tracker_Db_Exception if an exception occured
 	 */
 	public function query($query, $parameters = array()) 
 	{

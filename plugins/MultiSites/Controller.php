@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5976 2012-03-06 03:23:40Z matt $
+ * @version $Id: Controller.php 6267 2012-05-16 22:05:45Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_MultiSites
@@ -33,11 +33,18 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 
 	function index()
 	{
-		$this->getSitesInfo();
+		$view = new Piwik_View("MultiSites/templates/index.tpl");
+		$this->getSitesInfo($view);
+	}
+
+	function standalone()
+	{
+		$view = new Piwik_View("MultiSites/templates/standalone.tpl");
+		$this->getSitesInfo($view);
 	}
 
 
-	public function getSitesInfo()
+	public function getSitesInfo($view)
 	{
 		Piwik::checkUserHasSomeViewAccess();
 		$displayRevenueColumn = Piwik_Common::isGoalPluginEnabled();
@@ -127,7 +134,6 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 		
 		$this->applyPrettyMoney($digestableData);
 
-		$view = new Piwik_View("MultiSites/templates/index.tpl");
 		$view->sitesData = array_values($digestableData);
 		$view->evolutionBy = $this->evolutionBy;
 		$view->period = $period;

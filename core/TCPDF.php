@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: TCPDF.php 5782 2012-02-08 08:43:05Z matt $
+ * @version $Id: TCPDF.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -43,6 +43,8 @@ class Piwik_TCPDF extends TCPDF
 
 	/**
 	 * @see TCPDF::Error()
+	 * @param $msg
+	 * @throws Exception
 	 */
 	function Error($msg) 
 	{

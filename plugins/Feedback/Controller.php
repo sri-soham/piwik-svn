@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Controller.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_Feedback
@@ -25,6 +25,7 @@ class Piwik_Feedback_Controller extends Piwik_Controller
 
 	/**
 	 * send email to Piwik team and display nice thanks
+	 * @throws Exception
 	 */
 	function sendFeedback()
 	{

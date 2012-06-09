@@ -89,8 +89,7 @@ h3 {
 
 /* Cadre general */
 #main {
-	margin: 5px;
-	margin-top:30px;
+	margin: 30px 5px 5px;
 	text-align: left;
 }
 
@@ -147,9 +146,8 @@ p.nextStep a {
 }
 
 td {
-	border-color:#FFFFFF rgb(198, 205, 216)  rgb(198, 205, 216) rgb(198, 205, 216) ;
-	border-style:solid;
-	border-width:1px;
+	border: 1px solid rgb(198, 205, 216);
+	border-top-color: #FFF;
 	color:#203276;
 	padding:0.5em 0.5em 0.5em 0.8em;
 }
@@ -159,7 +157,7 @@ td {
 }
 .submit input{
 	margin-top:15px;
-	background:transparent url(./themes/default/images/background-submit.png) repeat scroll 0%;
+	background:transparent url(./themes/default/images/background-submit.png) repeat scroll 0;
 	font-size:1.4em;
 	border-color:#CCCCCC rgb(153, 153, 153) rgb(153, 153, 153) rgb(204, 204, 204);
 	border-style:double;
@@ -183,7 +181,7 @@ input {
 }
 #systemCheckLegend img {
 	padding-right:10px;
-    vertical-align: text-middle;
+    vertical-align: middle;
 
 }
 .infos img , .infosServer img {

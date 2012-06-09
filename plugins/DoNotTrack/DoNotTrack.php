@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DoNotTrack.php 6204 2012-04-12 13:40:04Z vipsoft $
+ * @version $Id: DoNotTrack.php 6375 2012-05-29 10:52:39Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_DoNotTrack
@@ -45,6 +45,9 @@ class Piwik_DoNotTrack extends Piwik_Plugin
 		);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function checkHeader($notification)
 	{
 		if((isset($_SERVER['HTTP_X_DO_NOT_TRACK']) && $_SERVER['HTTP_X_DO_NOT_TRACK'] === '1')
@@ -52,9 +55,15 @@ class Piwik_DoNotTrack extends Piwik_Plugin
 		{
 			$exclude =& $notification->getNotificationObject();
 			$exclude = true;
+			printDebug("DoNotTrack found.");
 
 			$trackingCookie = Piwik_Tracker_IgnoreCookie::getTrackingCookie();
 			$trackingCookie->delete();
+
+			// this is an optional supplement to the site's tracking status resource at:
+			//     /.well-known/dnt
+			// per Tracking Preference Expression (draft)
+			header('Tk: 1');
 		}
 	}
 }

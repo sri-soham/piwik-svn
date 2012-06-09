@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Dashboard.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: Dashboard.php 6253 2012-05-07 19:28:09Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Dashboard
@@ -91,17 +91,24 @@ class Piwik_Dashboard extends Piwik_Plugin
 	{
 		Piwik_AddTopMenu('General_Dashboard', array('module' => 'CoreHome', 'action' => 'index'), true, 1);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getJsFiles( $notification )
 	{
 		$jsFiles = &$notification->getNotificationObject();
 		
 		$jsFiles[] = "plugins/Dashboard/templates/widgetMenu.js";
 		$jsFiles[] = "libs/javascript/json2.js";
-		$jsFiles[] = "plugins/Dashboard/templates/Dashboard.js";
+		$jsFiles[] = "plugins/Dashboard/templates/dashboardObject.js";
 		$jsFiles[] = "plugins/Dashboard/templates/dashboardWidget.js";
+		$jsFiles[] = "plugins/Dashboard/templates/dashboard.js";
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getCssFiles( $notification )
 	{
 		$cssFiles = &$notification->getNotificationObject();
@@ -110,6 +117,9 @@ class Piwik_Dashboard extends Piwik_Plugin
 		$cssFiles[] = "plugins/Dashboard/templates/dashboard.css";
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function deleteDashboardLayout($notification)
 	{
 		$userLogin = $notification->getNotificationObject();

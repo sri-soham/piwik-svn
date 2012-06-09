@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ChartEvolution.php 4813 2011-05-26 09:28:38Z EZdesign $
+ * @version $Id: ChartEvolution.php 6300 2012-05-23 21:19:25Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -53,7 +53,8 @@ class Piwik_ViewDataTable_GenerateGraphHTML_ChartEvolution extends Piwik_ViewDat
 	/**
      * We ensure that the graph for a given Goal has a different ID than the 'Goals Overview' graph
      * so that both can display on the dashboard at the same time
-     */
+	 * @return null|string
+	 */
 	public function getUniqueIdViewDataTable()
 	{
 		$id = parent::getUniqueIdViewDataTable();

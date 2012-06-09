@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Myisam.php 6109 2012-03-24 11:49:29Z vipsoft $
+ * @version $Id: Myisam.php 6448 2012-06-02 23:52:13Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -21,8 +21,8 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Is this MySQL storage engine available?
 	 *
-	 * @param string $engineName
-	 * @return bool True if available and enabled; false otherwise
+	 * @param string  $engineName
+	 * @return bool  True if available and enabled; false otherwise
 	 */
 	static private function hasStorageEngine($engineName)
 	{
@@ -39,7 +39,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Is this schema available?
 	 *
-	 * @return bool True if schema is available; false otherwise
+	 * @return bool  True if schema is available; false otherwise
 	 */
 	static public function isAvailable()
 	{
@@ -49,7 +49,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Get the SQL to create Piwik tables
 	 *
-	 * @return array of strings containing SQL
+	 * @return array  array of strings containing SQL
 	 */
 	public function getTablesCreateSql()
 	{
@@ -358,7 +358,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 								  	  date2 DATE NULL,
 									  period TINYINT UNSIGNED NULL,
 								  	  ts_archived DATETIME NULL,
-								  	  value FLOAT NULL,
+								  	  value DOUBLE NULL,
 									  PRIMARY KEY(idarchive, name),
 									  INDEX index_idsite_dates_period(idsite, date1, date2, period, ts_archived),
 									  INDEX index_period_archived(period, ts_archived)
@@ -385,8 +385,9 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Get the SQL to create a specific Piwik table
 	 *
-	 * @param string $tableName
-	 * @return string SQL
+	 * @param string  $tableName
+	 * @throws Exception
+	 * @return string  SQL
 	 */
 	public function getTableCreateSql( $tableName )
 	{
@@ -404,7 +405,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	 * Names of all the prefixed tables in piwik
 	 * Doesn't use the DB
 	 *
-	 * @return array Table names
+	 * @return array  Table names
 	 */
 	public function getTablesNames()
 	{
@@ -424,9 +425,8 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Get list of tables installed
 	 *
-	 * @param bool $forceReload Invalidate cache
-	 * @param string $idSite
-	 * @return array Tables installed
+	 * @param bool  $forceReload  Invalidate cache
+	 * @return array  installed Tables
 	 */
 	public function getTablesInstalled($forceReload = true)
 	{
@@ -461,9 +461,9 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	}
 
 	/**
-	 * Do tables exist?
+	 * Checks whether any table exists
 	 *
-	 * @return bool True if tables exist; false otherwise
+	 * @return bool  True if tables exist; false otherwise
 	 */
 	public function hasTables()
 	{
@@ -473,7 +473,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Create database
 	 *
-	 * @param string $dbName
+	 * @param string  $dbName  Name of the database to create
 	 */
 	public function createDatabase( $dbName = null )
 	{
@@ -544,7 +544,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 	/**
 	 * Drop specific tables
 	 *
-	 * @param array $doNotDelete Names of tables to not delete
+	 * @param array  $doNotDelete  Names of tables to not delete
 	 */
 	public function dropTables( $doNotDelete = array() )
 	{

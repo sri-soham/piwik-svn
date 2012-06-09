@@ -178,11 +178,16 @@ dataTable.prototype =
 	// Function called when the AJAX request is successful
 	// it looks for the ID of the response and replace the very same ID 
 	// in the current page with the AJAX response
-	dataTableLoaded: function(response)
+	dataTableLoaded: function(response, workingDivId)
 	{
 		var content = $(response);
-		var idToReplace = $(content).attr('id');
+		
+		var idToReplace = workingDivId || $(content).attr('id');
 		var dataTableSel = $('#'+idToReplace);
+		
+		// keep the original list of related reports
+		var oldReportsElem = $('.datatableRelatedReports', dataTableSel);
+		$('.datatableRelatedReports', content).replaceWith(oldReportsElem);
 		
 		// if the current dataTable is located inside another datatable
 		table = $(content).parents('table.dataTable');
@@ -191,18 +196,20 @@ dataTable.prototype =
 			// we add class to the table so that we can give a different style to the subtable
 			$(content).find('table.dataTable').addClass('subDataTable');
 			$(content).find('.dataTableFeatures').addClass('subDataTable');
-			
+		
 			//we force the initialisation of subdatatables
-			dataTableSel.html( $(content) );
+			dataTableSel.replaceWith(content);
 		}
 		else
 		{
 			dataTableSel.find('object').remove();
-			dataTableSel.html( $(content) );
+			dataTableSel.replaceWith(content);
 		}
-		piwikHelper.lazyScrollTo(dataTableSel[0], 400);
-	},	
 		
+		piwikHelper.lazyScrollTo(content[0], 400);
+		
+		return content;
+	},
 			
 	/* This method is triggered when a new DIV is loaded, which happens
 		- at the first loading of the page
@@ -231,6 +238,7 @@ dataTable.prototype =
 		self.handleColumnDocumentation(domElem);
 		self.handleReportDocumentation(domElem);
 		self.handleRowActions(domElem);
+		self.handleRelatedReports(domElem);
 	},
 	
 	handleLimit: function(domElem)
@@ -253,14 +261,26 @@ dataTable.prototype =
 			}
 			$('.limitSelection ul li:last', domElem).addClass('last');
 			if(self.param.totalRows > 0) {
+				var show = function() {
+					$('.limitSelection ul', domElem).show();
+					$('.limitSelection', domElem).addClass('visible');
+					$(document).on('mouseup.limitSelection',function(e){
+						if((!$(e.target).parents('.limitSelection').length || $(e.target).parents('.limitSelection') != $('.limitSelection', domElem)) && !$(e.target).is('.limitSelection')) {
+							hide();
+						}
+					});
+				}
+				var hide = function() {
+					$('.limitSelection ul', domElem).hide();
+					$('.limitSelection', domElem).removeClass('visible');
+					$(document).off('mouseup.limitSelection');
+				}
 				$('.limitSelection div', domElem).on('click', function(){
-					$('.limitSelection ul', domElem).toggle();
-					$('.limitSelection', domElem).toggleClass('visible');
+					$('.limitSelection', domElem).is('.visible') ? hide() : show();
 				});
 				$('.limitSelection ul li', domElem).on('click', function(event){
 					var limit = parseInt($(event.target).text());
-					$('.limitSelection', domElem).removeClass('visible');
-					$('.limitSelection ul', domElem).hide();
+					hide();
 					if(limit != self.param.filter_limit) {
 						self.param.filter_limit = limit;
 						self.param.filter_offset = 0;
@@ -269,12 +289,6 @@ dataTable.prototype =
 						$('.limitSelection>div>span', domElem).text(self.param.filter_limit);
 						self.reloadAjaxDataTable();
 						self.notifyWidgetParametersChange(domElem, {'filter_limit': self.param.filter_limit});
-					}
-				});
-				$('body').on('mouseup',function(e){ 
-					if(!$(e.target).parents('.limitSelection').length && !$(e.target).is('.limitSelection')) {
-						$('.limitSelection', domElem).removeClass('visible');
-						$('.limitSelection ul', domElem).hide();
 					}
 				});
 			} else {
@@ -415,6 +429,8 @@ dataTable.prototype =
 				var totalRows = Number(self.param.totalRows);
 				offsetEndDisp = offsetEnd;
 
+				if (self.param.keep_summary_row == 1) --totalRows;
+				
 				if(offsetEnd > totalRows) offsetEndDisp = totalRows;
 				
 				// only show this string if there is some rows in the datatable
@@ -432,6 +448,7 @@ dataTable.prototype =
 				var offsetEnd = Number(self.param.filter_offset) 
 									+ Number(self.param.filter_limit);
 				var totalRows = Number(self.param.totalRows);
+				if (self.param.keep_summary_row == 1) --totalRows;
 				if(offsetEnd < totalRows)
 				{
 					$(this).css('display','inline');
@@ -524,6 +541,7 @@ dataTable.prototype =
 				
 				var filters = self.resetAllFilters();
 				self.param.flat = filters.flat;
+				self.param.columns = filters.columns;
 				
 				self.param.viewDataTable = viewDataTable;
 				self.reloadAjaxDataTable();
@@ -706,12 +724,15 @@ dataTable.prototype =
 		
 		var ul = $('div.tableConfiguration ul', domElem);
 		
-		if (ul.find('li').size() == 0 ||
-			!(self.param.viewDataTable == 'table' || self.param.viewDataTable == 'tableAllColumns'
-				|| self.param.viewDataTable == 'tableGoals'))
+		function hideConfigurationIcon()
 		{
 			// hide the icon when there are no actions available or we're not in a table view
 			$('div.tableConfiguration', domElem).remove();
+		}
+		
+		if (ul.find('li').size() == 0)
+		{
+			hideConfigurationIcon();
 			return;
 		}
 		
@@ -744,6 +765,9 @@ dataTable.prototype =
 				self.param.filter_offset = 0;
 				if (callbackAfterToggle) callbackAfterToggle();
 				self.reloadAjaxDataTable(true, callbackSuccess);
+                var data = {};
+                data[paramName]    = self.param[paramName];
+                self.notifyWidgetParametersChange(domElem, data);
 			};
 		};
 		
@@ -815,6 +839,7 @@ dataTable.prototype =
 					// when including aggregate rows is enabled, we remove the sorting
 					// this way, the aggregate rows appear directly before their children
 					self.param.filter_sort_column = '';
+                    self.notifyWidgetParametersChange(domElem, {filter_sort_column: ''});
 				}
 			}));
 		
@@ -825,6 +850,15 @@ dataTable.prototype =
 		}
 		close();
 		
+		if(	!iconHighlighted
+			&& !(self.param.viewDataTable == 'table' 
+				|| self.param.viewDataTable == 'tableAllColumns'
+				|| self.param.viewDataTable == 'tableGoals'))
+		{
+			hideConfigurationIcon();
+			return;
+		}
+			
 		// fix a css bug of ie7
 		if (document.all && !window.opera && window.XMLHttpRequest)
 		{
@@ -1041,20 +1075,8 @@ dataTable.prototype =
 		domElem = $(domElem);
 		var doc = domElem.find('.reportDocumentation');
 		
-		var h2 = false;
-		if (domElem.prev().is('h2'))
-		{
-			h2 = domElem.prev();
-		}
-		else if (this.param.viewDataTable == 'tableGoals')
-		{
-			h2 = $('#titleGoalsByDimension');
-		}
-		else if( $('h2', domElem))
-		{
-			h2 = $('h2', domElem);
-		}
-		if (doc.size() == 0)
+		var h2 = this._findReportHeader(domElem);
+		if (doc.size() == 0 || doc.children().size() == 0) // if we can't find the element, or the element is empty
 		{
 			if (h2 && h2.size() > 0)
 			{
@@ -1128,6 +1150,66 @@ dataTable.prototype =
 		this.doHandleRowActions(domElem.find('table > tbody > tr'));
 	},
 	
+	handleRelatedReports: function(domElem)
+	{
+		var self = this,
+			hideShowRelatedReports = function(thisReport)
+			{
+				$('span', $(thisReport).parent().parent()).each(function () {
+					if (thisReport == this)
+						$(this).hide();
+					else
+						$(this).show();
+				});
+			},
+			// 'this' report must be hidden in datatable output
+			thisReport = $('.datatableRelatedReports span:hidden', domElem)[0];
+		
+		hideShowRelatedReports(thisReport);
+		$('.datatableRelatedReports span', domElem).each(function() {
+			var clicked = this;
+			$(this).unbind('click').click(function(e) {
+				var url = $(this).attr('href');
+				
+				// if this url is also the url of a menu item, better to click that menu item instead of
+				// doing AJAX request
+				var menuItem = null;
+				$("#root>ul.nav a").each(function () {
+					if ($(this).attr('name') == url)
+					{
+						menuItem = this;
+						return false
+					}
+				});
+				
+				if (menuItem)
+				{
+					$(menuItem).click();
+					return;
+				}
+				
+				// modify parameters
+				self.resetAllFilters();
+				var newParams = broadcast.getValuesFromUrl(url);
+				for (var key in newParams)
+				{
+					self.param[key] = newParams[key];
+				}
+				
+				// do ajax request
+				self.reloadAjaxDataTable(true, function(newReport) {
+					var newDomElem = self.dataTableLoaded(newReport, self.workingDivId);
+					hideShowRelatedReports(clicked);
+					
+					// update header, if we can find it
+					var h2 = self._findReportHeader(newDomElem);
+					if (h2)
+						h2.text($(clicked).text());
+				});
+			});
+		});
+	},
+	
 	// also used in action data table
 	doHandleRowActions: function(trs)
 	{
@@ -1192,8 +1274,24 @@ dataTable.prototype =
 		var actions = tr.find('div.dataTableRowActions');
 		actions.height(tr.innerHeight() - 2)
 			.css('marginLeft', (td.width() + 5 - actions.outerWidth())+'px');
-	}
+	},
 	
+	_findReportHeader: function(domElem) {
+		var h2 = false;
+		if (domElem.prev().is('h2'))
+		{
+			h2 = domElem.prev();
+		}
+		else if (this.param.viewDataTable == 'tableGoals')
+		{
+			h2 = $('#titleGoalsByDimension');
+		}
+		else if( $('h2', domElem))
+		{
+			h2 = $('h2', domElem);
+		}
+		return h2;
+	}
 };
 
 
@@ -1243,6 +1341,8 @@ actionDataTable.prototype =
 	exportToFormatHide: dataTable.prototype.exportToFormatHide,
 	handleLimit: dataTable.prototype.handleLimit,
 	notifyWidgetParametersChange: dataTable.prototype.notifyWidgetParametersChange,
+	handleRelatedReports: dataTable.prototype.handleRelatedReports,
+	_findReportHeader: dataTable.prototype._findReportHeader,
 	
 	//initialisation of the actionDataTable
 	init: function(workingDivId, domElem)
@@ -1288,6 +1388,7 @@ actionDataTable.prototype =
 		
 		self.handleColumnDocumentation(domElem);
 		self.handleReportDocumentation(domElem);
+		self.handleRelatedReports(domElem);
 	},
 	
 	//see dataTable::applyCosmetics
@@ -1459,18 +1560,25 @@ actionDataTable.prototype =
 	},
 	
 	//called when the full table actions is loaded
-	dataTableLoaded: function(response)
+	dataTableLoaded: function(response, workingDivId)
 	{
 		var content = $(response);
-		var idToReplace = $(content).attr('id');		
+		var idToReplace = workingDivId || $(content).attr('id');		
 		
 		//reset parents id
 		self.parentAttributeParent = '';
 		self.parentId = '';
 	
 		var dataTableSel = $('#'+idToReplace);
-		dataTableSel.html( $(content) );
-		piwikHelper.lazyScrollTo(dataTableSel[0], 400);
+		
+		// keep the original list of related reports
+		var oldReportsElem = $('.datatableRelatedReports', dataTableSel);
+		$('.datatableRelatedReports', content).replaceWith(oldReportsElem);
+		
+		dataTableSel.replaceWith(content);
+		piwikHelper.lazyScrollTo(content[0], 400);
+		
+		return content;
 	},
 	
 	// Called when a set of rows for a category of actions is loaded

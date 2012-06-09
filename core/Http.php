@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Http.php 6010 2012-03-09 03:06:50Z vipsoft $
+ * @version $Id: Http.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -47,13 +47,14 @@ class Piwik_Http
 	 * If no $destinationPath is specified, the trimmed response (without header) is returned as a string.
 	 * If a $destinationPath is specified, the response (without header) is saved to a file.
 	 *
-	 * @param string $aUrl
-	 * @param int $timeout
-	 * @param string $userAgent
-	 * @param string $destinationPath
-	 * @param int $followDepth
-	 * @return bool true (or string) on success; false on HTTP response error code (1xx or 4xx)
-	 * @throws Exception for all other errors
+	 * @param string  $aUrl
+	 * @param int     $timeout
+	 * @param string  $userAgent
+	 * @param string  $destinationPath
+	 * @param int     $followDepth
+	 * @param bool    $acceptLanguage
+	 * @throws Exception
+	 * @return bool  true (or string) on success; false on HTTP response error code (1xx or 4xx)
 	 */
 	static public function sendHttpRequest($aUrl, $timeout, $userAgent = null, $destinationPath = null, $followDepth = 0, $acceptLanguage = false)
 	{
@@ -76,17 +77,17 @@ class Piwik_Http
 	/**
 	 * Sends http request using the specified transport method
 	 *
-	 * @param string $method
-	 * @param string $aUrl
-	 * @param int $timeout
-	 * @param string $userAgent
-	 * @param string $destinationPath
-	 * @param resource $file
-	 * @param int $followDepth
-	 * @param string Accept-language header
-	 * @param bool Only used with $method == 'curl'. If set to true (NOT recommended!) the SSL certificate will not be checked
-	 * @return bool true (or string) on success; false on HTTP response error code (1xx or 4xx)
-	 * @throws Exception for all other errors
+	 * @param string       $method
+	 * @param string       $aUrl
+	 * @param int          $timeout
+	 * @param string       $userAgent
+	 * @param string       $destinationPath
+	 * @param resource     $file
+	 * @param int          $followDepth
+	 * @param bool|string  $acceptLanguage               Accept-language header
+	 * @param bool         $acceptInvalidSslCertificate  Only used with $method == 'curl'. If set to true (NOT recommended!) the SSL certificate will not be checked
+	 * @throws Exception
+	 * @return bool  true (or string) on success; false on HTTP response error code (1xx or 4xx)
 	 */
 	static public function sendHttpRequestBy($method = 'socket', $aUrl, $timeout, $userAgent = null, $destinationPath = null, $file = null, $followDepth = 0, $acceptLanguage = false, $acceptInvalidSslCertificate = false)
 	{
@@ -474,10 +475,11 @@ class Piwik_Http
 	/**
 	 * Fetch the file at $url in the destination $destinationPath
 	 *
-	 * @param string $url
-	 * @param string $destinationPath
-	 * @param int $tries
-	 * @return true on success, throws Exception on failure
+	 * @param string  $url
+	 * @param string  $destinationPath
+	 * @param int     $tries
+	 * @throws Exception
+	 * @return bool  true on success, throws Exception on failure
 	 */
 	static public function fetchRemoteFile($url, $destinationPath = null, $tries = 0)
 	{

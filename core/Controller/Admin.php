@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Admin.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Admin.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -18,9 +18,10 @@
 abstract class Piwik_Controller_Admin extends Piwik_Controller
 {
 	/**
-	 * Used by Admin screens
+	 * Set the minimal variables in the view object
+	 * Extended by some admin view specific variables
 	 * 
-	 * @param Piwik_View $view
+	 * @param Piwik_View  $view
 	 */
 	protected function setBasicVariablesView($view)
 	{

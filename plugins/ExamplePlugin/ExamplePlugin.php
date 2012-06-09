@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExamplePlugin.php 5684 2012-01-19 05:19:21Z vipsoft $
+ * @version $Id: ExamplePlugin.php 6427 2012-05-31 23:26:11Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExamplePlugin
@@ -43,7 +43,20 @@ class Piwik_ExamplePlugin extends Piwik_Plugin
 //			'Controller.renderView' => 'addUniqueVisitorsColumnToGivenReport',
 		);
 	}
+
+	function activate()
+	{
+		// Executed every time plugin is Enabled
+	}
 	
+	function deactivate()
+	{
+		// Executed every time plugin is disabled
+	}
+	
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function addUniqueVisitorsColumnToGivenReport($notification)
 	{
 		$view = $notification->getNotificationInfo();
@@ -60,7 +73,6 @@ class Piwik_ExamplePlugin extends Piwik_Plugin
 		// we register the widgets so they appear in the "Add a new widget" window in the dashboard
 		// Note that the first two parameters can be either a normal string, or an index to a translation string
 		Piwik_AddWidget('ExamplePlugin_exampleWidgets', 'ExamplePlugin_exampleWidget', 'ExamplePlugin', 'exampleWidget');
-		Piwik_AddWidget('ExamplePlugin_exampleWidgets', 'ExamplePlugin_blogPiwikRss', 'ExamplePlugin', 'blogPiwik');
 		Piwik_AddWidget('ExamplePlugin_exampleWidgets', 'ExamplePlugin_photostreamMatt', 'ExamplePlugin', 'photostreamMatt');
 		Piwik_AddWidget('ExamplePlugin_exampleWidgets', 'ExamplePlugin_piwikForumVisits', 'ExamplePlugin', 'piwikDownloads');
 	}

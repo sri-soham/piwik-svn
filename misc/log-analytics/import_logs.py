@@ -5,7 +5,7 @@
 #
 # @link http://piwik.org
 # @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
-# @version $Id: import_logs.py 6170 2012-04-06 14:04:12Z Cyril $
+# @version $Id: import_logs.py 6433 2012-06-01 10:33:17Z Cyril $
 #
 # For more info see: http://piwik.org/log-analytics/
 
@@ -16,6 +16,7 @@ import datetime
 import fnmatch
 import gzip
 import hashlib
+import httplib
 import inspect
 import itertools
 import logging
@@ -45,32 +46,6 @@ except ImportError:
 ##
 ## Constants.
 ##
-
-_COMMON_LOG_FORMAT = (
-    '(?P<ip>\S+) \S+ \S+ \[(?P<date>.*?)\] '
-    '"\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+)'
-)
-_NCSA_EXTENDED_LOG_FORMAT = (
-    '(?P<ip>\S+) \S+ \S+ \[(?P<date>.*?)\] '
-    '"\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+) '
-    '"(?P<referrer>.*?)" "(?P<user_agent>.*?)"'
-)
-_COMMON_COMPLETE_LOG_FORMAT = (
-    '(?P<host>[\w\-\.]*)(?::\d+)? '
-    '(?P<ip>\S+) \S+ \S+ \[(?P<date>.*?)\] '
-    '"\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+) '
-    '"(?P<referrer>.*?)" "(?P<user_agent>.*?)"'
-)
-
-FORMATS = {
-    'common': _COMMON_LOG_FORMAT,
-    'common_vhost': '(?P<host>[\w\-\.]*)(?::\d+)? ' + _COMMON_LOG_FORMAT,
-    'ncsa_extended': _NCSA_EXTENDED_LOG_FORMAT,
-    'common_complete': _COMMON_COMPLETE_LOG_FORMAT,
-}
-
-DATE_FORMAT = '%d/%b/%Y:%H:%M:%S'
-
 
 STATIC_EXTENSIONS = (
     'gif jpg jpeg png bmp ico svg ttf eot woff class swf css js xml robots.txt'
@@ -117,6 +92,81 @@ PIWIK_DELAY_AFTER_FAILURE = 2
 PIWIK_EXPECTED_IMAGE = base64.b64decode(
     'R0lGODlhAQABAIAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
 )
+
+
+
+##
+## Formats.
+##
+
+class RegexFormat(object):
+
+    def __init__(self, name, regex, date_format='%d/%b/%Y:%H:%M:%S'):
+        self.name = name
+        self.regex = re.compile(regex)
+        self.date_format = date_format
+
+    def check_format(self, file):
+        line = file.readline()
+        file.seek(0)
+        if re.match(self.regex, line):
+            return self
+
+
+class IisFormat(object):
+
+    def check_format(self, file):
+        line = file.readline()
+        if not line.startswith('#Software: Microsoft Internet Information Services '):
+            file.seek(0)
+            return
+        # Skip the next 2 lines.
+        for i in xrange(2):
+            file.readline()
+        # Parse the 4th line (regex)
+        full_regex = []
+        line = file.readline()
+        fields = {
+            'date': '(?P<date>^\d+[-\d+]+',
+            'time': '[\d+:]+)',
+            'cs-uri-stem': '(?P<path>/\S*)',
+            'cs-uri-query': '(?P<query_string>\S*)',
+            'c-ip': '(?P<ip>[\d*.]*)',
+            'cs(User-Agent)': '(?P<user_agent>\S+)',
+            'cs(Referer)': '(?P<referrer>\S+)',
+            'sc-status': '(?P<status>\d+)',
+            'sc-bytes': '(?P<length>\S+)',
+            'cs-host': '(?P<host>\S+)',
+        }
+        # Skip the 'Fields: ' prefix.
+        line = line[9:]
+        for field in line.split():
+            try:
+                regex = fields[field]
+            except KeyError:
+                regex = '\S+'
+            full_regex.append(regex)
+        return RegexFormat('iis', ' '.join(full_regex), '%Y-%m-%d %H:%M:%S')
+
+
+
+_HOST_PREFIX = '(?P<host>[\w\-\.]*)(?::\d+)? '
+_COMMON_LOG_FORMAT = (
+    '(?P<ip>\S+) \S+ \S+ \[(?P<date>.*?) (?P<timezone>.*?)\] '
+    '"\S+ (?P<path>.*?) \S+" (?P<status>\S+) (?P<length>\S+)'
+)
+_NCSA_EXTENDED_LOG_FORMAT = (_COMMON_LOG_FORMAT +
+    ' "(?P<referrer>.*?)" "(?P<user_agent>.*?)"'
+)
+
+FORMATS = {
+    'common': RegexFormat('common', _COMMON_LOG_FORMAT),
+    'common_vhost': RegexFormat('common_vhost', _HOST_PREFIX + _COMMON_LOG_FORMAT),
+    'ncsa_extended': RegexFormat('ncsa_extended', _NCSA_EXTENDED_LOG_FORMAT),
+    'common_complete': RegexFormat('common_complete', _HOST_PREFIX + _NCSA_EXTENDED_LOG_FORMAT),
+    'iis': IisFormat(),
+}
+
 
 
 
@@ -264,8 +314,9 @@ class Configuration(object):
         )
         option_parser.add_option(
             '--log-format-name', dest='log_format_name', default=None,
-            help=("Access log format to detect (supported are: common, common_vhost, ncsa_extended, common_complete). "
+            help=("Access log format to detect (supported are: %s). "
                   "When not specified, the log format will be autodetected by trying all supported log formats."
+                  % ', '.join(sorted(FORMATS.iterkeys()))
         ))
         option_parser.add_option(
             '--log-format-regex', dest='log_format_regex', default=None,
@@ -285,6 +336,10 @@ class Configuration(object):
         option_parser.add_option(
             '--output', dest='output',
             help="Redirect output (stdout and stderr) to the specified file"
+        )
+        option_parser.add_option(
+            '--encoding', dest='encoding', default='utf8',
+            help="Log files encoding (default: %default)"
         )
 
 
@@ -317,14 +372,14 @@ class Configuration(object):
             logging.debug('Accepted hostnames: all')
 
         if self.options.log_format_regex:
-            self.format_regexp = re.compile(self.options.log_format_regex)
+            self.format = RegexFormat('custom', self.options.log_format_regex)
         elif self.options.log_format_name:
             try:
-                self.format_regexp = re.compile(FORMATS[self.options.log_format_name])
+                self.format = FORMATS[self.options.log_format_name]
             except KeyError:
                 fatal_error('invalid log format: %s' % self.options.log_format_name)
         else:
-            self.format_regexp = None
+            self.format = None
 
         if not self.options.piwik_url:
             fatal_error('no URL given for Piwik')
@@ -620,10 +675,12 @@ class Piwik(object):
         headers = headers or {}
         # If Content-Type isn't defined, PHP do not parse the request's body.
         headers['Content-type'] = 'application/x-www-form-urlencoded'
-        data = urllib.urlencode(args).encode('ascii', 'ignore')
+        data = urllib.urlencode(args)
         request = urllib2.Request(url + path, data, headers)
         response = urllib2.urlopen(request)
-        return response.read()
+        result = response.read()
+        response.close()
+        return result
 
     @staticmethod
     def _call_api(method, **kwargs):
@@ -678,11 +735,14 @@ class Piwik(object):
                     raise urllib2.URLError("didn't receive the expected response. Response was %s "
                     % ((response[:200] + '..') if len(response) > 200 else response))
                 return response
-            except (urllib2.URLError, ValueError), e:
+            except (urllib2.URLError, httplib.HTTPException, ValueError), e:
                 logging.debug('Error when connecting to Piwik: %s', e)
                 errors += 1
                 if errors == PIWIK_MAX_ATTEMPTS:
-                    if isinstance(e, urllib2.URLError):
+                    if isinstance(e, urllib2.HTTPError):
+                        # See Python issue 13211.
+                        message = e.msg
+                    elif isinstance(e, urllib2.URLError):
                         message = e.reason
                     else:
                         message = str(e)
@@ -800,8 +860,7 @@ class DynamicResolver(object):
 
 
     def check_format(self, format):
-        regexp = re.compile(format)
-        if 'host' not in regexp.groupindex:
+        if 'host' not in format.regex.groupindex:
             fatal_error(
                 "the selected log format doesn't include the hostname: you must "
                 "specify the Piwik site ID with the --idsite argument"
@@ -892,11 +951,15 @@ class Recorder(object):
 
         stats.dates_recorded.add(hit.date.date())
 
+        path = hit.path
+        if hit.query_string and not config.options.strip_query_string:
+            path += config.options.query_string_delimiter + hit.query_string
+
         args = {
             'rec': '1',
             'apiv': '1',
-            'url': main_url + hit.path[:1024],
-            'urlref': hit.referrer[:1024],
+            'url': (main_url + path[:1024]).encode('utf8'),
+            'urlref': hit.referrer[:1024].encode('utf8'),
             'cip': hit.ip,
             'cdt': self.date_to_piwik(hit.date),
             'idsite': site_id,
@@ -909,6 +972,7 @@ class Recorder(object):
             args['_cvar'] = '{"1":["Bot","%s"]}' % hit.user_agent
         elif config.options.enable_bots:
             args['_cvar'] = '{"1":["Not-Bot","%s"]}' % hit.user_agent
+            args['bots'] = '1'
         if hit.is_error or hit.is_redirect:
             args['_cvar'] = '{"2":["HTTP-code","%s"]}' % hit.status
             args['action_name'] = '%s/URL = %s%s' % (
@@ -921,7 +985,7 @@ class Recorder(object):
             piwik.call(
                 '/piwik.php', args,
                 expected_content=PIWIK_EXPECTED_IMAGE,
-                headers={'User-Agent' : hit.user_agent},
+                headers={'User-Agent' : hit.user_agent.encode('utf8')},
             )
         stats.count_lines_recorded.increment()
 
@@ -936,7 +1000,7 @@ class Recorder(object):
         result = piwik.call_api(
             'CoreAdminHome.invalidateArchivedReports',
             dates=','.join(dates),
-            idSites=','.join(stats.piwik_sites),
+            idSites=','.join(str(site_id) for site_id in stats.piwik_sites),
         )
 
 
@@ -1031,17 +1095,17 @@ class Parser(object):
                 return False
         return True
 
-
     @staticmethod
-    def detect_format(line):
+    def detect_format(file):
         """
-        Return the format matching this line, or None if none was found.
+        Return the format matching this file, or None if none was found.
         """
-        logging.debug('Detecting the log format...')
-        for name, format in FORMATS.iteritems():
-            if re.match(format, line):
+        logging.debug('Detecting the log format')
+        for name, candidate_format in FORMATS.iteritems():
+            format = candidate_format.check_format(file)
+            if format:
                 logging.debug('Format %s matches', name)
-                return name
+                return format
             else:
                 logging.debug('Format %s does not match', name)
 
@@ -1049,10 +1113,10 @@ class Parser(object):
         """
         Parse the specified filename and insert hits in the queue.
         """
-        def invalid_line(line):
+        def invalid_line(line, reason):
             stats.count_lines_invalid.increment()
             if config.options.debug >= 2:
-                logging.debug('Invalid line detected: ' + line)
+                logging.debug('Invalid line detected (%s): %s' % (reason, line))
 
         if filename == '-':
             filename = '(stdin)'
@@ -1073,29 +1137,33 @@ class Parser(object):
         if config.options.show_progress:
             print 'Parsing log %s...' % filename
 
+        if config.format:
+            # The format was explicitely specified.
+            format = config.format
+        else:
+            format = self.detect_format(file)
+            if format is None:
+                return fatal_error(
+                    'Cannot guess the logs format. Please give one using '
+                    'either the --log-format-name or --log-format-regex option'
+                )
+        # Make sure the format is compatible with the resolver.
+        resolver.check_format(format)
+
         for lineno, line in enumerate(file):
-            # Guess the format if needed.
-            if not config.format_regexp:
-                logging.debug('Guessing the log format...')
-                format_name = self.detect_format(line)
-                if not format_name:
-                    return fatal_error(
-                        'Cannot guess the logs format. Please give one using '
-                        'either the --log-format-name or --log-format-regex option'
-                    )
-                format = FORMATS[format_name]
-                config.format = format
-                config.format_regexp = re.compile(format)
-                # Make sure the format is compatible with the resolver.
-                resolver.check_format(format)
+            try:
+                line = line.decode(config.options.encoding)
+            except UnicodeDecodeError:
+                invalid_line(line, 'invalid encoding')
+                continue
 
             stats.count_lines_parsed.increment()
             if stats.count_lines_parsed.value <= config.options.skip:
                 continue
 
-            match = config.format_regexp.match(line)
+            match = format.regex.match(line)
             if not match:
-                invalid_line(line)
+                invalid_line(line, 'line did not match')
                 continue
 
             hit = Hit(
@@ -1109,22 +1177,31 @@ class Parser(object):
                 is_redirect=False,
             )
 
-            # Strip query string
-            if config.options.strip_query_string:
-                hit.path = hit.full_path.split(config.options.query_string_delimiter, 1)[0]
-            else:
+            try:
+                hit.query_string = match.group('query_string')
                 hit.path = hit.full_path
+            except IndexError:
+                hit.path, _, hit.query_string = hit.full_path.partition(config.options.query_string_delimiter)
 
-            # Parse date _with_ timezone to get an UTC timestamp.
+            # Parse date
             date_string = match.group('date')
             try:
-                tz = float(date_string[-5:])
-                hit.date = datetime.datetime.strptime(date_string[:-6], '%d/%b/%Y:%H:%M:%S')
+                hit.date = datetime.datetime.strptime(date_string, format.date_format)
             except ValueError:
-                # Date format is incorrect, the line is probably badly formatted.
-                invalid_line(line)
+                invalid_line(line, 'invalid date')
                 continue
-            hit.date -= datetime.timedelta(hours=tz/100)
+
+            # Parse timezone and substract its value from the date
+            try:
+                timezone = float(match.group('timezone'))
+            except IndexError:
+                timezone = 0
+            except ValueError:
+                invalid_line(line, 'invalid timezone')
+                continue
+
+            if timezone:
+                hit.date -= datetime.timedelta(hours=timezone/100)
 
             try:
                 hit.referrer = match.group('referrer')
@@ -1141,8 +1218,8 @@ class Parser(object):
             hit.ip = match.group('ip')
             try:
                 hit.length = int(match.group('length'))
-            except ValueError:
-                # Not all lines have a length (e.g. 304 redirects)
+            except (ValueError, IndexError):
+                # Some lines or formats don't have a length (e.g. 304 redirects, IIS logs)
                 hit.length = 0
             try:
                 hit.host = match.group('host')

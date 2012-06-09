@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ImageGraph.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: ImageGraph.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -36,7 +36,11 @@ class Piwik_ImageGraph extends Piwik_Plugin
 	
 	// Number of periods to plot on an evolution graph
 	const GRAPH_EVOLUTION_LAST_PERIODS = 30;
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	public function getReportMetadata($notification)
 	{
 		$info = $notification->getNotificationInfo();

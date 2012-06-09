@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Login.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Login.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_Login
@@ -42,7 +42,7 @@ class Piwik_Login extends Piwik_Plugin
 	 * Redirects to Login form with error message.
 	 * Listens to FrontController.NoAccessException hook.
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	function noAccess( $notification )
 	{
@@ -57,7 +57,7 @@ class Piwik_Login extends Piwik_Plugin
 	 * Set login name and autehntication token for authentication request.
 	 * Listens to API.Request.authenticate hook.
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	function ApiRequestAuthenticate($notification)
 	{
@@ -70,7 +70,7 @@ class Piwik_Login extends Piwik_Plugin
 	 * Initializes the authentication object.
 	 * Listens to FrontController.initAuthenticationObject hook.
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	function initAuthenticationObject($notification)
 	{
@@ -98,12 +98,13 @@ class Piwik_Login extends Piwik_Plugin
 		$auth->setLogin($defaultLogin);
 		$auth->setTokenAuth($defaultTokenAuth);
 	}
-	
+
 	/**
 	 * Authenticate user and initializes the session.
 	 * Listens to Login.initSession hook.
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @throws Exception
 	 */
 	function initSession($notification)
 	{

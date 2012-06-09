@@ -47,15 +47,15 @@
             {if $properties.show_all_views_icons}
 			<div class="tableIconsGroup">
             	<span class="tableGraphViews tableGraphCollapsed">
-                    {if $properties.show_bar_chart}<a class="tableIcon" format="graphVerticalBar" var="generateDataChartVerticalBar"><img width="16" height="16" src="themes/default/images/chart_bar.png" title="{'General_VBarGraph'|translate}" /></a>{/if}
-                    {if $properties.show_pie_chart}<a class="tableIcon" format="graphPie" var="generateDataChartPie"><img width="16" height="16" src="themes/default/images/chart_pie.png" title="{'General_Piechart'|translate}" /></a>{/if}
+                    {if $properties.show_bar_chart}<a class="tableIcon" format="graphVerticalBar" var="graphVerticalBar"><img width="16" height="16" src="themes/default/images/chart_bar.png" title="{'General_VBarGraph'|translate}" /></a>{/if}
+                    {if $properties.show_pie_chart}<a class="tableIcon" format="graphPie" var="graphPie"><img width="16" height="16" src="themes/default/images/chart_pie.png" title="{'General_Piechart'|translate}" /></a>{/if}
                     {if $properties.show_tag_cloud}<a class="tableIcon" format="cloud" var="cloud"><img width="16" height="16" src="themes/default/images/tagcloud.png" title="{'General_TagCloud'|translate}" /></a>{/if}
 				</span>
            </div>
            {elseif !$properties.hide_all_views_icons && $javascriptVariablesToSet.viewDataTable == "generateDataChartEvolution"}
 			<div class="tableIconsGroup">
             	<span class="tableGraphViews">
-                    <a class="tableIcon" format="graphEvolution" var="generateDataChartEvolution"><img width="16" height="16" src="themes/default/images/chart_bar.png" title="{'General_VBarGraph'|translate}" /></a>
+                    <a class="tableIcon" format="graphEvolution" var="graphEvolution"><img width="16" height="16" src="themes/default/images/chart_bar.png" title="{'General_VBarGraph'|translate}" /></a>
 				</span>
            </div>
            
@@ -97,6 +97,18 @@
 		</div>
 	</div>
 {/if}
+
+<div class="datatableRelatedReports">
+	{if !empty($properties.relatedReports) && (!empty($arrayDataTable) || !empty($cloudValues) || (isset($isDataAvailable) && $isDataAvailable))}
+		{if count($properties.relatedReports) == 1}{'General_RelatedReport'|translate}{else}{'General_RelatedReports'|translate}{/if}:
+		<ul style="list-style:none;{if count($properties.relatedReports) == 1}display:inline-block;{/if}">
+			<li><span href="{$properties.self_url}" style="display:none;">{$properties.title}</span></li>
+			{foreach from=$properties.relatedReports key=reportUrl item=reportTitle}
+				<li><span href="{$reportUrl}">{$reportTitle}</span></li>
+			{/foreach}
+		</ul>
+	{/if}
+</div>
 
 {if !empty($properties.show_footer_message)}
 	<div class='datatableFooterMessage'>{$properties.show_footer_message}</div>

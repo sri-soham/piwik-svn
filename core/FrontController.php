@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FrontController.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: FrontController.php 6417 2012-05-31 05:34:08Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -53,17 +53,17 @@ class Piwik_FrontController
 		}
 		return self::$instance;
 	}
-	
+
 	/**
 	 * Dispatches the request to the right plugin and executes the requested action on the plugin controller.
-	 * 
-	 * @throws Exception in case the plugin doesn't exist, the action doesn't exist, there is not enough permission, etc.
+	 *
+	 * @throws Exception|Piwik_FrontController_PluginDeactivatedException in case the plugin doesn't exist, the action doesn't exist, there is not enough permission, etc.
 	 *
 	 * @param string $module
 	 * @param string $action
 	 * @param array $parameters
 	 * @return mixed The returned value of the calls, often nothing as the module print but don't return data
-	 * @see fetchDispatch() 
+	 * @see fetchDispatch()
 	 */
 	function dispatch( $module = null, $action = null, $parameters = null)
 	{
@@ -191,14 +191,18 @@ class Piwik_FrontController
 				|| Piwik_Common::isArchivePhpTriggered()
 				;
 	}
-	
+
 	/**
 	 * Must be called before dispatch()
 	 * - checks that directories are writable,
 	 * - loads the configuration file,
-	 * - loads the plugin, 
+	 * - loads the plugin,
 	 * - inits the DB connection,
 	 * - etc.
+	 * @throws Exception
+	 * @throws Exception
+	 * @throws bool|Exception
+	 * @return
 	 */
 	function init()
 	{
@@ -257,7 +261,11 @@ class Piwik_FrontController
 			
 			if(!Piwik_Common::isPhpCliMode()
 				&& Piwik_Config::getInstance()->General['force_ssl'] == 1
-				&& !Piwik::isHttps())
+				&& !Piwik::isHttps()
+				// Specifically disable for the opt out iframe 
+				&& !(Piwik_Common::getRequestVar('module', '') == 'CoreAdminHome'
+					&& Piwik_Common::getRequestVar('action', '') == 'optOut')
+			)
 			{
 				$url = Piwik_Url::getCurrentUrl();
 				$url = str_replace("http://", "https://", $url);
@@ -311,6 +319,12 @@ class Piwik_FrontController
 			}
 			Zend_Registry::get('access')->reloadAccess($authAdapter);
 			
+			// Force the auth to use the token_auth if specified, so that embed dashboard 
+			// and all other non widgetized controller methods works fine
+			if(($token_auth = Piwik_Common::getRequestVar('token_auth', false, 'string')) !== false)
+			{
+				Piwik_API_Request::reloadAuthUsingTokenAuth();
+			}
 			Piwik::raiseMemoryLimitIfNecessary();
 
 			Piwik_Translate::getInstance()->reloadLanguage();

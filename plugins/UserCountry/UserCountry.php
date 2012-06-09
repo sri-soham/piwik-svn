@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserCountry.php 5925 2012-02-26 17:34:32Z vipsoft $
+ * @version $Id: UserCountry.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserCountry
@@ -52,7 +52,9 @@ class Piwik_UserCountry extends Piwik_Plugin
 		Piwik_AddMenu('General_Visitors', 'UserCountry_SubmenuLocations', array('module' => 'UserCountry', 'action' => 'index'));
 	}
 
-
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getSegmentsMetadata($notification)
 	{
 		$segments =& $notification->getNotificationObject();
@@ -74,6 +76,9 @@ class Piwik_UserCountry extends Piwik_Plugin
 		);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$metrics = array(
@@ -105,6 +110,9 @@ class Piwik_UserCountry extends Piwik_Plugin
 		);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getReportsWithGoalMetrics( $notification )
 	{
 		$dimensions =& $notification->getNotificationObject();
@@ -122,6 +130,10 @@ class Piwik_UserCountry extends Piwik_Plugin
 		));
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archivePeriod( $notification )
 	{
 		/**
@@ -141,6 +153,10 @@ class Piwik_UserCountry extends Piwik_Plugin
 												$nameToCount['UserCountry_country']['level0']);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archiveDay($notification)
 	{
 		/**

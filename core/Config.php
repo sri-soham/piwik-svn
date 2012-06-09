@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 6111 2012-03-24 12:05:43Z vipsoft $
+ * @version $Id: Config.php 6470 2012-06-07 17:49:18Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -139,6 +139,7 @@ class Piwik_Config
 	 * @todo remove in 2.0
 	 * @since 1.7
 	 * @deprecated 1.7
+	 * @return string
 	 */
 	static public function getDefaultDefaultConfigPath()
 	{
@@ -404,21 +405,34 @@ class Piwik_Config
 				}
 
 				// Only merge if the section exists in global.ini.php (in case a section only lives in config.ini.php)
-				$config = isset($configGlobal[$section])
-					? $this->array_unmerge($configGlobal[$section], $configCache[$section])
-					: $configCache[$section];
-
-				if (count($config) == 0)
+				
+				// get local and cached config
+				$local = isset($configLocal[$section]) ? $configLocal[$section] : array();
+				$config = $configCache[$section];
+				
+				// remove default values from both (they should not get written to local)
+				if (isset($configGlobal[$section]))
 				{
-					continue;
+					$config = $this->array_unmerge($configGlobal[$section], $configCache[$section]);
+					$local = $this->array_unmerge($configGlobal[$section], $local);
 				}
-
-				if (!isset($configLocal[$section])
-					|| self::compareElements($config, $configLocal[$section]))
+				
+				// if either local/config have non-default values and the other doesn't,
+				// OR both have values, but different values, we must write to config.ini.php
+				if (empty($local) xor empty($config)
+					|| (!empty($local)
+						&& !empty($config)
+						&& self::compareElements($config, $configLocal[$section])))
 				{
 					$dirty = true;
 				}
 
+				// no point in writing empty sections, so skip if the cached section is empty
+				if (empty($config))
+				{
+					continue;
+				}
+				
 				$output .= "[$section]\n";
 
 				foreach($config as $name => $value)

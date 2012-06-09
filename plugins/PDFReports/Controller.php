@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6113 2012-03-25 20:04:22Z JulienM $
+ * @version $Id: Controller.php 6422 2012-05-31 21:37:04Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -50,8 +50,11 @@ class Piwik_PDFReports_Controller extends Piwik_Controller
 		$view->newColumnAfter = ceil(count($reportsByCategory) / $columnsCount);
 		$view->reportsByCategory = $reportsByCategory;
 		$view->reportsJSON = Piwik_Common::json_encode($reportsById);
-		$view->periods = array_merge(array('never' => Piwik_Translate('General_Never')),
+		$periods = array_merge(array('never' => Piwik_Translate('General_Never')),
 							Piwik_PDFReports_API::getPeriodToFrequency());
+		// Do not display date range in selector
+		unset($periods['range']);
+		$view->periods = $periods;
 		$view->defaultFormat = Piwik_PDFReports::DEFAULT_FORMAT;
 		$view->formats = Piwik_ReportRenderer::$availableReportRenderers;
 		$view->displayFormats = Piwik_PDFReports_API::getDisplayFormats();

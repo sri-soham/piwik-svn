@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AddColumnsProcessedMetricsGoal.php 5574 2011-12-18 08:49:19Z matt $
+ * @version $Id: AddColumnsProcessedMetricsGoal.php 6400 2012-05-30 09:50:00Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -16,36 +16,37 @@
  */
 class Piwik_DataTable_Filter_AddColumnsProcessedMetricsGoal extends Piwik_DataTable_Filter_AddColumnsProcessedMetrics
 {
-	
-	/*
+	/**
 	 * Process main goal metrics: conversion rate, revenue per visit
 	 */
 	const GOALS_MINIMAL_REPORT = -2;
-	/*
+
+	/**
 	 * Process main goal metrics, and conversion rate per goal 
 	 */
 	const GOALS_OVERVIEW = -1;
-	/*
+
+	/**
 	 * Process all goal and per-goal metrics 
 	 */
 	const GOALS_FULL_TABLE = 0;
-	
+
 	/**
-	 * Adds processed goal metrics to a table: 
-	 * - global conversion rate, 
+	 * Adds processed goal metrics to a table:
+	 * - global conversion rate,
 	 * - global revenue per visit.
 	 * Can also process per-goal metrics:
 	 * - conversion rate
 	 * - nb conversions
 	 * - revenue per visit
-	 * 
-	 * @param Piwik_DataTable $table
-	 * @param bool $enable should be true (automatically set to true when filter_update_columns_when_show_all_goals is found in the API request)
-	 * @param string $processOnlyIdGoal Defines what metrics to add (don't process metrics when you don't display them)
-	 * 			If self::GOALS_FULL_TABLE, all Goal metrics (and per goal metrics) will be processed
-	 * 			If self::GOALS_OVERVIEW, only the main goal metrics will be added
-	 * 			If an int > 0, then will process only metrics for this specific Goal
-	 * @return void
+	 *
+	 * @param Piwik_DataTable  $table
+	 * @param bool             $enable             should be true (automatically set to true when filter_update_columns_when_show_all_goals is found in the API request)
+	 * @param string           $processOnlyIdGoal  Defines what metrics to add (don't process metrics when you don't display them)
+	 *                                             If self::GOALS_FULL_TABLE, all Goal metrics (and per goal metrics) will be processed
+	 *                                             If self::GOALS_OVERVIEW, only the main goal metrics will be added
+	 *                                             If an int > 0, then will process only metrics for this specific Goal
+	 * @return Piwik_DataTable_Filter_AddColumnsProcessedMetricsGoal
 	 */
 	public function __construct( $table, $enable = true, $processOnlyIdGoal )
 	{
@@ -55,7 +56,12 @@ class Piwik_DataTable_Filter_AddColumnsProcessedMetricsGoal extends Piwik_DataTa
 		// Ensure that all rows with no visit but conversions will be displayed
 		$this->deleteRowsWithNoVisit = false;
 	}
-	
+
+	/**
+	 * Filters the given data table
+	 *
+	 * @param Piwik_DataTable  $table
+	 */
 	public function filter($table)
 	{
 		// Add standard processed metrics
@@ -177,7 +183,12 @@ class Piwik_DataTable_Filter_AddColumnsProcessedMetricsGoal extends Piwik_DataTa
 					}
 				}
 			}
-			$row->addColumns($newColumns);
+			
+			// conversion_rate can be defined upstream apparently? FIXME
+			try {
+				$row->addColumns($newColumns);
+			}catch(Exception $e) {
+			}
 		}
 		$expectedColumns['revenue_per_visit'] = true;
 		

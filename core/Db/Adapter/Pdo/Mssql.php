@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Mssql.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Mssql.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -19,6 +19,7 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 	/**
 	 * Returns connection handle
 	 *
+	 * @throws Zend_Db_Adapter_Exception
 	 * @return resource
 	 */
 	public function getConnection()
@@ -130,6 +131,8 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 
 	/**
 	 * Check MSSQL version
+	 *
+	 * @throws Exception
 	 */
 	public function checkServerVersion()
 	{
@@ -142,6 +145,11 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 
 	}
 
+	/**
+	 * Returns the Mssql server version
+	 *
+	 * @return null|string
+	 */
 	public function getServerVersion()
 	{
 		try
@@ -162,6 +170,8 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 
 	/**
 	 * Check client version compatibility against database server
+	 *
+	 * @throws Exception
 	 */
 	public function checkClientVersion()
 	{
@@ -213,8 +223,8 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 	/**
 	 * Test error number
 	 *
-	 * @param Exception $e
-	 * @param string $errno
+	 * @param Exception  $e
+	 * @param string     $errno
 	 * @return bool
 	 */
 	public function isErrNo($e, $errno)
@@ -240,6 +250,7 @@ class Piwik_Db_Pdo_Mssql extends Zend_Db_Adapter_Pdo_Mssql implements Piwik_Db_A
 	/**
 	 * Retrieve client version in PHP style
 	 *
+	 * @throws Exception
 	 * @return string
 	 */
 	public function getClientVersion()

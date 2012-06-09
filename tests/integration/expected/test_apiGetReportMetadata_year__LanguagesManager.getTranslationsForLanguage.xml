@@ -1605,6 +1605,10 @@
 		<value>%shortDay% %day% %shortMonth%</value>
 	</row>
 	<row>
+		<label>CoreHome_LongMonthFormat</label>
+		<value>%longMonth% %longYear%</value>
+	</row>
+	<row>
 		<label>CoreHome_PeriodDay</label>
 		<value>Jour</value>
 	</row>
@@ -3311,10 +3315,6 @@
 	<row>
 		<label>Mobile_ShowAll</label>
 		<value>Afficher tout</value>
-	</row>
-	<row>
-		<label>Mobile_HttpTimeoutInfo</label>
-		<value>Augmenter si vous rencontrer des délais d'attentes dépassés</value>
 	</row>
 	<row>
 		<label>Mobile_AnonymousAccess</label>

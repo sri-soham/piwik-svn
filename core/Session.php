@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Session.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Session.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -23,7 +23,7 @@ class Piwik_Session extends Zend_Session
 	/**
 	 * Are we using file-based session store?
 	 *
-	 * @return bool True if file-based; false otherwise
+	 * @return bool  True if file-based; false otherwise
 	 */
 	public static function isFileBasedSessions()
 	{
@@ -35,7 +35,8 @@ class Piwik_Session extends Zend_Session
 	/**
 	 * Start the session
 	 *
-	 * @param array $options An array of configuration options; the auto-start (bool) setting is ignored
+	 * @param array|bool  $options  An array of configuration options; the auto-start (bool) setting is ignored
+	 * @return void
 	 */
 	public static function start($options = false)
 	{

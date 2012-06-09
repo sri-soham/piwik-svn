@@ -146,15 +146,17 @@ table.dataTable td.columnodd {
 }
 
 table.dataTable td.labeleven {
-	background: #F9FAFA;
-	background-image: url(images/bullet2.gif);
-	background-repeat: no-repeat;
+	background: #F9FAFA url(images/bullet2.gif) no-repeat;
 }
 
 table.dataTable td.labelodd {
 	background: #fff url(images/bullet1.gif) no-repeat;
 }
 
+.dataTable tr.highlight td {
+	background-color: #ECF9DD;
+	font-weight: bold;
+}
 
 table.dataTable td.label,table.subActionsDataTable td.label,table.actionsDataTable td.label {
 	border-top: 0;
@@ -305,6 +307,17 @@ table thead div {
 	font-size: 12px;
 	color: #184A83;
 	cursor: pointer;
+}
+
+.datatableRelatedReports {
+	color: #888;
+    font-size: 11px;    
+    padding-bottom: 5px;
+}
+
+.datatableRelatedReports span {
+	cursor: pointer;
+	font-weight:bold;
 }
 
 /* are the following two supposed to be together? */
@@ -525,7 +538,8 @@ table.dataTable th .columnDocumentationTitle {
 	padding: 0;
 	border-radius: 4px;
 	-moz-border-radius: 4px;
-	-webkit-border-radius: 4px; 
+	-webkit-border-radius: 4px;
+	max-width: 500px; 
 }
 
 .reportDocumentation p {
@@ -552,6 +566,15 @@ h2 .reportDocumentationIcon {
 
 h2 .reportDocumentationIcon.hidden {
 	background: none;
+}
+
+.helpDate {
+	color: #777777;
+    font-size: 11px;
+	font-style:italic;    
+    padding: 4px;
+    text-align: right;
+    display:block;
 }
 
 table.dataTable .dataTableRowActions {

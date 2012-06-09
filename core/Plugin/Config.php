@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 5685 2012-01-20 04:15:42Z vipsoft $
+ * @version $Id: Config.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -23,8 +23,8 @@ class Piwik_Plugin_Config
 	/**
 	 * Constructor
 	 *
-	 * @param string $pluginName
-	 * @param string $configFileName
+	 * @param string  $pluginName      name of the plugin
+	 * @param string  $configFileName  name of the plugin file; defaults to local.config.php
 	 */
 	public function __construct($pluginName, $configFileName = 'local.config.php')
 	{
@@ -47,7 +47,7 @@ class Piwik_Plugin_Config
 	/**
 	 * Store local plugin configuration
 	 *
-	 * @param array $pluginConfig
+	 * @param array  $pluginConfig
 	 */
 	public function store($pluginConfig)
 	{

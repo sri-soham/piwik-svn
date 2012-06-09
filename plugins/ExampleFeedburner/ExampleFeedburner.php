@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleFeedburner.php 4528 2011-04-21 00:04:29Z vipsoft $
+ * @version $Id: ExampleFeedburner.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleFeedburner
@@ -82,13 +82,14 @@ class Piwik_ExampleFeedburner_Controller extends Piwik_Controller
 		$view->fbStats = $this->getFeedData($feedburnerFeedName);
 		echo $view->render();
 	}
-	
+
 
 	/**
 	 * Returns array of counts and images based on Feedburner URI
-	 * 
+	 *
 	 * @param string $uri
-	 * @return array()
+	 * @throws Exception
+	 * @return array
 	 */
 	protected function getFeedData($uri)
 	{

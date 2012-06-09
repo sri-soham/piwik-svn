@@ -374,13 +374,13 @@ if (!this.JSON2) {
 /*global _paq:true */
 /*members encodeURIComponent, decodeURIComponent, getElementsByTagName,
 	shift, unshift,
-	addEventListener, attachEvent, removeEventListener, detachEvent,
+	addEventListener, attachEvent, removeEventListener, detachEvent, disableCookies,
 	cookie, domain, readyState, documentElement, doScroll, title, text,
 	location, top, document, referrer, parent, links, href, protocol, GearsFactory,
 	event, which, button, srcElement, type, target,
 	parentNode, tagName, hostname, className,
 	userAgent, cookieEnabled, platform, mimeTypes, enabledPlugin, javaEnabled,
-	XDomainRequest, XMLHttpRequest, ActiveXObject, open, setRequestHeader, onreadystatechange, setRequestHeader, send, readyState, status,
+	XMLHttpRequest, ActiveXObject, open, setRequestHeader, onreadystatechange, send, readyState, status,
 	getTime, getTimeAlias, setTime, toGMTString, getHours, getMinutes, getSeconds,
 	toLowerCase, charAt, indexOf, lastIndexOf, split, slice, toUpperCase,
 	onload, src,
@@ -689,36 +689,6 @@ var
 		}
 
 		/*
-		 * Set cookie value
-		 */
-		function setCookie(cookieName, value, msToExpire, path, domain, secure) {
-			var expiryDate;
-
-			// relative time to expire in milliseconds
-			if (msToExpire) {
-				expiryDate = new Date();
-				expiryDate.setTime(expiryDate.getTime() + msToExpire);
-			}
-
-			documentAlias.cookie = cookieName + '=' + encodeWrapper(value) +
-				(msToExpire ? ';expires=' + expiryDate.toGMTString() : '') +
-				';path=' + (path || '/') +
-				(domain ? ';domain=' + domain : '') +
-				(secure ? ';secure' : '');
-		}
-
-		/*
-		 * Get cookie value
-		 */
-		function getCookie(cookieName) {
-			var cookiePattern = new RegExp('(^|;)[ ]*' + cookieName + '=([^;]*)'),
-
-				cookieMatch = cookiePattern.exec(documentAlias.cookie);
-
-			return cookieMatch ? decodeWrapper(cookieMatch[2]) : 0;
-		}
-
-		/*
 		 * UTF-8 encoding
 		 */
 		function utf8_encode(argString) {
@@ -1009,6 +979,9 @@ var
 				// Default is user agent defined.
 				configCookiePath,
 
+				// Cookies are disabled
+				configCookiesDisabled = false,
+
 				// Do Not Track
 				configDoNotTrack,
 
@@ -1066,6 +1039,42 @@ var
 
 				// Visitor UUID
 				visitorUUID;
+
+
+			/*
+			 * Set cookie value
+			 */
+			function setCookie(cookieName, value, msToExpire, path, domain, secure) {
+				if (configCookiesDisabled) {
+					return;
+				}
+				var expiryDate;
+
+				// relative time to expire in milliseconds
+				if (msToExpire) {
+					expiryDate = new Date();
+					expiryDate.setTime(expiryDate.getTime() + msToExpire);
+				}
+
+				documentAlias.cookie = cookieName + '=' + encodeWrapper(value) +
+					(msToExpire ? ';expires=' + expiryDate.toGMTString() : '') +
+					';path=' + (path || '/') +
+					(domain ? ';domain=' + domain : '') +
+					(secure ? ';secure' : '');
+			}
+
+			/*
+			 * Get cookie value
+			 */
+			function getCookie(cookieName) {
+				if (configCookiesDisabled) {
+					return 0;
+				}
+				var cookiePattern = new RegExp('(^|;)[ ]*' + cookieName + '=([^;]*)'),
+					cookieMatch = cookiePattern.exec(documentAlias.cookie);
+
+				return cookieMatch ? decodeWrapper(cookieMatch[2]) : 0;
+			}
 
 			/*
 			 * Removes hash tag from the URL
@@ -1159,10 +1168,9 @@ var
 					// we use the progid Microsoft.XMLHTTP because
 					// IE5.5 included MSXML 2.5; the progid MSXML2.XMLHTTP
 					// is pinned to MSXML2.XMLHTTP.3.0
-					var xhr = windowAlias.XDomainRequest ? new windowAlias.XDomainRequest() :
-							windowAlias.XMLHttpRequest ? new windowAlias.XMLHttpRequest() :
-									windowAlias.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') :
-											null;
+					var xhr = windowAlias.XMLHttpRequest ? new windowAlias.XMLHttpRequest() :
+							windowAlias.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') :
+									null;
 
 					xhr.open('POST', configTrackerUrl, true);
 
@@ -1173,11 +1181,10 @@ var
 						}
 					};
 
+					// see XMLHttpRequest Level 2 spec, section 4.7.2 for invalid headers
+					// @link http://dvcs.w3.org/hg/xhr/raw-file/tip/Overview.html
 					xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
 
-					// Safari: unsafe headers
-//					xhr.setRequestHeader('Content-Length', request.length);
-//					xhr.setRequestHeader('Connection', 'close');
 					xhr.send(request);
 				} catch (e) {
 					// fallback
@@ -1215,9 +1222,11 @@ var
 			 * Does browser have cookies enabled (for this site)?
 			 */
 			function hasCookies() {
-				var testCookieName = getCookieName('testcookie');
-
+				if (configCookiesDisabled) {
+					return '0';
+				}
 				if (!isDefined(navigatorAlias.cookieEnabled)) {
+					var testCookieName = getCookieName('testcookie');
 					setCookie(testCookieName, '1');
 					return getCookie(testCookieName) === '1' ? '1' : '0';
 				}
@@ -1392,11 +1401,17 @@ var
 					campaignNameDetected,
 					campaignKeywordDetected;
 
+				if (configCookiesDisabled) {
+					// Temporarily allow cookies just to delete the existing ones
+					configCookiesDisabled = false;
+					setCookie(idname, '', -86400, configCookiePath, configCookieDomain);
+					setCookie(sesname, '', -86400, configCookiePath, configCookieDomain);
+					setCookie(cvarname, '', -86400, configCookiePath, configCookieDomain);
+					setCookie(refname, '', -86400, configCookiePath, configCookieDomain);
+					configCookiesDisabled = true;
+				}
+
 				if (configDoNotTrack) {
-					setCookie(idname, '', -1, configCookiePath, configCookieDomain);
-					setCookie(sesname, '', -1, configCookiePath, configCookieDomain);
-					setCookie(cvarname, '', -1, configCookiePath, configCookieDomain);
-					setCookie(refname, '', -1, configCookiePath, configCookieDomain);
 					return '';
 				}
 
@@ -1918,32 +1933,36 @@ var
 						ag: 'application/x-silverlight'
 					};
 
-				// general plugin detection
-				if (navigatorAlias.mimeTypes && navigatorAlias.mimeTypes.length) {
-					for (i in pluginMap) {
-						if (Object.prototype.hasOwnProperty.call(pluginMap, i)) {
-							mimeType = navigatorAlias.mimeTypes[pluginMap[i]];
-							browserFeatures[i] = (mimeType && mimeType.enabledPlugin) ? '1' : '0';
+				if (!((new RegExp('MSIE')).test(navigatorAlias.userAgent))) {
+					// general plugin detection
+					if (navigatorAlias.mimeTypes && navigatorAlias.mimeTypes.length) {
+						for (i in pluginMap) {
+							if (Object.prototype.hasOwnProperty.call(pluginMap, i)) {
+								mimeType = navigatorAlias.mimeTypes[pluginMap[i]];
+								browserFeatures[i] = (mimeType && mimeType.enabledPlugin) ? '1' : '0';
+							}
 						}
 					}
+
+					// Safari and Opera
+					// IE6/IE7 navigator.javaEnabled can't be aliased, so test directly
+					if (typeof navigator.javaEnabled !== 'unknown' &&
+							isDefined(navigatorAlias.javaEnabled) &&
+							navigatorAlias.javaEnabled()) {
+						browserFeatures.java = '1';
+					}
+
+					// Firefox
+					if (isFunction(windowAlias.GearsFactory)) {
+						browserFeatures.gears = '1';
+					}
+
+					// other browser features
+					browserFeatures.cookie = hasCookies();
 				}
 
-				// Safari and Opera
-				// IE6/IE7 navigator.javaEnabled can't be aliased, so test directly
-				if (typeof navigator.javaEnabled !== 'unknown' &&
-						isDefined(navigatorAlias.javaEnabled) &&
-						navigatorAlias.javaEnabled()) {
-					browserFeatures.java = '1';
-				}
-
-				// Firefox
-				if (isFunction(windowAlias.GearsFactory)) {
-					browserFeatures.gears = '1';
-				}
-
-				// other browser features
+				// screen resolution
 				browserFeatures.res = screenAlias.width + 'x' + screenAlias.height;
-				browserFeatures.cookie = hasCookies();
 			}
 
 /*<DEBUG>*/
@@ -1976,9 +1995,7 @@ var
 			/*
 			 * initialize tracker
 			 */
-			if (!((new RegExp('MSIE')).test(navigatorAlias.userAgent))) {
-				detectBrowserFeatures();
-			}
+			detectBrowserFeatures();
 			updateDomainHash();
 
 /*<DEBUG>*/
@@ -2383,14 +2400,28 @@ var
 				},
 
 				/**
+				 * Disables all cookies from being set
+				 * Existing cookies will be deleted on the next call to track*
+				 * 
+				 */
+				disableCookies: function () {
+					configCookiesDisabled = true;
+					browserFeatures.cookie = '0';
+				},
+
+				/**
 				 * Handle do-not-track requests
 				 *
 				 * @param bool enable If true, don't track if user agent sends 'do-not-track' header
 				 */
 				setDoNotTrack: function (enable) {
 					var dnt = navigatorAlias.doNotTrack || navigatorAlias.msDoNotTrack;
-
 					configDoNotTrack = enable && (dnt === 'yes' || dnt === '1');
+
+					// do not track also disables cookies and deletes existing cookies
+					if (configDoNotTrack) {
+						this.disableCookies();
+					}
 				},
 
 				/**

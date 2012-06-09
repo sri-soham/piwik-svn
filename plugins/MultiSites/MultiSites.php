@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: MultiSites.php 5740 2012-02-02 03:44:31Z matt $
+ * @version $Id: MultiSites.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_MultiSites
@@ -36,6 +36,9 @@ class Piwik_MultiSites extends Piwik_Plugin
 		);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$isGoalPluginEnabled = Piwik_Common::isGoalPluginEnabled();
@@ -65,13 +68,19 @@ class Piwik_MultiSites extends Piwik_Plugin
 		Piwik_AddTopMenu('General_MultiSitesSummary', array('module' => 'MultiSites', 'action' => 'index'), true, 3);
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getJsFiles( $notification )
 	{
 		$jsFiles = &$notification->getNotificationObject();
 		
 		$jsFiles[] = "plugins/MultiSites/templates/common.js";
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getCssFiles( $notification )
 	{
 		$cssFiles = &$notification->getNotificationObject();

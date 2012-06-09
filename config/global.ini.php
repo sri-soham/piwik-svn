@@ -31,8 +31,8 @@ adapter			= PDO_MYSQL
 [database_tests]
 host 			= localhost
 username 		= root
-password 		=
-dbname			= piwik_tests
+password 		= /soham/
+dbname			= piwik_svn
 tables_prefix	= piwiktests_
 port			= 3306
 adapter 		= PDO_MYSQL
@@ -61,11 +61,19 @@ disable_merged_assets = 0
 ; If set to 1, all requests to piwik.php will be forced to be 'new visitors'
 tracker_always_new_visitor = 0
 
+; Allow automatic upgrades to Beta or RC releases
+allow_upgrades_to_beta = 0
+
 [General]
-; if set to 1, Unique Visitors will be processed for Years and Date Ranges
-; disabled by default, to ensure optimal performance for high traffic Piwik instances
-; if you set it to 1 and want the Unique Visitors to be re-processed in for reports in the past, drop all piwik_archive_* tables
-enable_processing_unique_visitors_year_and_range = 0
+; the following settings control whether Unique Visitors will be processed for different period types.
+; year and range periods are disabled by default, to ensure optimal performance for high traffic Piwik instances
+; if you set it to 1 and want the Unique Visitors to be re-processed for reports in the past, drop all piwik_archive_* tables
+; it is recommended to always enable Unique Visitors processing for 'day' periods
+enable_processing_unique_visitors_day = 1
+enable_processing_unique_visitors_week = 1
+enable_processing_unique_visitors_month = 1
+enable_processing_unique_visitors_year = 0
+enable_processing_unique_visitors_range = 0
 
 ; when set to 1, all requests to Piwik will return a maintenance message without connecting to the DB
 ; this is useful when upgrading using the shell command, to prevent other users from accessing the UI while Upgrade is in progress
@@ -78,6 +86,11 @@ action_url_category_delimiter = /
 
 ; similar to above, but this delimiter is only used for page titles in the Actions > Page titles report
 action_title_category_delimiter = /
+
+; the maximum url category depth to track. if this is set to 2, then a url such as
+; "example.com/blog/development/first-post" would be treated as "example.com/blog/development".
+; this setting is used mainly to limit the amount of data that is stored by Piwik.
+action_category_level_limit = 10
 
 ; minimum number of websites to run autocompleter
 autocomplete_min_sites = 5
@@ -497,3 +510,13 @@ PluginsInstalled[] = Installation
 Plugins_Tracker[] = Provider
 Plugins_Tracker[] = Goals
 Plugins_Tracker[] = DoNotTrack
+
+[APISettings]
+; Any key/value pair can be added in this section, they will be available via the REST call
+; index.php?module=API&method=API.getSettings 
+; This can be used to expose values from Piwik, to control for example a Mobile app tracking
+SDK_batch_size = 10
+SDK_interval_value = 30
+
+; NOTE: do not directly in this file! See notice at the top
+ 

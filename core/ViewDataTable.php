@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ViewDataTable.php 6197 2012-04-11 23:21:22Z matt $
+ * @version $Id: ViewDataTable.php 6436 2012-06-01 13:53:33Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -188,8 +188,8 @@ abstract class Piwik_ViewDataTable
 	 * If defaultType is specified and if there is no 'viewDataTable' in the URL, a ViewDataTable of this $defaultType will be returned.
 	 * If force is set to true, a ViewDataTable of the $defaultType will be returned in all cases.
 	 *
-	 * @param string defaultType Any of these: table, cloud, graphPie, graphVerticalBar, graphEvolution, sparkline, generateDataChart*
-	 * @param bool force If set to true, returns a ViewDataTable of the $defaultType
+	 * @param string $defaultType Any of these: table, cloud, graphPie, graphVerticalBar, graphEvolution, sparkline, generateDataChart*
+	 * @param bool $force If set to true, returns a ViewDataTable of the $defaultType
 	 * @return Piwik_ViewDataTable
 	 */
 	static public function factory( $defaultType = null, $force = false)
@@ -305,6 +305,12 @@ abstract class Piwik_ViewDataTable
 		$this->viewProperties['apiMethodToRequestDataTable'] = $this->apiMethodToRequestDataTable;
 		$this->viewProperties['uniqueId'] = $this->getUniqueIdViewDataTable();
 		$this->viewProperties['exportLimit'] = Piwik_Config::getInstance()->General['API_datatable_default_limit'];
+		$this->viewProperties['highlight_summary_row'] = false;
+		$this->viewProperties['metadata'] = array();
+		
+		$this->viewProperties['relatedReports'] = array();
+		$this->viewProperties['title'] = 'unknown';
+		$this->viewProperties['self_url'] = $this->getBaseReportUrl($currentControllerName, $currentControllerAction);
 		
 		$standardColumnNameToTranslation = array_merge(
 			Piwik_API_API::getInstance()->getDefaultMetrics(),
@@ -377,12 +383,13 @@ abstract class Piwik_ViewDataTable
 		}
 		return $this->dataTable;
 	}
-	
+
 	/**
 	 * To prevent calling an API multiple times, the DataTable can be set directly.
 	 * It won't be loaded again from the API in this case
-	 * 
-	 * @return $dataTable Piwik_DataTable
+	 *
+	 * @param $dataTable
+	 * @return void $dataTable Piwik_DataTable
 	 */
 	public function setDataTable($dataTable)
 	{
@@ -432,6 +439,7 @@ abstract class Piwik_ViewDataTable
 	/**
 	 * Hook called after the dataTable has been loaded from the API
 	 * Can be used to add, delete or modify the data freshly loaded
+	 * @return bool
 	 */
 	protected function postDataTableLoadedFromAPI()
 	{
@@ -439,6 +447,19 @@ abstract class Piwik_ViewDataTable
 		{
 			return false;
 		}
+		
+		// deal w/ table metadata
+		if ($this->dataTable instanceof Piwik_DataTable)
+		{
+			$this->viewProperties['metadata'] = $this->dataTable->getAllTableMetadata();
+			
+			if (isset($this->viewProperties['metadata'][Piwik_DataTable::ARCHIVED_DATE_METADATA_NAME]))
+			{
+				$this->viewProperties['metadata'][Piwik_DataTable::ARCHIVED_DATE_METADATA_NAME] =
+					$this->makePrettyArchivedOnText();
+			}
+		}
+		
 		// First, filters that delete rows
 		foreach($this->queuedFiltersPriority as $filter)
 		{
@@ -462,13 +483,41 @@ abstract class Piwik_ViewDataTable
 			$genericFilter->filter($this->dataTable);
 		}
 		
-		// Finally, apply datatable filters that were queued (should be 'presentation' filters that do not affect the number of rows)
-		foreach($this->queuedFilters as $filter)
+		if (!isset($this->variablesDefault['disable_queued_filters'])
+			|| !$this->variablesDefault['disable_queued_filters'])
 		{
-			$filterName = $filter[0];
-			$filterParameters = $filter[1];
-			$this->dataTable->filter($filterName, $filterParameters);
+			// Finally, apply datatable filters that were queued (should be 'presentation' filters that
+			// do not affect the number of rows)
+			foreach($this->queuedFilters as $filter)
+			{
+				$filterName = $filter[0];
+				$filterParameters = $filter[1];
+				$this->dataTable->filter($filterName, $filterParameters);
+			}
 		}
+		return true;
+	}
+	
+	/**
+	 * Returns prettified and translated text that describes when a report was last updated.
+	 * 
+	 * @return string
+	 */
+	private function makePrettyArchivedOnText()
+	{
+		$dateText = $this->viewProperties['metadata'][Piwik_DataTable::ARCHIVED_DATE_METADATA_NAME];
+		$date = Piwik_Date::factory($dateText);
+		$today = mktime(0,0,0);
+		if ($date->getTimestamp() > $today)
+		{
+			$elapsedSeconds = time() - $date->getTimestamp();
+			$timeAgo = Piwik::getPrettyTimeFromSeconds( $elapsedSeconds );
+			
+			return Piwik_Translate('CoreHome_ReportGeneratedXAgo', $timeAgo);
+		}
+		
+		$prettyDate = $date->getLocalized("%longYear%, %longMonth% %day%") . $date->toString('S');
+		return Piwik_Translate('CoreHome_ReportGeneratedOn', $prettyDate);
 	}
 	
 	/**
@@ -486,6 +535,7 @@ abstract class Piwik_ViewDataTable
 		
 		$toSetEventually = array(
 			'filter_limit',
+			'keep_summary_row',
 			'filter_sort_column',
 			'filter_sort_order',
 			'filter_excludelowpop',
@@ -565,6 +615,7 @@ abstract class Piwik_ViewDataTable
 
 	/**
 	 *  Sets the $uniqIdTable variable that is used as the DIV ID in the rendered HTML
+	 * @param $uniqIdTable
 	 */
 	public function setUniqueIdViewDataTable($uniqIdTable)
 	{
@@ -573,7 +624,8 @@ abstract class Piwik_ViewDataTable
 	}
 
 	/**
-	 *  Returns current value of $uniqIdTable variable that is used as the DIV ID in the rendered HTML
+	 * Returns current value of $uniqIdTable variable that is used as the DIV ID in the rendered HTML
+	 * @return null|string
 	 */
 	public function getUniqueIdViewDataTable()
 	{
@@ -684,7 +736,7 @@ abstract class Piwik_ViewDataTable
 		}
 		
 		// we escape the values that will be displayed in the javascript footer of each datatable
-		// to make sure there is malicious code injected (the value are already htmlspecialchar'ed as they
+		// to make sure there is no malicious code injected (the value are already htmlspecialchar'ed as they
 		// are loaded with Piwik_Common::getRequestVar()
 		foreach($javascriptVariablesToSet as &$value)
 		{
@@ -914,6 +966,15 @@ abstract class Piwik_ViewDataTable
 	}
 	
 	/**
+	 * Whether or not to show the summary row on every page of results. The default behavior
+	 * is to treat the summary row like any other row.
+	 */
+	public function alwaysShowSummaryRow()
+	{
+		$this->variablesDefault['keep_summary_row'] = true;
+	}
+	
+	/**
 	 * Sets the value to use for the Exclude low population filter.
 	 *
 	 * @param int|float If a row value is less than this value, it will be removed from the dataTable
@@ -992,6 +1053,7 @@ abstract class Piwik_ViewDataTable
 	 *
 	 * @param string $columnName column name
 	 * @param string $columnTranslation column name translation
+	 * @throws Exception
 	 */
 	public function setColumnTranslation( $columnName, $columnTranslation )
 	{
@@ -1007,6 +1069,7 @@ abstract class Piwik_ViewDataTable
 	 * Returns column translation if available, in other case given column name
 	 *
 	 * @param string $columnName column name
+	 * @return string
 	 */
 	public function getColumnTranslation( $columnName )
 	{
@@ -1034,7 +1097,9 @@ abstract class Piwik_ViewDataTable
 	
 	/**
 	 * Returns metric documentation, or false
+	 *
 	 * @param string $columnName column name
+	 * @return bool
 	 */
 	public function getMetricDocumentation($columnName)
 	{
@@ -1064,7 +1129,10 @@ abstract class Piwik_ViewDataTable
 		$this->documentation = $documentation;
 	}
 	
-	/** Returns report documentation, or false */
+	/**
+	 * Returns report documentation, or false
+	 * @return array|bool
+	 */
 	public function getReportDocumentation()
 	{
 		if ($this->metricsDocumentation === false)
@@ -1141,6 +1209,15 @@ abstract class Piwik_ViewDataTable
 	}
 	
 	/**
+	 * Set whether to highlight the summary row or not. If not highlighted, it will
+	 * look like every other row.
+	 */
+	public function setHighlightSummaryRow( $highlightSummaryRow )
+	{
+		$this->viewProperties['highlight_summary_row'] = $highlightSummaryRow;
+	}
+	
+	/**
 	 * Sets columns translations array.
 	 *
 	 * @param array $columnsTranslations An associative array indexed by column names, eg. array('nb_visit'=>"Numer of visits")
@@ -1149,12 +1226,13 @@ abstract class Piwik_ViewDataTable
 	{
 		$this->columnsTranslations += $columnsTranslations;
 	}
-	
+
 	/**
 	 * Sets a custom parameter, that will be printed in the javascript array associated with each datatable
 	 *
-	 * @param string parameter name
+	 * @param string $parameter name
 	 * @param mixed $value
+	 * @throws Exception
 	 */
 	public function setCustomParameter($parameter, $value)
 	{
@@ -1189,30 +1267,159 @@ abstract class Piwik_ViewDataTable
 	}
 	
 	/**
+	 * Adds one report to the set of reports that are related to this one. Related reports
+	 * are displayed in the footer as links. When they are clicked, the report will change to
+	 * the related report.
+	 * 
+	 * Make sure to call setReportTitle so this report will be displayed correctly.
+	 * 
+	 * @param string $module The report's controller name, ie, 'UserSettings'.
+	 * @param string $action The report's controller action, ie, 'getBrowser'.
+	 * @param string $title The text used to describe the related report.
+	 * @param array $queryParams Any specific query params to use when loading the report.
+	 *                           This can be used to, for example, make a goal report a related
+	 *                           report (by adding an idGoal parameter).
+	 */
+	public function addRelatedReport( $module, $action, $title, $queryParams = array() )
+	{
+		// don't add the related report if it references this report
+		if ($this->currentControllerName == $module && $this->currentControllerAction == $action)
+		{
+			return;
+		}
+		
+		$url = $this->getBaseReportUrl($module, $action, $queryParams);
+		$this->viewProperties['relatedReports'][$url] = $title;
+	}
+	
+ 	/**
+	 * Adds a set of reports that are related to this one. Related reports are displayed in
+	 * the footer as links. When they are clicked, the report will change to the related report.
+	 * 
+	 * If you need to associate specific query params with a report, use the addRelatedReport
+	 * method instead of this one.
+	 * 
+	 * @param string $thisReportTitle The title of this report.
+	 * @param array $relatedReports An array mapping report IDs ('Controller.methodName') with
+	 *                              display text.
+	 */
+	public function addRelatedReports( $thisReportTitle, $relatedReports )
+	{
+		$this->setReportTitle($thisReportTitle);
+		foreach ($relatedReports as $report => $title)
+		{
+			list($module, $action) = explode('.', $report);
+			$this->addRelatedReport($module, $action, $title);
+		}
+	}
+	
+	/**
+	 * Sets the title of this report.
+	 * 
+	 * @param string $title
+	 */
+	public function setReportTitle( $title )
+	{
+		$this->viewProperties['title'] = $title;
+	}
+	
+	/**
+	 * Sets a custom URL to use to reference this report.
+	 * 
+	 * @param string $url
+	 */
+	public function setReportUrl( $module, $action, $queryParams = array() )
+	{
+		$this->viewProperties['self_url'] = $this->getBaseReportUrl($module, $action, $queryParams);
+	}
+	
+	/**
 	 * Returns true if it is likely that the data for this report has been purged and if the
 	 * user should be told about that.
 	 * 
 	 * In order for this function to return true, the following must also be true:
 	 * - The data table for this report must either be empty or not have been fetched.
-	 * - The period of this report is not a range.
+	 * - The period of this report is not a multiple period.
 	 * - The date of this report must be older than the delete_reports_older_than config option.
+	 * @return bool
 	 */
 	public function hasReportBeenPurged()
 	{
-		$strDate = Piwik_Common::getRequestVar('date');
-		if ((is_null($this->dataTable) || $this->dataTable->getRowsCount() == 0)
-			&& Piwik_Period_Range::parseDateRange($strDate) === false)
+		$strPeriod = Piwik_Common::getRequestVar('period', false);
+		$strDate = Piwik_Common::getRequestVar('date', false);
+		
+		if ($strPeriod !== false
+			&& $strDate !== false
+			&& (is_null($this->dataTable) || $this->dataTable->getRowsCount() == 0))
 		{
-			$reportDate = Piwik_Date::factory($strDate);
+			// if range, only look at the first date
+			if ($strPeriod == 'range')
+			{
+				$idSite = Piwik_Common::getRequestVar('idSite', '');
+				if (intval($idSite) != 0)
+				{
+					$site = new Piwik_Site($idSite);
+					$timezone = $site->getTimezone();
+				}
+				else
+				{
+					$timezone = 'UTC';
+				}
+				
+				$period = new Piwik_Period_Range('range', $strDate, $timezone);
+				$reportDate = $period->getDateStart();
+			}
+			// if a multiple period, this function is irrelevant
+			else if (Piwik_Archive::isMultiplePeriod($strDate, $strPeriod))
+			{
+				return false;
+			}
+			// otherwise, use the date as given
+			else
+			{
+				$reportDate = Piwik_Date::factory($strDate);
+			}
+			
 			$reportYear = $reportDate->toString('Y');
 			$reportMonth = $reportDate->toString('m');
 			
-			if (Piwik_PrivacyManager::shouldReportBePurged($reportYear, $reportMonth))
+			if (class_exists('Piwik_PrivacyManager')
+				&& Piwik_PrivacyManager::shouldReportBePurged($reportYear, $reportMonth))
 			{
 				return true;
 			}
 		}
 		
 		return false;
+	}
+	
+	/**
+	 * Returns URL for this report w/o any filter parameters.
+	 * 
+	 * @param string $module
+	 * @param string $action
+	 * @param array $queryParams
+	 */
+	private function getBaseReportUrl( $module, $action, $queryParams = array() )
+	{
+		$params = array_merge($queryParams, array('module' => $module, 'action' => $action));
+		
+		// unset all filter query params so the related report will show up in its default state,
+		// unless the filter param was in $queryParams
+		$genericFiltersInfo = Piwik_API_DataTableGenericFilter::getGenericFiltersInformation();
+		foreach ($genericFiltersInfo as $filter)
+		{
+			foreach ($filter as $queryParamName => $queryParamInfo)
+			{
+				if (!isset($params[$queryParamName]))
+				{
+					$params[$queryParamName] = null;
+				}
+			}
+		}
+		
+		// add the related report
+		$url = Piwik_Url::getCurrentQueryStringWithParametersModified($params);
+		return $url;
 	}
 }

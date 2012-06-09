@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Access.php 6085 2012-03-21 09:18:14Z matt $
+ * @version $Id: Access.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -85,12 +85,17 @@ class Piwik_Access
 	 * Returns the list of the existing Access level.
 	 * Useful when a given API method requests a given acccess Level.
 	 * We first check that the required access level exists.
+	 *
+	 * @return array
 	 */
 	static public function getListAccess()
 	{
 		return self::$availableAccess;
 	}
 
+	/**
+	 * Constructor
+	 */
 	function __construct() 
 	{
 		$this->idsitesByAccess = array( 
@@ -99,7 +104,7 @@ class Piwik_Access
 							'superuser'  => array()
 		);
 	}
-	
+
 	/**
 	 * Loads the access levels for the current user.
 	 *
@@ -107,8 +112,9 @@ class Piwik_Access
 	 * If the user credentials are not correct we don't load anything.
 	 * If the login/password is correct the user is either the SuperUser or a normal user.
 	 * We load the access levels for this user for all the websites.
-	 * 
-	 * @return true on success, false if reloading access failed (when auth object wasn't specified and user is not enforced to be Super User)
+	 *
+	 * @param null|Piwik_Auth  $auth  Auth adapter
+	 * @return bool  true on success, false if reloading access failed (when auth object wasn't specified and user is not enforced to be Super User)
 	 */
 	public function reloadAccess(Piwik_Auth $auth = null)
 	{
@@ -163,8 +169,8 @@ class Piwik_Access
 	/**
 	 * Returns the SQL query joining sites and access table for a given login
 	 * 
-	 * @param string $select Columns or expression to SELECT FROM table, eg. "MIN(ts_created)"
-	 * @return string SQL query
+	 * @param string  $select  Columns or expression to SELECT FROM table, eg. "MIN(ts_created)"
+	 * @return string  SQL query
 	 */
 	static public function getSqlAccessSite($select)
 	{
@@ -185,10 +191,12 @@ class Piwik_Access
 		$this->idsitesByAccess['superuser'] = Piwik_SitesManager_API::getInstance()->getAllSitesId();
 		return true;
 	}
-	
+
 	/**
 	 * We bypass the normal auth method and give the current user Super User rights.
 	 * This should be very carefully used.
+	 *
+	 * @param bool  $bool
 	 */
 	public function setSuperUser($bool = true)
 	{
@@ -237,8 +245,8 @@ class Piwik_Access
 	 * Returns an array of ID sites for which the user has at least a VIEW access.
 	 * Which means VIEW or ADMIN or SUPERUSER.
 	 *
-	 * @return array Example if the user is ADMIN for 4
-	 *              and has VIEW access for 1 and 7, it returns array(1, 4, 7);
+	 * @return array  Example if the user is ADMIN for 4
+	 *                and has VIEW access for 1 and 7, it returns array(1, 4, 7);
 	 */
 	public function getSitesIdWithAtLeastViewAccess()
 	{
@@ -252,8 +260,8 @@ class Piwik_Access
 	/**
 	 * Returns an array of ID sites for which the user has an ADMIN access.
 	 *
-	 * @return array Example if the user is ADMIN for 4 and 8
-	 *              and has VIEW access for 1 and 7, it returns array(4, 8);
+	 * @return array  Example if the user is ADMIN for 4 and 8
+	 *                and has VIEW access for 1 and 7, it returns array(4, 8);
 	 */
 	public function getSitesIdWithAdminAccess()
 	{
@@ -267,8 +275,8 @@ class Piwik_Access
 	/**
 	 * Returns an array of ID sites for which the user has a VIEW access only.
 	 *
-	 * @return array Example if the user is ADMIN for 4
-	 *              and has VIEW access for 1 and 7, it returns array(1, 7);
+	 * @return array  Example if the user is ADMIN for 4
+	 *                and has VIEW access for 1 and 7, it returns array(1, 7);
 	 * @see getSitesIdWithAtLeastViewAccess()
 	 */
 	public function getSitesIdWithViewAccess()
@@ -278,8 +286,8 @@ class Piwik_Access
 
 	/**
 	 * Throws an exception if the user is not the SuperUser
-	 * 
-	 * @throws Exception
+	 *
+	 * @throws Piwik_Access_NoAccessException
 	 */
 	public function checkUserIsSuperUser()
 	{
@@ -292,7 +300,7 @@ class Piwik_Access
 	/**
 	 * If the user doesn't have an ADMIN access for at least one website, throws an exception
 	 *
-	 * @throws Exception
+	 * @throws Piwik_Access_NoAccessException
 	 */
 	public function checkUserHasSomeAdminAccess()
 	{
@@ -310,7 +318,7 @@ class Piwik_Access
 	/**
 	 * If the user doesn't have any view permission, throw exception
 	 *
-	 * @throws Exception
+	 * @throws Piwik_Access_NoAccessException
 	 */
 	public function checkUserHasSomeViewAccess()
 	{
@@ -329,8 +337,8 @@ class Piwik_Access
 	 * This method checks that the user has ADMIN access for the given list of websites.
 	 * If the user doesn't have ADMIN access for at least one website of the list, we throw an exception.
 	 * 
-	 * @param int|arrayOfIntegers List of ID sites to check
-	 * @throws Exception If for any of the websites the user doesn't have an ADMIN access
+	 * @param int|array  $idSites  List of ID sites to check
+	 * @throws Piwik_Access_NoAccessException If for any of the websites the user doesn't have an ADMIN access
 	 */
 	public function checkUserHasAdminAccess( $idSites )
 	{
@@ -353,8 +361,8 @@ class Piwik_Access
 	 * This method checks that the user has VIEW or ADMIN access for the given list of websites.
 	 * If the user doesn't have VIEW or ADMIN access for at least one website of the list, we throw an exception.
 	 * 
-	 * @param int|arrayOfIntegers|string List of ID sites to check (integer, array of integers, string comma separated list of integers)
-	 * @throws Exception If for any of the websites the user doesn't have an VIEW or ADMIN access
+	 * @param int|array|string  $idSites  List of ID sites to check (integer, array of integers, string comma separated list of integers)
+	 * @throws Piwik_Access_NoAccessException  If for any of the websites the user doesn't have an VIEW or ADMIN access
 	 */
 	public function checkUserHasViewAccess( $idSites )
 	{
@@ -372,7 +380,12 @@ class Piwik_Access
 			}
 		}
 	}
-	
+
+	/**
+	 * @param int|array|string $idSites
+	 * @return array
+	 * @throws Piwik_Access_NoAccessException
+	 */
 	protected function getIdSites($idSites)
 	{
 		if($idSites === 'all')
@@ -393,7 +406,6 @@ class Piwik_Access
 }
 
 /**
- *
  * Exception thrown when a user doesn't  have sufficient access.
  * 
  * @package Piwik

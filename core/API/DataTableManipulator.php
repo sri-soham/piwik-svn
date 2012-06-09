@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTableManipulator.php 6196 2012-04-11 18:30:46Z EZdesign $
+ * @version $Id: DataTableManipulator.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -32,17 +32,28 @@ abstract class Piwik_API_DataTableManipulator
 	protected $request;
 	
 	private $apiMethodForSubtable;
-	
+
+	/**
+	 * Constructor
+	 *
+	 * @param bool   $apiModule
+	 * @param bool   $apiMethod
+	 * @param array  $request
+	 */
 	public function __construct($apiModule=false, $apiMethod=false, $request=array()) {
 		$this->apiModule = $apiModule;
 		$this->apiMethod = $apiMethod;
 		$this->request = $request;
 	}
-	
+
 	/**
-	 * This method can be used by subclasses to iterate over data tables that might be 
+	 * This method can be used by subclasses to iterate over data tables that might be
 	 * data table arrays. It calls back the template method self::doManipulate for each table.
 	 * This way, data table arrays can be handled in a transparent fashion.
+	 *
+	 * @param Piwik_DataTable_Array|Piwik_DataTable  $dataTable
+	 * @throws Exception
+	 * @return Piwik_DataTable_Array|Piwik_DataTable
 	 */
 	protected function manipulate($dataTable) {
 		if ($dataTable instanceof Piwik_DataTable_Array)
@@ -76,13 +87,23 @@ abstract class Piwik_API_DataTableManipulator
 		
 		return $dataTable;
 	}
-	
-	/** Template method called from self::manipulate */
+
+	/**
+	 * Template method called from self::manipulate
+	 *
+	 * @param Piwik_DataTable  $dataTable
+	 * @param bool|string      $date
+	 * @return
+	 */
 	protected abstract function doManipulate(Piwik_DataTable $dataTable, $date=false);
-	
+
 	/**
 	 * Load the subtable for a row.
 	 * Returns null if none is found.
+	 *
+	 * @param Piwik_Datatable_Row  $row
+	 * @param bool|string          $date
+	 * @throws Exception
 	 * @return Piwik_DataTable
 	 */
 	protected function loadSubtable($row, $date=false) {
@@ -127,15 +148,22 @@ abstract class Piwik_API_DataTableManipulator
 		
 		return $dataTable;
 	}
-	
+
 	/**
 	 * In this method, subclasses can clean up the request array for loading subtables
 	 * in order to make Piwik_API_ResponseBuilder behave correctly (e.g. not trigger the
 	 * manipulator again).
+	 *
+	 * @param $request
+	 * @return
 	 */
 	protected abstract function manipulateSubtableRequest(&$request);
 	
-	/** Extract the API method for loading subtables from the meta data */
+	/**
+	 * Extract the API method for loading subtables from the meta data
+	 *
+	 * @return string
+	 */
 	private function getApiMethodForSubtable()
 	{
 		if (!$this->apiMethodForSubtable)

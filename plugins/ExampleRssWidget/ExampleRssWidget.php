@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleRssWidget.php 3175 2010-09-25 03:52:17Z vipsoft $
+ * @version $Id: ExampleRssWidget.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleRssWidget
@@ -38,6 +38,9 @@ class Piwik_ExampleRssWidget extends Piwik_Plugin
 		return array( 'AssetManager.getCssFiles' => 'getCssFiles');
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getCssFiles( $notification )
 	{
 		$cssFiles = &$notification->getNotificationObject();

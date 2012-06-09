@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Manager.php 4311 2011-04-04 18:49:55Z vipsoft $
+ * @version $Id: Manager.php 6406 2012-05-30 11:48:36Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -51,8 +51,8 @@ class Piwik_DataTable_Manager
 	/**
 	 * Add a DataTable to the registry
 	 * 
-	 * @param Piwik_DataTable
-	 * @return int Index of the table in the manager array
+	 * @param Piwik_DataTable  $table
+	 * @return int  Index of the table in the manager array
 	 */
 	public function addTable( $table )
 	{
@@ -60,20 +60,21 @@ class Piwik_DataTable_Manager
 		$this->nextTableId++;
 		return $this->nextTableId - 1;
 	}
-	
+
 	/**
 	 * Returns the DataTable associated to the ID $idTable.
-	 * NB: The datatable has to have been instanciated before! 
+	 * NB: The datatable has to have been instanciated before!
 	 * This method will not fetch the DataTable from the DB.
-	 * 
-	 * @exception If the table can't be found
-	 * @return Piwik_DataTable The table 
+	 *
+	 * @param int  $idTable
+	 * @throws Exception If the table can't be found
+	 * @return Piwik_DataTable  The table
 	 */
 	public function getTable( $idTable )
 	{
 		if(!isset($this->tables[$idTable]))
 		{
-			throw new Exception(sprintf("The requested table (id = %d) couldn't be found in the DataTable Manager", $idTable));
+			throw new Exception(sprintf("This report has been reprocessed since your last click. To see this error less often, please increase the timeout value in seconds in Settings > General Settings. (error: id %s not found).", $idTable));
 		}
 		return $this->tables[$idTable];
 	}
@@ -95,7 +96,7 @@ class Piwik_DataTable_Manager
 	 * Deletes (unsets) the datatable given its id and removes it from the manager
 	 * Subsequent get for this table will fail
 	 *
-	 * @param int $id
+	 * @param int  $id
 	 */
 	public function deleteTable( $id )
 	{
@@ -109,7 +110,7 @@ class Piwik_DataTable_Manager
 	/**
 	 * Remove the table from the manager (table has already been unset)
 	 *
-	 * @param int $id
+	 * @param int  $id
 	 */
 	public function setTableDeleted($id)
 	{

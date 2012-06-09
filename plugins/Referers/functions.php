@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: functions.php 5604 2011-12-23 02:36:50Z matt $
+ * @version $Id: functions.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Referers
@@ -169,7 +169,9 @@ function Piwik_getRefererTypeLabel($label)
 
 /**
  * Works in both directions
- * @param mixed 
+ * @param string $name
+ * @throws Exception
+ * @return string
  */
 function Piwik_getRefererTypeFromShortName($name)
 {

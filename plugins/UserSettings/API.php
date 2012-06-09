@@ -1,11 +1,11 @@
 <?php
 /**
  * Piwik - Open source web analytics
- * 
+ *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6057 2012-03-16 02:19:47Z vipsoft $
- * 
+ * @version $Id: API.php 6362 2012-05-29 05:17:56Z capedfuzz $
+ *
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
  */
@@ -16,12 +16,12 @@
 require_once PIWIK_INCLUDE_PATH . '/plugins/UserSettings/functions.php';
 
 /**
- * The UserSettings API lets you access reports about your Visitors technical settings: browsers, browser types (rendering engine), 
+ * The UserSettings API lets you access reports about your Visitors technical settings: browsers, browser types (rendering engine),
  * operating systems, plugins supported in their browser, Screen resolution and Screen types (normal, widescreen, dual screen or mobile).
- *  
+ *
  * @package Piwik_UserSettings
  */
-class Piwik_UserSettings_API 
+class Piwik_UserSettings_API
 {
 	static private $instance = null;
 	static public function getInstance()
@@ -32,7 +32,7 @@ class Piwik_UserSettings_API
 		}
 		return self::$instance;
 	}
-	
+
 	protected function getDataTable($name, $idSite, $period, $date, $segment)
 	{
 		Piwik::checkUserHasViewAccess( $idSite );
@@ -57,21 +57,64 @@ class Piwik_UserSettings_API
 		return $dataTable;
 	}
 
-	public function getOS( $idSite, $period, $date, $segment = false )
+	public function getOS( $idSite, $period, $date, $segment = false, $addShortLabel = true )
 	{
 		$dataTable = $this->getDataTable('UserSettings_os', $idSite, $period, $date, $segment);
 		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getOSLogo'));
-		$dataTable->queueFilter('ColumnCallbackAddMetadata', array( 'label', 'shortLabel', 'Piwik_getOSShortLabel') );
+		if ($addShortLabel)
+		{
+			$dataTable->queueFilter(
+				'ColumnCallbackAddMetadata', array( 'label', 'shortLabel', 'Piwik_getOSShortLabel') );
+		}
 		$dataTable->queueFilter('ColumnCallbackReplace', array( 'label', 'Piwik_getOSLabel') );
 		return $dataTable;
 	}
-		
-	public function getBrowser( $idSite, $period, $date, $segment = false )
+	
+	/**
+	 * Gets a DataTable displaying number of visits by operating system family. The operating
+	 * system families are listed in /libs/UserAgentParser/UserAgentParser.php.
+	 */
+	public function getOSFamily( $idSite, $period, $date, $segment = false )
+	{
+		$dataTable = $this->getOS($idSite, $period, $date, $segment, $addShortLabel = false);
+		$dataTable->queueFilter('GroupBy', array('label', 'Piwik_UserSettings_getOSFamily'));
+		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_Translate'));
+		return $dataTable;
+	}
+	
+	/**
+	 * Gets a DataTable displaying number of visits by device type (mobile vs. desktop).
+	 */
+	public function getMobileVsDesktop( $idSite, $period, $date, $segment = false )
+	{
+		$dataTable = $this->getOS($idSite, $period, $date, $segment, $addShortLabel = false);
+		$dataTable->queueFilter('GroupBy', array('label', 'Piwik_UserSettings_getDeviceTypeFromOS'));
+		$dataTable->queueFilter('MetadataCallbackReplace',
+			array('logo', 'Piwik_UserSettings_getDeviceTypeImg', null, array('label')));
+		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_Translate'));
+		return $dataTable;
+	}
+	
+	public function getBrowserVersion( $idSite, $period, $date, $segment = false )
 	{
 		$dataTable = $this->getDataTable('UserSettings_browser', $idSite, $period, $date, $segment);
 		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getBrowsersLogo'));
 		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'shortLabel', 'Piwik_getBrowserShortLabel'));
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_getBrowserLabel'));
+		return $dataTable;
+	}
+	
+	/**
+	 * Gets a DataTable displaying number of visits by browser (ie, Firefox, Chrome, etc.).
+	 * The browser version is not included in this report.
+	 */
+	public function getBrowser( $idSite, $period, $date, $segment = false )
+	{
+		$dataTable = $this->getBrowserVersion($idSite, $period, $date, $segment);
+		
+		$getBrowserFromBrowserVersion = 'Piwik_UserSettings_getBrowserFromBrowserVersion';
+		$dataTable->queueFilter('GroupBy', array('label', $getBrowserFromBrowserVersion));
+		
 		return $dataTable;
 	}
 	
@@ -82,7 +125,7 @@ class Piwik_UserSettings_API
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_getBrowserTypeLabel'));
 		return $dataTable;
 	}
-	
+
 	public function getWideScreen( $idSite, $period, $date, $segment = false )
 	{
 		$dataTable = $this->getDataTable('UserSettings_wideScreen', $idSite, $period, $date, $segment);
@@ -90,7 +133,7 @@ class Piwik_UserSettings_API
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'ucfirst'));
 		return $dataTable;
 	}
-	
+
 	public function getPlugin( $idSite, $period, $date, $segment = false )
 	{
 		// fetch all archive data required
@@ -109,17 +152,17 @@ class Piwik_UserSettings_API
 			$browserTypesArray 	= Array($browserTypes);
 			$visitSumsArray 	= Array($visitsSums);
 		}
-		
+
 		// walk through the results and calculate the percentage
 		foreach($tableArray as $key => $table) {
-			
+
 			// get according browserType table
 			foreach($browserTypesArray AS $k => $browsers) {
 				if($k == $key) {
 					$browserType = $browsers;
 				}
 			}
-			
+
 			// get according visitsSum
 			foreach($visitSumsArray AS $k => $visits) {
 				if($k == $key) {
@@ -130,26 +173,27 @@ class Piwik_UserSettings_API
 					}
 				}
 			}
-			
-			$ieStats		= $browserType->getRowFromLabel('ie');
 
-			$ieVisits 	= 0;
+			// Calculate percentage, but ignore IE users because plugin detection doesn't work on IE
+			$ieVisits = 0;
+
+			$ieStats = $browserType->getRowFromLabel('ie');
 			if($ieStats !== false)
 			{
 				$ieVisits = $ieStats->getColumn(Piwik_Archive::INDEX_NB_VISITS);
 			}
-			$visitsSum		= $visitsSumTotal - $ieVisits;
-		
-			// Calculate percentage, but ignore IE users because plugin detection doesn't work on IE
-			// The filter must be applied now so that the new column can 
-			// be sorted by the generic filters (applied right after this function exits)
+
+			$visitsSum = $visitsSumTotal - $ieVisits;
+
+			// The filter must be applied now so that the new column can
+			// be sorted by the generic filters (applied right after this loop exits)
 			$table->filter('ColumnCallbackAddColumnPercentage', array('nb_visits_percentage', Piwik_Archive::INDEX_NB_VISITS, $visitsSum, 1));
+			$table->filter('RangeCheck', array('nb_visits_percentage'));
 		}
-		
+
 		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getPluginsLogo'));
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'ucfirst'));
-		
+
 		return $dataTable;
 	}
-	
 }

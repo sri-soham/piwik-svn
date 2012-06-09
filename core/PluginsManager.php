@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PluginsManager.php 6028 2012-03-10 03:47:35Z vipsoft $
+ * @version $Id: PluginsManager.php 6427 2012-05-31 23:26:11Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -81,7 +81,7 @@ class Piwik_PluginsManager
 	/**
 	 * Returns true if plugin is always activated
 	 *
-	 * @param string $name Name of plugin
+	 * @param string  $name  Name of plugin
 	 * @return bool
 	 */
 	public function isPluginAlwaysActivated( $name )
@@ -92,7 +92,7 @@ class Piwik_PluginsManager
 	/**
 	 * Returns true if plugin has been activated
 	 *
-	 * @param string $name Name of plugin
+	 * @param string  $name  Name of plugin
 	 * @return bool
 	 */
 	public function isPluginActivated( $name )
@@ -104,7 +104,7 @@ class Piwik_PluginsManager
 	/**
 	 * Returns true if plugin is loaded (in memory)
 	 *
-	 * @parm string $name Name of plugin
+	 * @param string  $name  Name of plugin
 	 * @return bool
 	 */
 	public function isPluginLoaded( $name )
@@ -127,12 +127,16 @@ class Piwik_PluginsManager
 	/**
 	 * Deactivate plugin
 	 *
-	 * @param string $pluginName Name of plugin
+	 * @param string  $pluginName  Name of plugin
 	 */
 	public function deactivatePlugin($pluginName)
 	{
 		$plugins = $this->pluginsToLoad;
 		$key = array_search($pluginName, $plugins);
+		
+		$plugin = $this->loadPlugin($pluginName);
+		$plugin->deactivate();
+		
 		if($key !== false)
 		{
 			unset($plugins[$key]);
@@ -173,7 +177,8 @@ class Piwik_PluginsManager
 	/**
 	 * Activate the specified plugin and install (if needed)
 	 *
-	 * @param string $pluginName Name of plugin
+	 * @param string  $pluginName  Name of plugin
+	 * @throws Exception
 	 */
 	public function activatePlugin($pluginName)
 	{
@@ -193,6 +198,8 @@ class Piwik_PluginsManager
 
 		$this->installPluginIfNecessary($plugin);
 
+		$plugin->activate();
+		
 		// we add the plugin to the list of activated plugins
 		if(!in_array($pluginName, $plugins))
 		{
@@ -215,7 +222,7 @@ class Piwik_PluginsManager
 	/**
 	 * Load the specified plugins
 	 *
-	 * @param array $pluginsToLoad Array of plugins to load
+	 * @param array  $pluginsToLoad  Array of plugins to load
 	 */
 	public function loadPlugins( array $pluginsToLoad )
 	{
@@ -247,7 +254,7 @@ class Piwik_PluginsManager
 	/**
 	 * Load translations for loaded plugins
 	 *
-	 * @param string $language Optional language code
+	 * @param bool|string  $language  Optional language code
 	 */
 	public function loadPluginTranslations($language = false)
 	{
@@ -303,8 +310,9 @@ class Piwik_PluginsManager
 	/**
 	 * Returns the given Piwik_Plugin object
 	 *
-	 * @param string $name
-	 * @return Piwik_Piwik
+	 * @param string  $name
+	 * @throws Exception
+	 * @return array
 	 */
 	public function getLoadedPlugin($name)
 	{
@@ -346,7 +354,8 @@ class Piwik_PluginsManager
 	 * Loads the plugin filename and instantiates the plugin with the given name, eg. UserCountry
 	 * Do NOT give the class name ie. Piwik_UserCountry, but give the plugin name ie. UserCountry
 	 *
-	 * @param string $pluginName
+	 * @param string  $pluginName
+	 * @throws Exception
 	 * @return Piwik_Plugin
 	 */
 	public function loadPlugin( $pluginName )
@@ -394,7 +403,8 @@ class Piwik_PluginsManager
 	/**
 	 * Unload plugin
 	 *
-	 * @param Piwik_Plugin $plugin
+	 * @param Piwik_Plugin  $plugin
+	 * @throws Exception
 	 */
 	public function unloadPlugin( $plugin )
 	{
@@ -441,22 +451,23 @@ class Piwik_PluginsManager
 	/**
 	 * Install a specific plugin
 	 *
-	 * @param Piwik_Plugin $plugin
-	 * @throws Exception if installation fails
+	 * @param Piwik_Plugin  $plugin
+	 * @throws Piwik_PluginsManager_PluginException if installation fails
 	 */
 	private function installPlugin( Piwik_Plugin $plugin )
 	{
 		try{
 			$plugin->install();
 		} catch(Exception $e) {
-			throw new Piwik_PluginsManager_PluginException($plugin->getPluginName(), $e->getMessage());		}
+			throw new Piwik_PluginsManager_PluginException($plugin->getPluginName(), $e->getMessage());		
+		}
 	}
 
 
 	/**
 	 * For the given plugin, add all the observers of this plugin.
 	 *
-	 * @param Piwik_Plugin $plugin
+	 * @param Piwik_Plugin  $plugin
 	 */
 	private function addPluginObservers( Piwik_Plugin $plugin )
 	{
@@ -471,8 +482,8 @@ class Piwik_PluginsManager
 	/**
 	 * Add a plugin in the loaded plugins array
 	 *
-	 * @param string $pluginName plugin name without prefix (eg. 'UserCountry')
-	 * @param Piwik_Plugin $newPlugin
+	 * @param string  $pluginName  plugin name without prefix (eg. 'UserCountry')
+	 * @param Piwik_Plugin  $newPlugin
 	 */
 	private function addLoadedPlugin( $pluginName, Piwik_Plugin $newPlugin )
 	{
@@ -482,8 +493,10 @@ class Piwik_PluginsManager
 	/**
 	 * Load translation
 	 *
-	 * @param Piwik_Plugin $plugin
-	 * @param string $langCode
+	 * @param Piwik_Plugin  $plugin
+	 * @param string        $langCode
+	 * @throws Exception
+	 * @return void
 	 */
 	private function loadTranslation( $plugin, $langCode )
 	{
@@ -543,12 +556,14 @@ class Piwik_PluginsManager
 	/**
 	 * Install a plugin, if necessary
 	 *
-	 * @param Piwik_Plugin $plugin
+	 * @param Piwik_Plugin  $plugin
 	 */
 	private function installPluginIfNecessary( Piwik_Plugin $plugin )
 	{
 		$pluginName = $plugin->getPluginName();
 
+		$saveConfig = false;
+			
 		// is the plugin already installed or is it the first time we activate it?
 		$pluginsInstalled = $this->getInstalledPluginsName();
 		if(!in_array($pluginName, $pluginsInstalled))
@@ -556,6 +571,8 @@ class Piwik_PluginsManager
 			$this->installPlugin($plugin);
 			$pluginsInstalled[] = $pluginName;
 			Piwik_Config::getInstance()->PluginsInstalled['PluginsInstalled'] = $pluginsInstalled;
+			
+			$saveConfig = true;
 		}
 
 		$information = $plugin->getInformation();
@@ -573,10 +590,14 @@ class Piwik_PluginsManager
 			{
 				$pluginsTracker[] = $pluginName;
 				Piwik_Config::getInstance()->Plugins_Tracker['Plugins_Tracker'] = $pluginsTracker;
+				$saveConfig = true;
 			}
 		}
-
-		Piwik_Config::getInstance()->forceSave();
+		
+		if($saveConfig)
+		{
+			Piwik_Config::getInstance()->forceSave();
+		}
 	}
 }
 
@@ -599,11 +620,11 @@ class Piwik_PluginsManager_PluginException extends Exception
 /**
  * Post an event to the dispatcher which will notice the observers
  *
- * @param string $eventName The event name
- * @param mixed $object Object, array or string that the listeners can read and/or modify.
- *                Listeners can call $object =& $notification->getNotificationObject(); to fetch and then modify this variable.
- * @param array $info Additional array of data that can be used by the listeners, but not edited
- * @param bool $pending Should the notification be posted to plugins that register after the notification was sent?
+ * @param string  $eventName  The event name
+ * @param mixed   $object     Object, array or string that the listeners can read and/or modify.
+ *                            Listeners can call $object =& $notification->getNotificationObject(); to fetch and then modify this variable.
+ * @param array   $info       Additional array of data that can be used by the listeners, but not edited
+ * @param bool    $pending    Should the notification be posted to plugins that register after the notification was sent?
  * @return void
  */
 function Piwik_PostEvent( $eventName,  &$object = null, $info = array(), $pending = false )
@@ -615,8 +636,8 @@ function Piwik_PostEvent( $eventName,  &$object = null, $info = array(), $pendin
 /**
  * Register an action to execute for a given event
  *
- * @param string $hookName Name of event
- * @param function $function Callback hook
+ * @param string    $hookName  Name of event
+ * @param function  $function  Callback hook
  */
 function Piwik_AddAction( $hookName, $function )
 {
@@ -638,8 +659,6 @@ class Piwik_Event_Notification extends Event_Notification
 	/**
 	 * Use notification counter to profile runtime execution
 	 * time and memory usage.
-	 *
-	 * @param  mixed $callback Callback function
 	 */
 	function increaseNotificationCount(/* array($className|object, $method) */) {
 		parent::increaseNotificationCount();

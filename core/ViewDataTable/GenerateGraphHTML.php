@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphHTML.php 6196 2012-04-11 18:30:46Z EZdesign $
+ * @version $Id: GenerateGraphHTML.php 6358 2012-05-29 02:08:36Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -23,9 +23,13 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	protected $width = '100%';
 	protected $height = 250;
 	protected $graphType = 'unknown';
-	
+
 	/**
 	 * @see Piwik_ViewDataTable::init()
+	 * @param string $currentControllerName
+	 * @param string $currentControllerAction
+	 * @param string $apiMethodToRequestDataTable
+	 * @param null $controllerActionCalledWhenRequestSubTable
 	 */
 	function init($currentControllerName,
 						$currentControllerAction,
@@ -77,14 +81,22 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	 * We persist the parametersToModify values in the javascript footer.
 	 * This is used by the "export links" that use the "date" attribute
 	 * from the json properties array in the datatable footer.
+	 * @return array
 	 */
 	protected function getJavascriptVariablesToSet()
 	{
-		return $this->parametersToModify + parent::getJavascriptVariablesToSet();
+		$original = parent::getJavascriptVariablesToSet();
+		$originalViewDataTable = $original['viewDataTable'];
+		
+		$result = $this->parametersToModify + $original;;
+		$result['viewDataTable'] = $originalViewDataTable;
+		
+		return $result;
 	}
 	
 	/**
 	 * @see Piwik_ViewDataTable::main()
+	 * @return null
 	 */
 	public function main()
 	{

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6077 2012-03-20 22:19:40Z matt $
+ * @version $Id: API.php 6363 2012-05-29 05:50:06Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Actions
@@ -39,25 +39,35 @@ class Piwik_Actions_API
 		}
 		return self::$instance;
 	}
-	
+
 
 	/**
 	 * Backward compatibility. Fallsback to getPageTitles() instead.
 	 * @deprecated Deprecated since Piwik 0.5
 	 * @ignore
+	 *
+	 * @param int $idSite
+	 * @param string $period
+	 * @param $date
+	 * @param bool $segment
+	 * @param bool $expanded
+	 * @param bool|int $idSubtable
+	 * @return Piwik_DataTable
 	 */
 	public function getActions( $idSite, $period, $date, $segment = false, $expanded = false, $idSubtable = false )
 	{
 	    return $this->getPageTitles( $idSite, $period, $date, $segment, $expanded, $idSubtable );
 	}
-	
+
 	/**
 	 * Returns the list of metrics (pages, downloads, outlinks)
-	 * 
+	 *
 	 * @param int $idSite
 	 * @param string $period
 	 * @param string $date
-	 * @param string $segment
+	 * @param bool|string $segment
+	 * @param bool|array $columns
+	 * @return Piwik_DataTable
 	 */
 	public function get( $idSite, $period, $date, $segment = false, $columns = false)
 	{
@@ -111,14 +121,26 @@ class Piwik_Actions_API
 		return $dataTable;
 	}
 	
+	/**
+	 * Returns a DataTable with analytics information for every unique entry page URL, for
+	 * the specified site, period & segment.
+	 */
 	public function getEntryPageUrls( $idSite, $period, $date, $segment = false, $expanded = false, $idSubtable = false )
 	{
-		return $this->getPageUrls( $idSite, $period, $date, $segment, $expanded, $idSubtable );
+		$dataTable = $this->getPageUrls($idSite, $period, $date, $segment, $expanded, $idSubtable);
+		$this->filterNonEntryActions($dataTable);
+		return $dataTable;
 	}
 	
+	/**
+	 * Returns a DataTable with analytics information for every unique exit page URL, for
+	 * the specified site, period & segment.
+	 */
 	public function getExitPageUrls( $idSite, $period, $date, $segment = false, $expanded = false, $idSubtable = false )
 	{
-		return $this->getPageUrls( $idSite, $period, $date, $segment, $expanded, $idSubtable );
+		$dataTable = $this->getPageUrls($idSite, $period, $date, $segment, $expanded, $idSubtable);
+		$this->filterNonExitActions($dataTable);
+		return $dataTable;
 	}
 	
 	public function getPageUrl( $pageUrl, $idSite, $period, $date, $segment = false)
@@ -135,6 +157,30 @@ class Piwik_Actions_API
 		$dataTable = Piwik_Archive::getDataTableFromArchive('Actions_actions', $idSite, $period, $date, $segment, $expanded, $idSubtable);
 		$this->filterPageDatatable($dataTable);
 		$this->filterActionsDataTable($dataTable, $expanded);
+		return $dataTable;
+	}
+	
+	/**
+	 * Returns a Piwik_DataTable with analytics information for every unique entry page title
+	 * for the given site, time period & segment.
+	 */
+	public function getEntryPageTitles( $idSite, $period, $date, $segment = false, $expanded = false,
+										$idSubtable = false )
+	{
+		$dataTable = $this->getPageTitles($idSite, $period, $date, $segment, $expanded, $idSubtable);
+		$this->filterNonEntryActions($dataTable);
+		return $dataTable;
+	}
+	
+	/**
+	 * Returns a Piwik_DataTable with analytics information for every unique exit page title
+	 * for the given site, time period & segment.
+	 */
+	public function getExitPageTitles( $idSite, $period, $date, $segment = false, $expanded = false,
+									   $idSubtable = false )
+	{
+		$dataTable = $this->getPageTitles($idSite, $period, $date, $segment, $expanded, $idSubtable);
+		$this->filterNonExitActions($dataTable);
 		return $dataTable;
 	}
 	
@@ -231,6 +277,9 @@ class Piwik_Actions_API
 		return $this->doFilterPageDatatableSearch($callBackParameters, $table, $searchTree);
 	}
 
+	/**
+	 * This looks very similar to LabelFilter.php should it be refactored somehow? FIXME
+	 */
 	protected function doFilterPageDatatableSearch($callBackParameters, $table, $searchTree)
 	{
 		// filter a data table array
@@ -307,6 +356,26 @@ class Piwik_Actions_API
 		$dataTable->filter('Sort', array('nb_visits', 'desc', $naturalSort = false, $expanded));
 		
 		$dataTable->queueFilter('ReplaceSummaryRowLabel');
+	}
+	
+	/**
+	 * Removes DataTable rows referencing actions that were never the first action of a visit.
+	 * 
+	 * @param Piwik_DataTable $dataTable
+	 */
+	private function filterNonEntryActions( $dataTable )
+	{
+		$dataTable->filter('ColumnCallbackDeleteRow', array('entry_nb_visits', 'strlen'));
+	}
+	
+	/**
+	 * Removes DataTable rows referencing actions that were never the last action of a visit.
+	 * 
+	 * @param Piwik_DataTable $dataTable
+	 */
+	private function filterNonExitActions( $dataTable )
+	{
+		$dataTable->filter('ColumnCallbackDeleteRow', array('exit_nb_visits', 'strlen'));
 	}
 }
 

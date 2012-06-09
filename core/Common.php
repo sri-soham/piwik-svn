@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Common.php 6127 2012-03-29 04:35:58Z matt $
+ * @version $Id: Common.php 6412 2012-05-31 03:24:39Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -68,7 +68,25 @@ class Piwik_Common
 	}
 	
 	/**
+	 * Returns an array containing the prefixed table names of every passed argument.
+	 * 
+	 * @param string ... The table names to prefix, ie "log_visit"
+	 * @return array The prefixed names in an array.
+	 */
+	static public function prefixTables()
+	{
+		$result = array();
+		foreach (func_get_args() as $table)
+		{
+			$result[] = self::prefixTable($table);
+		}
+		return $result;
+	}
+
+	/**
 	 * Returns the table name, after removing the table prefix
+	 * @param string $table
+	 * @return string
 	 */
 	static public function unprefixTable($table)
 	{
@@ -153,6 +171,8 @@ class Piwik_Common
 	 */
 	static function getCacheWebsiteAttributes( $idSite )
 	{
+		$idSite = (int)$idSite;
+		
 		$cache = self::getTrackerCache();
 		if(($cacheContent = $cache->get($idSite)) !== false)
 		{
@@ -214,6 +234,7 @@ class Piwik_Common
 	 * Store data in general (global cache)
 	 *
 	 * @param mixed $value
+	 * @return bool
 	 */
 	static protected function setCacheGeneral($value)
 	{
@@ -247,6 +268,7 @@ class Piwik_Common
 	 */
 	static public function deleteCacheWebsiteAttributes( $idSite )
 	{
+		$idSite = (int)$idSite;
 		$cache = new Piwik_CacheFile('tracker');
 		$cache->delete($idSite);
 	}
@@ -440,7 +462,8 @@ class Piwik_Common
 	/**
 	 * Builds a URL from the result of parse_url function
 	 * Copied from the PHP comments at http://php.net/parse_url
-	 * @param array
+	 * @param array $parsed
+	 * @return bool|string
 	 */
 	static public function getParseUrlReverse($parsed)
 	{
@@ -533,7 +556,7 @@ class Piwik_Common
 	 * @param string $path without trailing slash
 	 * @param string $content
 	 */
-	static public function createHtAccess( $path, $content = "<Files \"*\">\nDeny from all\n</Files>\n" )
+	static public function createHtAccess( $path, $content = "<Files \"*\">\n<IfModule mod_access.c>\nDeny from all\n</IfModule>\n<IfModule !mod_access_compat>\n<IfModule mod_authz_host.c>\nDeny from all\n</IfModule>\n</IfModule>\n<IfModule mod_access_compat>\nDeny from all\n</IfModule>\n</Files>\n" )
 	{
 		if(self::isApache())
 		{
@@ -679,17 +702,18 @@ class Piwik_Common
 	 * - The single quotes are not protected so "Piwik's amazing" will still be "Piwik's amazing".
 	 *
 	 * - Transformations are:
-	 * 		- '&' (ampersand) becomes '&amp;'
-	 *  	- '"'(double quote) becomes '&quot;'
-	 * 		- '<' (less than) becomes '&lt;'
-	 * 		- '>' (greater than) becomes '&gt;'
+	 *         - '&' (ampersand) becomes '&amp;'
+	 *         - '"'(double quote) becomes '&quot;'
+	 *         - '<' (less than) becomes '&lt;'
+	 *         - '>' (greater than) becomes '&gt;'
 	 * - It handles the magic_quotes setting.
 	 * - A non string value is returned without modification
 	 *
-	 * @param mixed The variable to be cleaned
+	 * @param mixed $value The variable to be cleaned
+	 * @throws Exception
 	 * @return mixed The variable after cleaning
 	 */
-	static public function sanitizeInputValues($value)
+	static public function sanitizeInputValues($value, $alreadyStripslashed = false)
 	{
 		if(is_numeric($value))
 		{
@@ -699,11 +723,9 @@ class Piwik_Common
 		{
 			$value = self::sanitizeInputValue($value);
 
-			// Undo the damage caused by magic_quotes; deprecated in php 5.3 but not removed until php 5.4
-			if(version_compare(PHP_VERSION, '5.4', '<')
-				&& get_magic_quotes_gpc())
+			if(!$alreadyStripslashed) // a JSON array was already stripslashed, don't do it again for each value
 			{
-				$value = stripslashes($value);
+				$value = self::undoMagicQuotes($value);
 			}
 		}
 		elseif (is_array($value))
@@ -711,14 +733,14 @@ class Piwik_Common
 			foreach (array_keys($value) as $key)
 			{
 				$newKey = $key;
-				$newKey = self::sanitizeInputValues($newKey);
+				$newKey = self::sanitizeInputValues($newKey, $alreadyStripslashed);
 				if ($key != $newKey)
 				{
 					$value[$newKey] = $value[$key];
 					unset($value[$key]);
 				}
 
-				$value[$newKey] = self::sanitizeInputValues($value[$newKey]);
+				$value[$newKey] = self::sanitizeInputValues($value[$newKey], $alreadyStripslashed);
 			}
 		}
 		elseif( !is_null($value)
@@ -769,7 +791,44 @@ class Piwik_Common
 	{
 		return htmlspecialchars_decode($value, self::HTML_ENCODING_QUOTE_STYLE);
 	}
-
+	
+	/**
+	 * Unsanitize one or more values.
+	 * 
+	 * @param string|array $value
+	 * @return string|array unsanitized input
+	 */
+	static public function unsanitizeInputValues($value)
+	{
+		if (is_array($value))
+		{
+			$result = array();
+			foreach ($value as $key => $arrayValue)
+			{
+				$result[$key] = self::unsanitizeInputValues($arrayValue);
+			}
+			return $result;
+		}
+		else
+		{
+			return self::unsanitizeInputValue($value);
+		}
+	}
+	
+	/**
+	 * Undo the damage caused by magic_quotes; deprecated in php 5.3 but not removed until php 5.4
+	 * 
+	 * @param string
+	 * @return string modified or not
+	 */
+	static public function undoMagicQuotes($value)
+	{
+		return version_compare(PHP_VERSION, '5.4', '<')
+				&& get_magic_quotes_gpc()
+				? stripslashes($value)
+				: $value;
+	}
+	
 	/**
 	 * Returns a sanitized variable value from the $_GET and $_POST superglobal.
 	 * If the variable doesn't have a value or an empty value, returns the defaultValue if specified.
@@ -779,11 +838,11 @@ class Piwik_Common
 	 *
 	 * @param string $varName name of the variable
 	 * @param string $varDefault default value. If '', and if the type doesn't match, exit() !
-	 * @param string $varType Expected type, the value must be one of the following: array, int, integer, string
+	 * @param string $varType Expected type, the value must be one of the following: array, int, integer, string, json
 	 * @param array $requestArrayToUse
 	 *
-	 * @exception if the variable type is not known
-	 * @exception if the variable we want to read doesn't have neither a value nor a default value specified
+	 * @throws Exception  if the variable type is not known
+	 *                    or if the variable we want to read doesn't have neither a value nor a default value specified
 	 *
 	 * @return mixed The variable after cleaning
 	 */
@@ -825,7 +884,16 @@ class Piwik_Common
 			}
 		}
 
-		// Normal case, there is a value available in REQUEST for the requested varName
+		// Normal case, there is a value available in REQUEST for the requested varName:
+		
+		// we deal w/ json differently
+		if ($varType == 'json')
+		{
+			$value = self::undoMagicQuotes($requestArrayToUse[$varName]);
+			$value = Piwik_Common::json_decode($value, $assoc = true);
+			return self::sanitizeInputValues($value, $alreadyStripslashed = true);
+		}
+		
 		$value = self::sanitizeInputValues( $requestArrayToUse[$varName] );
 		if( !is_null($varType))
 		{
@@ -970,13 +1038,14 @@ class Piwik_Common
 	/**
 	 * This function will convert the input string to the binary representation of the ID
 	 * but it will throw an Exception if the specified input ID is not correct
-	 * 
+	 *
 	 * This is used when building segments containing visitorId which could be an invalid string
 	 * therefore throwing Unexpected PHP error [pack(): Type H: illegal hex digit i] severity [E_WARNING]
-	 * 
-	 * It would be simply to silent fail the pack() call above but in all other cases, we don't expect an error, 
+	 *
+	 * It would be simply to silent fail the pack() call above but in all other cases, we don't expect an error,
 	 * so better be safe and get the php error when something unexpected is happening
 	 * @param string $id
+	 * @throws Exception
 	 * @return binary string
 	 */
 	static public function convertVisitorIdToBin($id)
@@ -1304,8 +1373,8 @@ class Piwik_Common
 	/**
 	 * Returns the visitor language based only on the Browser 'accepted language' information
 	 *
-	 * @param string $browserLang Browser's accepted langauge header
-	 * @param array Array of valid language codes
+	 * @param $browserLanguage Browser's accepted langauge header
+	 * @param $validLanguages  array of valid language codes
 	 * @return string 2 letter ISO 639 code
 	 */
 	static public function extractLanguageCodeFromBrowserLanguage($browserLanguage, $validLanguages)
@@ -1708,6 +1777,7 @@ class Piwik_Common
 	 * Is the current script execution triggered by misc/cron/archive.php ?
 	 * 
 	 * Helpful for error handling: directly throw error without HTML (eg. when DB is down)
+	 * @return bool
 	 */
 	static public function isArchivePhpTriggered()
 	{
@@ -1807,18 +1877,11 @@ class Piwik_Common
  * Mark orphaned object for garbage collection
  *
  * For more information: @link http://dev.piwik.org/trac/ticket/374
+ * @param $var
  */
 function destroy(&$var)
 {
 	if (is_object($var)) $var->__destruct();
 	unset($var);
 	$var = null;
-}
-
-
-// http://bugs.php.net/bug.php?id=53632
-if (strpos(str_replace('.','',serialize($_REQUEST)), '22250738585072011') !== false)
-{
-  header('Status: 422 Unprocessable Entity');
-  die('Exit');
 }

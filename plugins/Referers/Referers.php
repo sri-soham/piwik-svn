@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Referers.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Referers.php 6363 2012-05-29 05:50:06Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Referers
@@ -51,6 +51,9 @@ class Piwik_Referers extends Piwik_Plugin
 		return $hooks;
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
@@ -114,7 +117,10 @@ class Piwik_Referers extends Piwik_Plugin
         		),
     	));
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getSegmentsMetadata($notification)
 	{
 		$segments =& $notification->getNotificationObject();
@@ -159,9 +165,9 @@ class Piwik_Referers extends Piwik_Plugin
 	function addWidgets()
 	{
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetKeywords', 'Referers', 'getKeywords');
-		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetCampaigns', 'Referers', 'getCampaigns');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetExternalWebsites', 'Referers', 'getWebsites');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetSearchEngines', 'Referers', 'getSearchEngines');
+		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetCampaigns', 'Referers', 'getCampaigns');
 		Piwik_AddWidget( 'Referers_Referers', 'Referers_WidgetOverview', 'Referers', 'getRefererType');
 		if(Piwik_Archive::isSegmentationEnabled())
 		{
@@ -184,7 +190,7 @@ class Piwik_Referers extends Piwik_Plugin
 	/**
 	 * Adds Goal dimensions, so that the dimensions are displayed in the UI Goal Overview page
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 * @return void
 	 */
 	function getReportsWithGoalMetrics( $notification )
@@ -230,7 +236,7 @@ class Piwik_Referers extends Piwik_Plugin
 	 * Period archiving: sums up daily stats and sums report tables,
 	 * making sure that tables are still truncated.
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 * @return void
 	 */
 	function archivePeriod( $notification )
@@ -306,7 +312,7 @@ class Piwik_Referers extends Piwik_Plugin
 	/**
 	 * Hooks on daily archive to trigger various log processing
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 * @return void
 	 */
 	public function archiveDay( $notification )
@@ -337,12 +343,13 @@ class Piwik_Referers extends Piwik_Plugin
 		destroy($this->interestByType);
 		destroy($this->distinctUrls);
 	}
-	
+
 	/**
 	 * Daily archive: processes all Referers reports, eg. Visits by Keyword,
 	 * Visits by websites, etc.
 	 *
 	 * @param Piwik_ArchiveProcessing $archiveProcessing
+	 * @throws Exception
 	 * @return void
 	 */
 	protected function archiveDayAggregateVisits(Piwik_ArchiveProcessing $archiveProcessing)

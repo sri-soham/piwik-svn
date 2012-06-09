@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sparkline.php 4305 2011-04-04 06:30:44Z matt $
+ * @version $Id: Sparkline.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -25,6 +25,7 @@ class Piwik_ViewDataTable_Sparkline extends Piwik_ViewDataTable
 
 	/**
 	 * @see Piwik_ViewDataTable::main()
+	 * @return mixed
 	 */
 	public function main()
 	{

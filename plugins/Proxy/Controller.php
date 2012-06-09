@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5431 2011-11-13 02:37:04Z vipsoft $
+ * @version $Id: Controller.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Proxy
@@ -131,7 +131,6 @@ class Piwik_Proxy_Controller extends Piwik_Controller
 		if(!empty($referrer) && !Piwik_Url::isLocalUrl($referrer))
 		{
 			die('Invalid Referer detected - check that your browser sends the Referer header. <br/>The link you would have been redirected to is: '.$url);
-			exit;
 		}
 
 		// mask visits to *.piwik.org

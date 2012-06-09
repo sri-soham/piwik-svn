@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ReplaceSummaryRowLabel.php 4169 2011-03-23 01:59:57Z matt $
+ * @version $Id: ReplaceSummaryRowLabel.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -17,6 +17,10 @@
  */
 class Piwik_DataTable_Filter_ReplaceSummaryRowLabel extends Piwik_DataTable_Filter
 {
+	/**
+	 * @param Piwik_DataTable  $table
+	 * @param string|null      $newLabel  new label for summary row
+	 */
 	public function __construct( $table, $newLabel = null)
 	{
 		parent::__construct($table);
@@ -26,7 +30,12 @@ class Piwik_DataTable_Filter_ReplaceSummaryRowLabel extends Piwik_DataTable_Filt
 		}
 		$this->newLabel = $newLabel;
 	}
-	
+
+	/**
+	 * Updates the summary row label
+	 *
+	 * @param Piwik_DataTable  $table
+	 */
 	public function filter($table)
 	{
 		$rows = $table->getRows();

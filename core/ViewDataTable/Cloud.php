@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Cloud.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: Cloud.php 6300 2012-05-23 21:19:25Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -30,9 +30,13 @@ class Piwik_ViewDataTable_Cloud extends Piwik_ViewDataTable
 	{
 		return 'cloud';
 	}
-		
+
 	/**
 	 * @see Piwik_ViewDataTable::init()
+	 * @param string $currentControllerName
+	 * @param string $currentControllerAction
+	 * @param string $apiMethodToRequestDataTable
+	 * @param null|string $controllerActionCalledWhenRequestSubTable
 	 */
 	function init($currentControllerName,
 						$currentControllerAction,
@@ -51,6 +55,7 @@ class Piwik_ViewDataTable_Cloud extends Piwik_ViewDataTable
 	/**
 	 * @see Piwik_ViewDataTable::main()
 	 *
+	 * @return null
 	 */
 	public function main()
 	{

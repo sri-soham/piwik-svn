@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6078 2012-03-20 22:25:21Z matt $
+ * @version $Id: Controller.php 6363 2012-05-29 05:50:06Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserCountryMap
@@ -37,6 +37,7 @@ class Piwik_UserCountryMap_Controller extends Piwik_Controller
 			. "&period=" . $period
 			. "&date=" . $date
 			. "&token_auth=" . $token_auth
+			. "&segment=" . Piwik_Common::unsanitizeInputValue(Piwik_Common::getRequestVar('segment', ''))
 			. "&filter_limit=-1";
 		
 		// definition of the color scale

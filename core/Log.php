@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Log.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Log.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -86,6 +86,11 @@ abstract class Piwik_Log extends Zend_Log
 
 	/**
 	 * Log an event
+	 * @param string $event
+	 * @param int $priority
+	 * @param null $extras
+	 * @throws Zend_Log_Exception
+	 * @return void
 	 */
 	public function log($event, $priority, $extras = null)
 	{

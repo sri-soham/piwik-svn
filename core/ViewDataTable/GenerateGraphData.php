@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphData.php 6120 2012-03-26 14:55:27Z EZdesign $
+ * @version $Id: GenerateGraphData.php 6324 2012-05-26 19:39:16Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -109,9 +109,10 @@ abstract class Piwik_ViewDataTable_GenerateGraphData extends Piwik_ViewDataTable
 		$this->setColumnTranslation('nb_conversions', Piwik_Translate('Goals_ColumnConversions'));
 		$this->setColumnTranslation('revenue', Piwik_Translate('General_TotalRevenue'));
 	}
-	
+
 	/**
 	 * Used in initChartObjectData to add the series picker config to the view object
+	 * @param bool $multiSelect
 	 */
 	protected function addSeriesPickerToView($multiSelect=true)
 	{
@@ -179,6 +180,7 @@ abstract class Piwik_ViewDataTable_GenerateGraphData extends Piwik_ViewDataTable
 		// throws exception if no view access
 		$this->loadDataTableFromAPI();
 		$this->checkStandardDataTable();
+		$this->postDataTableLoadedFromAPI();
 		
 		$graphLimit = $this->getGraphLimit();
 		if(!empty($graphLimit))

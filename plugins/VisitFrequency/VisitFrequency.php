@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitFrequency.php 5421 2011-11-09 18:07:25Z EZdesign $
+ * @version $Id: VisitFrequency.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitFrequency
@@ -39,6 +39,9 @@ class Piwik_VisitFrequency extends Piwik_Plugin
 		return $hooks;
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
@@ -75,7 +78,11 @@ class Piwik_VisitFrequency extends Piwik_Plugin
 	{
 		Piwik_AddMenu('General_Visitors', 'VisitFrequency_SubmenuFrequency', array('module' => 'VisitFrequency', 'action' => 'index'));
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archivePeriod( $notification )
 	{
 		$archiveProcessing = $notification->getNotificationObject();
@@ -92,7 +99,11 @@ class Piwik_VisitFrequency extends Piwik_Plugin
 		$archiveProcessing->archiveNumericValuesSum($numericToSum);
 		$archiveProcessing->archiveNumericValuesMax('max_actions_returning');
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archiveDay($notification)
 	{
 		/* @var $archiveProcessing Piwik_ArchiveProcessing */

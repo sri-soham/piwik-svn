@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: RowEvolution.php 6198 2012-04-11 23:46:24Z matt $
+ * @version $Id: RowEvolution.php 6421 2012-05-31 10:54:39Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -62,12 +62,13 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 	
 	/** Whether or not to show all metrics in the evolution graph when to popover opens */
 	protected $initiallyShowAllMetrics = false;
-	
+
 	/**
 	 * The constructor
 	 * Initialize some local variables from the request
-	 * @param int
-	 * @param Piwik_Date ($this->date from controller)
+	 * @param int $idSite
+	 * @param Piwik_Date $date ($this->date from controller)
+	 * @throws Exception
 	 */
 	public function __construct($idSite, $date)
 	{
@@ -166,8 +167,8 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 	protected function extractEvolutionReport($report)
 	{
 		$this->dataTable = $report['reportData'];
-		$this->rowLabel = $report['label'];
-		$this->rowIcon = $report['logo'];
+		$this->rowLabel = Piwik_Common::sanitizeInputValue($report['label']);
+		$this->rowIcon = !empty($report['logo']) ? $report['logo'] : false;
 		$this->availableMetrics = $report['metadata']['metrics'];
 		$this->dimension = $report['metadata']['dimension'];
 	}
@@ -205,8 +206,12 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 		
 		return $view;
 	}
-	
-	/** Prepare metrics toggles with spark lines */
+
+	/**
+	 * Prepare metrics toggles with spark lines
+	 * @param $controller
+	 * @return array
+	 */
 	protected function getMetricsToggles($controller)
 	{
 		$chart = new Piwik_Visualization_Chart_Evolution;
@@ -260,14 +265,18 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 			}
 			
 			$color = $colors[ $i % count($colors) ];
-			
-			$metrics[] = array(
+			$newMetric = array(
 				'label' => $metricData['name'],
 				'color' => $color,
 				'details' => $details,
-				'sparkline' => $this->getSparkline($metric, $controller) 
+				'sparkline' => $this->getSparkline($metric, $controller),
 			);
-			
+			// Multi Rows, each metric can be for a particular row and display an icon
+			if(!empty($metricData['logo']))
+			{
+				$newMetric['logo'] = $metricData['logo'];
+			}
+			$metrics[] = $newMetric;
 			$i++;
 		}
 		

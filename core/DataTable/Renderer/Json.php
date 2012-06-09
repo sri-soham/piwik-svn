@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Json.php 5534 2011-12-07 17:14:39Z vipsoft $
+ * @version $Id: Json.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -19,12 +19,22 @@
  */
 class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 {
+	/**
+	 * Computes the dataTable output and returns the string/binary
+	 *
+	 * @return string
+	 */
 	public function render()
 	{
 		$this->renderHeader();
 		return $this->renderTable($this->table);
 	}
-	
+
+	/**
+	 * Computes the exception output and returns the string/binary
+	 *
+	 * @return string
+	 */
 	function renderException()
 	{
 		$this->renderHeader();
@@ -35,7 +45,13 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 		
 		return $this->jsonpWrap($exceptionMessage);
 	}
-	
+
+	/**
+	 * Computes the output for the given data table
+	 *
+	 * @param Piwik_DataTable  $table
+	 * @return string
+	 */
 	protected function renderTable($table)
 	{
 		$renderer = new Piwik_DataTable_Renderer_Php();
@@ -58,7 +74,11 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 		
 		return $this->jsonpWrap($str);
 	}
-	
+
+	/**
+	 * @param $str
+	 * @return string
+	 */
 	protected function jsonpWrap($str)
 	{		
 		if(($jsonCallback = Piwik_Common::getRequestVar('callback', false)) === false)
@@ -73,7 +93,10 @@ class Piwik_DataTable_Renderer_Json extends Piwik_DataTable_Renderer
 		
 		return $str;
 	}
-	
+
+	/**
+	 * Sends the http header for json file
+	 */
 	protected function renderHeader()
 	{
 		@header('Content-Type: application/json; charset=utf-8');

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PrivacyManager.php 6177 2012-04-07 22:25:10Z capedfuzz $
+ * @version $Id: PrivacyManager.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -43,7 +43,9 @@ class Piwik_PrivacyManager extends Piwik_Plugin
 		'delete_reports_keep_day_reports' => 0,
 		'delete_reports_keep_week_reports' => 0,
 		'delete_reports_keep_month_reports' => 1,
-		'delete_reports_keep_year_reports' => 1
+		'delete_reports_keep_year_reports' => 1,
+		'delete_reports_keep_range_reports' => 0,
+		'delete_reports_keep_segment_reports' => 0,
 	);
 	
     public function getInformation()
@@ -65,17 +67,28 @@ class Piwik_PrivacyManager extends Piwik_Plugin
         );
     }
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getScheduledTasks($notification)
 	{
 		$tasks = &$notification->getNotificationObject();
 		
-		$purgeLogDataTask = new Piwik_ScheduledTask($this, 'deleteLogData', new Piwik_ScheduledTime_Daily());
-		$tasks[] = $purgeLogDataTask;
+		// both tasks are low priority so they will execute after most others, but not lowest, so 
+		// they will execute before the optimize tables task
 		
-		$purgeReportDataTask = new Piwik_ScheduledTask($this, 'deleteReportData', new Piwik_ScheduledTime_Daily());
+		$purgeReportDataTask = new Piwik_ScheduledTask(
+			$this, 'deleteReportData', new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY);
 		$tasks[] = $purgeReportDataTask;
+		
+		$purgeLogDataTask = new Piwik_ScheduledTask(
+			$this, 'deleteLogData', new Piwik_ScheduledTime_Daily(), Piwik_ScheduledTask::LOW_PRIORITY);
+		$tasks[] = $purgeLogDataTask;
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
     function getJsFiles($notification)
     {
         $jsFiles = &$notification->getNotificationObject();
@@ -291,6 +304,7 @@ class Piwik_PrivacyManager extends Piwik_Plugin
 	 * @param int|Piwik_Date $reportsOlderThan If an int, the number of months a report must be older than
 	 *                                         in order to be purged. If a date, the date a report must be
 	 *                                         older than in order to be purged.
+	 * @return bool
 	 */
 	public static function shouldReportBePurged( $reportDateYear, $reportDateMonth, $reportsOlderThan = null )
 	{

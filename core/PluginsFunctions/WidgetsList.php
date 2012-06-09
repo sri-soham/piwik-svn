@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: WidgetsList.php 5525 2011-12-03 21:59:44Z vipsoft $
+ * @version $Id: WidgetsList.php 6347 2012-05-28 09:40:32Z matt $
  * 
  * @category Piwik
  * @package PluginsFunctions
@@ -15,22 +15,58 @@
  */
 class Piwik_WidgetsList
 {
+	/**
+	 * List of widgets
+	 *
+	 * @var array
+	 */
 	static protected $widgets = null;
+
+	/**
+	 * Indicated whether the hook was posted or not
+	 *
+	 * @var bool
+	 */
 	static protected $hookCalled = false;
 	
-	static function get()
+	/**
+	 * Returns all available widgets
+	 * The event WidgetsList.add is used to create the list
+	 *
+	 * @return array
+	 */
+	static public function get()
 	{
 		if(!self::$hookCalled)
 		{
 			self::$hookCalled = true;
 			Piwik_PostEvent('WidgetsList.add');
 		}
-		return self::$widgets;
+		uksort(self::$widgets, 'Piwik_sortWidgetCategories');
+		
+		$widgets = array();
+		foreach(self::$widgets as $key => $v) 
+		{
+			if(isset($widgets[Piwik_Translate($key)])) {
+				$v = array_merge($widgets[Piwik_Translate($key)], $v);
+			}
+			$widgets[Piwik_Translate($key)] = $v;
+		}
+		return $widgets;
 	}
 	
-	static function add($widgetCategory, $widgetName, $controllerName, $controllerAction, $customParameters)
+	/**
+	 * Adds an widget to the list
+	 *
+	 * @param string  $widgetCategory
+	 * @param string  $widgetName
+	 * @param string  $controllerName
+	 * @param string  $controllerAction
+	 * @param array   $customParameters
+	 */
+	static public function add($widgetCategory, $widgetName, $controllerName, $controllerAction, $customParameters)
 	{
-		$widgetCategory = Piwik_Translate($widgetCategory);
+		$widgetCategory = $widgetCategory;
 		$widgetName = Piwik_Translate($widgetName);
 		$widgetUniqueId = 'widget' . $controllerName . $controllerAction;
 		foreach($customParameters as $name => $value)
@@ -52,7 +88,14 @@ class Piwik_WidgetsList
 									);
 	}
 	
-	static function isDefined($controllerName, $controllerAction)
+	/**
+	 * Checks if the widget with the given parameters exists in der widget list
+	 *
+	 * @param string  $controllerName
+	 * @param string  $controllerAction
+	 * @return bool
+	 */
+	static public function isDefined($controllerName, $controllerAction)
 	{
 		$widgetsList = self::get();
 		foreach($widgetsList as $widgetCategory => $widgets) 
@@ -70,16 +113,75 @@ class Piwik_WidgetsList
 	}
 }
 
+/*
+ * @private
+ */
+function Piwik_sortWidgetCategories($a, $b)
+{
+	$order = array(
+		'VisitsSummary_VisitsSummary',
+		'Live!',
+		'General_Visitors',
+		'UserSettings_VisitorSettings',
+		'Actions_Actions',
+		'Referers_Referers',
+		'Goals_Goals',
+		'Goals_Ecommerce',
+		'_others_',
+		'Example Widgets',
+		'ExamplePlugin_exampleWidgets',
+	);
+	
+	if(($oa = array_search($a, $order)) === false) {
+		$oa = array_search('_others_', $order);
+	}
+	if(($ob = array_search($b, $order)) === false) {
+		$ob = array_search('_others_', $order);
+	}
+//	var_dump($a);
+//	var_dump($b);
+	return $oa > $ob; 
+}
+
+
+
+/**
+ * Returns all available widgets
+ *
+ * @see Piwik_WidgetsList::get
+ *
+ * @return array
+ */
 function Piwik_GetWidgetsList()
 {
 	return Piwik_WidgetsList::get();
 }
 
+/**
+ * Adds an widget to the list
+ *
+ * @see Piwik_WidgetsList::add
+ *
+ * @param string  $widgetCategory
+ * @param string  $widgetName
+ * @param string  $controllerName
+ * @param string  $controllerAction
+ * @param array   $customParameters
+ */
 function Piwik_AddWidget( $widgetCategory, $widgetName, $controllerName, $controllerAction, $customParameters = array())
 {
 	Piwik_WidgetsList::add($widgetCategory, $widgetName, $controllerName, $controllerAction, $customParameters);
 }
 
+/**
+ * Checks if the widget with the given parameters exists in der widget list
+ *
+ * @see Piwik_WidgetsList::isDefined
+ *
+ * @param string  $controllerName
+ * @param string  $controllerAction
+ * @return bool
+ */
 function Piwik_IsWidgetDefined($controllerName, $controllerAction)
 {
 	return Piwik_WidgetsList::isDefined($controllerName, $controllerAction);

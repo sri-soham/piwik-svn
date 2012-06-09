@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ArchiveProcessing.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: ArchiveProcessing.php 6442 2012-06-01 14:52:28Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -53,7 +53,13 @@ abstract class Piwik_ArchiveProcessing
 	 * @var int
 	 */
 	const DONE_OK_TEMPORARY = 3;
-
+	
+	/**
+	 * A row is created to lock an idarchive for the current archive being processed
+	 * @var string
+	 */
+	const PREFIX_SQL_LOCK = "locked_";
+	
 	/**
 	 * Idarchive in the DB for the requested archive
 	 *
@@ -212,12 +218,13 @@ abstract class Piwik_ArchiveProcessing
 	{
 		$this->time = time();
 	}
-	
+
 	/**
 	 * Returns the Piwik_ArchiveProcessing_Day or Piwik_ArchiveProcessing_Period object
 	 * depending on $name period string
 	 *
 	 * @param string $name day|week|month|year
+	 * @throws Exception
 	 * @return Piwik_ArchiveProcessing Piwik_ArchiveProcessing_Day|Piwik_ArchiveProcessing_Period
 	 */
 	static function factory($name)
@@ -337,7 +344,7 @@ abstract class Piwik_ArchiveProcessing
 	 * Utility function which creates a TablePartitioning instance for the numeric
 	 * archive data of a given period.
 	 * 
-	 * @param $period The time period of the archive data.
+	 * @param Piwik_Period $period The time period of the archive data.
 	 * @return Piwik_TablePartitioning_Monthly
 	 */
 	public static function makeNumericArchiveTable($period)
@@ -351,7 +358,7 @@ abstract class Piwik_ArchiveProcessing
 	 * Utility function which creates a TablePartitioning instance for the blob
 	 * archive data of a given period.
 	 * 
-	 * @param $period The time period of the archive data.
+	 * @param Piwik_Period $period The time period of the archive data.
 	 * @return Piwik_TablePartitioning_Monthly
 	 */
 	public static function makeBlobArchiveTable($period)
@@ -456,7 +463,6 @@ abstract class Piwik_ArchiveProcessing
 	{
 		if (!Piwik::getArchiveProcessingLock($this->idsite, $this->period, $this->segment))
 		{
-			// unable to get lock
 			Piwik::log('Unable to get lock for idSite = ' . $this->idsite
 				. ', period = ' . $this->period->getLabel()
 				. ', UTC datetime [' . $this->startDatetimeUTC . ' -> ' . $this->endDatetimeUTC . ' ]...');
@@ -481,7 +487,7 @@ abstract class Piwik_ArchiveProcessing
 	
 	/**
 	 * Returns the name of the archive field used to tell the status of an archive, (ie,
-	 * whether the archive was created succesfully or not).
+	 * whether the archive was created successfully or not).
 	 * 
 	 * @param bool $flagArchiveAsAllPlugins
 	 * @return string
@@ -491,11 +497,14 @@ abstract class Piwik_ArchiveProcessing
 		return self::getDoneStringFlagFor(
 			$this->getSegment(), $this->period, $this->getRequestedReport(), $flagArchiveAsAllPlugins);
 	}
-	
+
 	/**
 	 * Returns the name of the archive field used to tell the status of an archive, (ie,
-	 * whether the archive was created succesfully or not).
-	 * 
+	 * whether the archive was created successfully or not).
+	 *
+	 * @param Piwik_Segment $segment
+	 * @param Piwik_Period $period
+	 * @param string $requestedReport
 	 * @param bool $flagArchiveAsAllPlugins
 	 * @return string
 	 */
@@ -551,7 +560,7 @@ abstract class Piwik_ArchiveProcessing
 		// delete the first done = ERROR 
 		$done = $this->getDoneStringFlag();
 		Piwik_Query("DELETE FROM ".$this->tableArchiveNumeric->getTableName()." 
-					WHERE idarchive = ? AND name = '".$done."'",
+					WHERE idarchive = ? AND (name = '".$done."' OR name LIKE '".self::PREFIX_SQL_LOCK."%')",
 					array($this->idArchive)
 		);
 		
@@ -664,6 +673,7 @@ abstract class Piwik_ArchiveProcessing
 		return $this->nb_visits_converted;
 	}
 	
+	
 	/**
 	 * Returns the idArchive we will use for the current archive
 	 *
@@ -672,14 +682,24 @@ abstract class Piwik_ArchiveProcessing
 	protected function loadNextIdarchive()
 	{
 		$db = Zend_Registry::get('db');
-		$id = $db->fetchOne("SELECT max(idarchive) 
-							FROM ".$this->tableArchiveNumeric->getTableName());
-		if(empty($id))
-		{
-			$id = 0;
-		}
-		$this->idArchive = $id + 1;
-		
+		$table = $this->tableArchiveNumeric->getTableName();
+		$locked = self::PREFIX_SQL_LOCK . Piwik_Common::generateUniqId();
+		$date = date("Y-m-d H:i:s");
+		Piwik_LockTables("$table AS tb1", $table);
+		$db->exec("INSERT INTO $table "
+					." SELECT ifnull(max(idarchive),0)+1, 
+								'".$locked."',
+								".(int)$this->idsite.",
+								'".$date."',
+								'".$date."',
+								0,
+								'".$date."',
+								0 "
+					." FROM $table as tb1");		
+		Piwik_UnlockAllTables();
+        $id = $db->fetchOne("SELECT idarchive FROM $table WHERE name = ? LIMIT 1", $locked);
+
+		$this->idArchive = $id;
 	}
 
 	/**
@@ -694,8 +714,8 @@ abstract class Piwik_ArchiveProcessing
 	
 	/**
 	 * @param string $name
-	 * @param string|array of string $aValues
-	 * @return true 
+	 * @param string|array $values
+	 * @return bool|array
 	 */
 	public function insertBlobRecord($name, $values)
 	{
@@ -791,10 +811,12 @@ abstract class Piwik_ArchiveProcessing
 	{
 		return array('idarchive', 'idsite', 'date1', 'date2', 'period', 'ts_archived', 'name', 'value');
 	}
-	
+
 	/**
 	 * Inserts a record in the right table (either NUMERIC or BLOB)
-	 *
+	 * @param $name
+	 * @param $value
+	 * @return
 	 */
 	protected function insertRecord($name, $value)
 	{
@@ -877,7 +899,7 @@ abstract class Piwik_ArchiveProcessing
 									$sqlSegmentsFindArchiveAllPlugins
 									OR name = 'nb_visits')
 							$timeStampWhere
-						ORDER BY ts_archived DESC";
+						ORDER BY idarchive DESC";
 		$results = Piwik_FetchAll($sqlQuery, $bindSQL );
 		if(empty($results))
 		{
@@ -966,17 +988,25 @@ abstract class Piwik_ArchiveProcessing
 					&& Piwik_Common::isArchivePhpTriggered()))
 					;
 	}
-	
+
 	/**
-	 * Returns true when 
-	 * - there is no segment and period is not range 
+	 * Returns true when
+	 * - there is no segment and period is not range
 	 * - there is a segment that is part of the preprocessed [Segments] list
+	 * @param Piwik_Segment $segment
+	 * @param Piwik_Period $period
+	 * @return bool
 	 */
 	protected function shouldProcessReportsAllPlugins($segment, $period)
 	{
 		return self::shouldProcessReportsAllPluginsFor($segment, $period);
 	}
-	
+
+	/**
+	 * @param Piwik_Segment $segment
+	 * @param Piwik_Period $period
+	 * @return bool
+	 */
 	protected static function shouldProcessReportsAllPluginsFor($segment, $period)
 	{
 		if($segment->isEmpty() && $period->getLabel() != 'range')

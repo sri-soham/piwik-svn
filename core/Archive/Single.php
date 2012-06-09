@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Single.php 5842 2012-02-15 04:11:43Z matt $
+ * @version $Id: Single.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * 
  * @category Piwik
@@ -106,10 +106,11 @@ class Piwik_Archive_Single extends Piwik_Archive
 	{
 		return $this->period->getPrettyString();
 	}
-	
+
 	/**
 	 * Returns the idarchive of this Archive used to index this archive in the DB
 	 *
+	 * @throws Exception
 	 * @return int
 	 */
 	public function getIdArchive()
@@ -159,6 +160,7 @@ class Piwik_Archive_Single extends Piwik_Archive
 	 * Prepares the archive. Gets the idarchive from the ArchiveProcessing.
 	 * 
 	 * This will possibly launch the archiving process if the archive was not available.
+	 * @return bool
 	 */
 	public function prepareArchive()
 	{
@@ -238,16 +240,17 @@ class Piwik_Archive_Single extends Piwik_Archive
 		}
 		return $archiveJustProcessed;
 	}
-	
+
 	/**
-	 * Returns a value from the current archive with the name = $name 
+	 * Returns a value from the current archive with the name = $name
 	 * Method used by getNumeric or getBlob
 	 *
-	 * @param string $name
-	 * @param string $typeValue numeric|blob
-	 * @return mixed|false if no result
+	 * @param string        $name
+	 * @param string        $typeValue     numeric|blob
+	 * @param string|bool   $archivedDate  Value to store date of archive info in. If false, not stored.
+	 * @return mixed|bool  false if no result
 	 */
-	protected function get( $name, $typeValue = 'numeric' )
+	protected function get( $name, $typeValue = 'numeric', &$archivedDate = false )
 	{
 	   	$this->setRequestedReport($name);
 	   	$this->prepareArchive();
@@ -293,12 +296,23 @@ class Piwik_Archive_Single extends Piwik_Archive
 		}
 
 		$db = Zend_Registry::get('db');
-		$value = $db->fetchOne("SELECT value 
+		$row = $db->fetchRow("SELECT value, ts_archived
 								FROM $table
-								WHERE idarchive = ?
-									AND name = ?",	
+								WHERE idarchive = ? AND name = ?",
 								array( $this->idArchive , $name) 
 							);
+
+		$value = $tsArchived = false;
+		if (is_array($row))
+		{
+			$value = $row['value'];
+			$tsArchived = $row['ts_archived'];
+		}
+
+		if ($archivedDate !== false)
+		{
+			$archivedDate = $tsArchived;
+		}
 
 		if($value === false)
 		{
@@ -332,9 +346,9 @@ class Piwik_Archive_Single extends Piwik_Archive
 	 * If $addMetadataSubtableId set to true, it will add for each row a 'metadata' called 'databaseSubtableId' 
 	 *  containing the child ID of the subtable  associated to this row.
 	 *
-	 * @param string $name
-	 * @param Piwik_DataTable $dataTableToLoad
-	 * @param bool $addMetadataSubtableId
+	 * @param string           $name
+	 * @param Piwik_DataTable  $dataTableToLoad
+	 * @param bool             $addMetadataSubtableId
 	 */
 	public function loadSubDataTables($name, Piwik_DataTable $dataTableToLoad, $addMetadataSubtableId = false)
 	{
@@ -362,9 +376,10 @@ class Piwik_Archive_Single extends Piwik_Archive
 		}
 	}
 
-	
+
 	/**
 	 * Free the blob cache memory array
+	 * @param $name
 	 */
 	public function freeBlob( $name )
 	{
@@ -376,11 +391,12 @@ class Piwik_Archive_Single extends Piwik_Archive
 	{
 		return @gzuncompress($data);
 	}
-	
+
 	/**
 	 * Fetches all blob fields name_* at once for the current archive for performance reasons.
-	 * 
-	 * @return false if no visits
+	 *
+	 * @param $name
+	 * @return
 	 */
 	public function preFetchBlob( $name )
 	{
@@ -482,8 +498,8 @@ class Piwik_Archive_Single extends Piwik_Archive
 	 * Returns a DataTable that has the name '$name' from the current Archive.
 	 * If $idSubTable is specified, returns the subDataTable called '$name_$idSubTable'
 	 *
-	 * @param string $name
-	 * @param int $idSubTable optional id SubDataTable
+	 * @param string  $name
+	 * @param int     $idSubTable  optional id SubDataTable
 	 * @return Piwik_DataTable
 	 */
 	public function getDataTable( $name, $idSubTable = null )
@@ -495,13 +511,14 @@ class Piwik_Archive_Single extends Piwik_Archive
 		
 		$this->setRequestedReport($name);
 		
-		$data = $this->get($name, 'blob');
+		$data = $this->get($name, 'blob', $tsArchived);
 		
 		$table = new Piwik_DataTable();
 	
 		if($data !== false)
 		{
 			$table->addRowsFromSerializedArray($data);
+			$table->setMetadata(Piwik_DataTable::ARCHIVED_DATE_METADATA_NAME, $tsArchived);
 		}
 		if($data === false 
 			&& $idSubTable !== null)
@@ -575,8 +592,8 @@ class Piwik_Archive_Single extends Piwik_Archive
 	 * 		$idSubTable = $row->getIdSubDataTable();
 	 * 		$subTable = Piwik_DataTable_Manager::getInstance()->getTable($idSubTable);
 	 *  
-	 * @param string $name
-	 * @param int $idSubTable Optional subDataTable to load instead of loading the parent DataTable
+	 * @param string  $name
+	 * @param int     $idSubTable  Optional subDataTable to load instead of loading the parent DataTable
 	 * @return Piwik_DataTable
 	 */
 	public function getDataTableExpanded($name, $idSubTable = null)

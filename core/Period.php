@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Period.php 4311 2011-04-04 18:49:55Z vipsoft $
+ * @version $Id: Period.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -29,6 +29,10 @@ abstract class Piwik_Period
 	protected $subperiods = array();
 	protected $subperiodsProcessed = false;
 	protected $label = null;
+
+	/**
+	 * @var Piwik_Date
+	 */
 	protected $date = null;
 	static protected $errorAvailablePeriods = 'day, week, month, year, range';
 	
@@ -37,10 +41,11 @@ abstract class Piwik_Period
 		$this->checkInputDate( $date );
 		$this->date = clone $date;
 	}
-	
+
 	/**
 	 * @param string $strPeriod "day", "week", "month", "year"
 	 * @param Piwik_Date $date Piwik_Date object
+	 * @throws Exception
 	 * @return Piwik_Period
 	 */
 	static public function factory($strPeriod, Piwik_Date $date)

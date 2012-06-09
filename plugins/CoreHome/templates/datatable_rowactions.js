@@ -170,11 +170,18 @@ DataTable_RowActions_RowEvolution.prototype.showRowEvolution = function(tr, labe
 		position: ['center', 'center'],
 		resizable: false,
 		autoOpen: true,
+		open: function(event, ui) {
+			$('.ui-widget-overlay').on('click.rowEvolution',function(){
+				$('.rowEvolutionPopover').dialog('close');
+			})
+		},
 		close: function(event, ui) {
 			// reset multi evolution if regular close button has been used
 			if (typeof event.originalEvent != 'undefined') {
 				self.multiEvolutionRows = [];
 			}
+			piwikHelper.abortQueueAjax();
+			$('.ui-widget-overlay').off('click.rowEvolution');
 			box.find('div.jqplot-target').trigger('piwikDestroyPlot');
 			box.dialog('destroy').remove();
 		}
@@ -230,11 +237,17 @@ DataTable_RowActions_RowEvolution.prototype.showRowEvolution = function(tr, labe
 		date: request.data.date,
 		idSite: request.data.idSite,
 		period: request.data.period,
-		label: requestLabel
+		label: requestLabel,
+		segment: request.data.segment,
+		disableLink: 1
 	};
 
 	if (metric) {
 		request.data.column = metric;
+	}
+	var token_auth = broadcast.getValueFromUrl('token_auth');
+	if (token_auth.length && token_auth != 'anonymous') {
+		request.data.token_auth = token_auth;
 	}
 
 	piwikHelper.queueAjaxRequest($.ajax(request));

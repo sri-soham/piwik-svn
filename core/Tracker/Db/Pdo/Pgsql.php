@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Pgsql.php 2968 2010-08-20 15:26:33Z vipsoft $
+ * @version $Id: Pgsql.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -20,6 +20,8 @@ class Piwik_Tracker_Db_Pdo_Pgsql extends Piwik_Tracker_Db_Pdo_Mysql
 {
 	/**
 	 * Builds the DB object
+	 * @param $dbInfo
+	 * @param string $driverName
 	 */
 	public function __construct( $dbInfo, $driverName = 'pgsql') 
 	{

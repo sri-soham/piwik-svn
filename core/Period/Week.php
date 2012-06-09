@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Week.php 5573 2011-12-18 07:43:35Z matt $
+ * @version $Id: Week.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -18,6 +18,11 @@ class Piwik_Period_Week extends Piwik_Period
 {
 	protected $label = 'week';
 
+	/**
+	 * Returns the current period as a localized short string
+	 *
+	 * @return string
+	 */
 	public function getLocalizedShortString()
 	{
 		//"30 Dec - 6 Jan 09"
@@ -29,13 +34,23 @@ class Piwik_Period_Week extends Piwik_Period
 		return $out;
 	}
 
+	/**
+	 * Returns the current period as a localized long string
+	 *
+	 * @return string
+	 */
 	public function getLocalizedLongString()
 	{
 		$shortDateStart = $this->getDateStart()->getLocalized("%day% %longMonth%");
 		$shortDateEnd =  $this->getDateEnd()->getLocalized("%day% %longMonth% %longYear%");
 		return Piwik_Translate('CoreHome_PeriodWeek') . " $shortDateStart - $shortDateEnd";
 	}
-	
+
+	/**
+	 * Returns the current period as a string
+	 *
+	 * @return string
+	 */
 	public function getPrettyString()
 	{
 		$out = Piwik_Translate('General_DateRangeFromTo', 
@@ -44,7 +59,10 @@ class Piwik_Period_Week extends Piwik_Period
         );
 		return $out;
 	}
-	
+
+	/**
+	 * Generates the subperiods - one for each day in the week
+	 */
 	protected function generate()
 	{
 		if($this->subperiodsProcessed)

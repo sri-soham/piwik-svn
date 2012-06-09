@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Visit.php 5998 2012-03-08 02:28:50Z matt $
+ * @version $Id: Visit.php 6403 2012-05-30 10:49:44Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -326,6 +326,11 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	 *
 	 * Tracker.knownVisitorInformation is triggered after saving the new visit data
 	 * Even data is an array with updated information about the visit
+	 * @param $idActionUrl
+	 * @param $idActionName
+	 * @param $actionType
+	 * @param $visitIsConverted
+	 * @throws Piwik_Tracker_Visit_VisitorNotFoundInDatabase
 	 */
 	protected function handleKnownVisit($idActionUrl, $idActionName, $actionType, $visitIsConverted)
 	{
@@ -437,6 +442,10 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	 * 1) Insert the new action
 	 *
 	 * 2) Insert the visit information
+	 * @param $idActionUrl
+	 * @param $idActionName
+	 * @param $actionType
+	 * @param $visitIsConverted
 	 */
 	protected function handleNewVisit($idActionUrl, $idActionName, $actionType, $visitIsConverted)
 	{
@@ -650,6 +659,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	/**
 	 * Returns the current date in the "Y-m-d" PHP format
 	 *
+	 * @param string $format
 	 * @return string
 	 */
 	protected function getCurrentDate( $format = "Y-m-d")
@@ -688,7 +698,9 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 		 * As a result, these sophisticated bots exhibit characteristics of
 		 * browsers (cookies enabled, executing JavaScript, etc).
 		 */
-		if ( strpos($ua, 'Googlebot') !== false					// Googlebot
+		$allowBots = Piwik_Common::getRequestVar('bots', false) != false;
+		if ( !$allowBots
+			&& (strpos($ua, 'Googlebot') !== false					// Googlebot
 				|| strpos($ua, 'Google Web Preview') !== false	// Google Instant
 				|| strpos($ua, 'bingbot') !== false				// Bingbot
 				|| strpos($ua, 'YottaaMonitor') !== false		// Yottaa
@@ -705,7 +717,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 						'207.68.192.0/20',
 						// Chinese bot hammering websites
 						'1.202.218.8' 
-					))) 
+					)))) 
 		{
 			printDebug('Search bot detected, visit excluded');
 			$excluded = true;
@@ -724,6 +736,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 			{
 				printDebug($_SERVER['REQUEST_METHOD'].' parameter '.$parameterForceRecord.' not found in URL, request excluded');
 				$excluded = true;
+				printDebug("'$parameterForceRecord' parameter not found.");
 			}
 		}
 
@@ -739,12 +752,20 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 		if(!$excluded)
 		{
 			$excluded = $this->isIgnoreCookieFound();
+			if($excluded)
+			{
+				printDebug("Ignore cookie found.");
+			}
 		}
 
 		// Checking for excluded IPs
 		if(!$excluded)
 		{
 			$excluded = $this->isVisitorIpExcluded($ip);
+			if($excluded)
+			{
+				printDebug("IP excluded.");
+			}
 		}
 
 		if($excluded)
@@ -824,9 +845,10 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	{
 		return (bool)Piwik_Config::getInstance()->Tracker['use_third_party_id_cookie'];
 	}
-	
+
 	/**
-	 * Is the request for a known VisitorId, based on 1st party, 3rd party (optional) cookies or Tracking API forced Visitor ID 
+	 * Is the request for a known VisitorId, based on 1st party, 3rd party (optional) cookies or Tracking API forced Visitor ID
+	 * @throws Exception
 	 */
 	protected function assignVisitorIdFromRequest()
 	{
@@ -1100,9 +1122,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 			$debug = 'Page level';
 		}
 		
-		$customVar = Piwik_Common::unsanitizeInputValue(Piwik_Common::getRequestVar( $parameter, '', 'string', $request));
-		$customVar = @Piwik_Common::json_decode($customVar, $assoc = true);
-
+		$customVar = Piwik_Common::unsanitizeInputValues(Piwik_Common::getRequestVar($parameter, '', 'json', $request));
 		if(!is_array($customVar))
 		{
 			return array();
@@ -1236,6 +1256,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 
 	/**
 	 * Returns true if the recognizeTheVisitor() method did recognize the visitor
+	 * @return bool
 	 */
 	protected function isVisitorKnown()
 	{
@@ -1262,6 +1283,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	 * Returns an object able to handle the current action
 	 * Plugins can return an override Action that for example, does not record the action in the DB
 	 *
+	 * @throws Exception
 	 * @return Piwik_Tracker_Action child or fake but with same public interface
 	 */
 	protected function newAction()
@@ -1303,6 +1325,22 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 
 	/**
 	 * Returns a 64-bit hash of all the configuration settings
+	 * @param $os
+	 * @param $browserName
+	 * @param $browserVersion
+	 * @param $resolution
+	 * @param $plugin_Flash
+	 * @param $plugin_Java
+	 * @param $plugin_Director
+	 * @param $plugin_Quicktime
+	 * @param $plugin_RealPlayer
+	 * @param $plugin_PDF
+	 * @param $plugin_WindowsMedia
+	 * @param $plugin_Gears
+	 * @param $plugin_Silverlight
+	 * @param $plugin_Cookie
+	 * @param $ip
+	 * @param $browserLang
 	 * @return string
 	 */
 	protected function getConfigHash( $os, $browserName, $browserVersion, $resolution, $plugin_Flash, $plugin_Java, $plugin_Director, $plugin_Quicktime, $plugin_RealPlayer, $plugin_PDF, $plugin_WindowsMedia, $plugin_Gears, $plugin_Silverlight, $plugin_Cookie, $ip, $browserLang)
@@ -1315,6 +1353,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	 * Returns either
 	 * - "-1" for a known visitor
 	 * - at least 16 char identifier in hex @see Piwik_Common::generateUniqId()
+	 * @return int|string
 	 */
 	protected function getVisitorUniqueId()
 	{
@@ -1369,28 +1408,31 @@ class Piwik_Tracker_Visit_Referer
 	/**
 	 * Returns an array containing the following information:
 	 * - referer_type
-	 *		- direct			-- absence of referer URL OR referer URL has the same host
-	 *		- site				-- based on the referer URL
-	 *		- search_engine		-- based on the referer URL
-	 *		- campaign			-- based on campaign URL parameter
+	 *        - direct            -- absence of referer URL OR referer URL has the same host
+	 *        - site                -- based on the referer URL
+	 *        - search_engine        -- based on the referer URL
+	 *        - campaign            -- based on campaign URL parameter
 	 *
 	 * - referer_name
-	 * 		- ()
-	 * 		- piwik.net			-- site host name
-	 * 		- google.fr			-- search engine host name
-	 * 		- adwords-search	-- campaign name
+	 *         - ()
+	 *         - piwik.net            -- site host name
+	 *         - google.fr            -- search engine host name
+	 *         - adwords-search    -- campaign name
 	 *
 	 * - referer_keyword
-	 * 		- ()
-	 * 		- ()
-	 * 		- my keyword
-	 * 		- my paid keyword
-	 * 		- ()
-	 * 		- ()
+	 *         - ()
+	 *         - ()
+	 *         - my keyword
+	 *         - my paid keyword
+	 *         - ()
+	 *         - ()
 	 *
 	 * - referer_url : the same for all the referer types
 	 *
-	 * @param URLs must be URL Encoded
+	 * @param $refererUrl must be URL Encoded
+	 * @param $currentUrl
+	 * @param $idSite
+	 * @return array
 	 */
 	public function getRefererInformation($refererUrl, $currentUrl, $idSite)
 	{

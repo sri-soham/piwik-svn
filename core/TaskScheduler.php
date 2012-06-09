@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: TaskScheduler.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: TaskScheduler.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -29,9 +29,11 @@ class Piwik_TaskScheduler
 	const TIMETABLE_OPTION_STRING = "TaskScheduler.timetable";
 	static private $running = false;
 	
-	/*
+	/**
 	 * runTasks collects tasks defined within piwik plugins, runs them if they are scheduled and reschedules
 	 * the tasks that have been executed.
+	 *
+	 * @return array
 	 */
 	static public function runTasks()
 	{
@@ -55,8 +57,8 @@ class Piwik_TaskScheduler
 		$return = array();
 		
 		// for every priority level, starting with the highest and concluding with the lowest
-		for ($priority = Piwik_ScheduledTask::HIGH_PRIORITY;
-			 $priority != Piwik_ScheduledTask::LOW_PRIORITY;
+		for ($priority = Piwik_ScheduledTask::HIGHEST_PRIORITY;
+			 $priority <= Piwik_ScheduledTask::LOWEST_PRIORITY;
 			 ++$priority)
 		{
 			// Loop through each task

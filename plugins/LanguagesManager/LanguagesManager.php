@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: LanguagesManager.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: LanguagesManager.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_LanguagesManager
@@ -37,7 +37,10 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 			'UsersManager.deleteUser' => 'deleteUserLanguage',
 		);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getCssFiles( $notification )
 	{
 		$cssFiles = &$notification->getNotificationObject();
@@ -45,6 +48,9 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 		$cssFiles[] = "themes/default/styles.css";
 	}	
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getJsFiles( $notification )
 	{
 		$jsFiles = &$notification->getNotificationObject();
@@ -66,7 +72,10 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 		$view->currentLanguageName = self::getLanguageNameForCurrentUser();
 		Piwik_AddTopMenu('LanguageSelector', $view->render(), true, $order = 30, true);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getLanguageToLoad($notification)
 	{
 		$language =& $notification->getNotificationObject();
@@ -80,6 +89,9 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 		}
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function deleteUserLanguage($notification)
 	{
 		$userLogin = $notification->getNotificationObject();
@@ -189,6 +201,7 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 	 * Set the language for the session
 	 *
 	 * @param string $languageCode ISO language code
+	 * @return bool
 	 */
 	static public function setLanguageForSession($languageCode)
 	{

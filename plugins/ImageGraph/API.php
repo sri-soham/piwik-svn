@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 5903 2012-02-25 03:26:41Z matt $
+ * @version $Id: API.php 6447 2012-06-02 23:49:29Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -29,6 +29,8 @@ class Piwik_ImageGraph_API
 	const TRUNCATE_KEY = 'truncate';
 	const WIDTH_KEY = 'width';
 	const HEIGHT_KEY = 'height';
+	const MAX_WIDTH = 1024;
+	const MAX_HEIGHT = 1024; 
 
 	static private $DEFAULT_PARAMETERS = array(
 		Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE => array(
@@ -95,7 +97,7 @@ class Piwik_ImageGraph_API
 	public function get($idSite, $period, $date, $apiModule, $apiAction, $graphType = false,
 						$outputType = Piwik_ImageGraph_API::GRAPH_OUTPUT_INLINE, $column = false, $showMetricTitle = true,
 						$width = false, $height = false, $fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE, $aliasedGraph = true,
-						$colors = false)
+						$idGoal = false, $colors = false)
 	{
 		Piwik::checkUserHasViewAccess($idSite);
 
@@ -121,8 +123,12 @@ class Piwik_ImageGraph_API
 
 		try
 		{
-			//Fetch the metadata for given api-action
-			$metadata = Piwik_API_API::getInstance()->getMetadata($idSite, $apiModule, $apiAction, $apiParameters = array(), $languageLoaded, $period, $date);
+			$apiParameters = array();
+			if(!empty($idGoal)) {
+				$apiParameters = array( 'idGoal' => $idGoal);
+			}
+			// Fetch the metadata for given api-action
+			$metadata = Piwik_API_API::getInstance()->getMetadata($idSite, $apiModule, $apiAction, $apiParameters, $languageLoaded, $period, $date);
 			if(!$metadata)
 			{
 				throw new Exception('Invalid API Module and/or API Action');
@@ -176,15 +182,19 @@ class Piwik_ImageGraph_API
 				}
 			}
 
+			$width = (int)$width;
+			$height = (int)$height;
 			if(empty($width))
 			{
 				$width = self::$DEFAULT_PARAMETERS[$graphType][self::WIDTH_KEY];
 			}
-
 			if(empty($height))
 			{
 				$height = self::$DEFAULT_PARAMETERS[$graphType][self::HEIGHT_KEY];
 			}
+			// Cap width and height to a safe amount
+			$width = min($width, self::MAX_WIDTH);
+			$height = min($height, self::MAX_HEIGHT);
 
 			if($reportHasDimension)
 			{
@@ -253,10 +263,9 @@ class Piwik_ImageGraph_API
 				$apiAction,
 				$segment = false,
 				$apiParameters = false, 
-				$idGoal = false, 
+				$idGoal, 
 				$languageLoaded
 			);
-
 			// prepare abscissa and ordinate series
 			$abscissaSerie = array();
 			$ordinateSerie = array();
@@ -321,7 +330,7 @@ class Piwik_ImageGraph_API
 
 						$hasData = true;
 
-						if($parsedOrdinateValue != 0)
+						if(!empty($parsedOrdinateValue))
 						{
 							$hasNonZeroValue = true;
 						}
@@ -337,7 +346,6 @@ class Piwik_ImageGraph_API
 					$ordinateSerie[] = $parsedOrdinateValue;
 				}
 			}
-
 			if(!$hasData || !$hasNonZeroValue)
 			{
 				throw new Exception(Piwik_Translate('General_NoDataForGraph'));
@@ -377,9 +385,6 @@ class Piwik_ImageGraph_API
 		switch($outputType)
 		{
 			case self::GRAPH_OUTPUT_FILE:
-
-				// adding the idGoal to the filename
-				$idGoal = Piwik_Common::getRequestVar('idGoal', '', 'string');
 				if($idGoal != '')
 				{
 					$idGoal = '_' . $idGoal;
@@ -423,6 +428,8 @@ class Piwik_ImageGraph_API
 			$ordinateValue = ($hour * 3600) + ($min * 60) + $sec;
 		}
 
+		// OK, only numbers from here please (strip out currency sign)
+		$ordinateValue = preg_replace('/[^0-9.]/', '', $ordinateValue);
 		return $ordinateValue;
 	}
 

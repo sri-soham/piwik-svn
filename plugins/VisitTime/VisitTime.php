@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitTime.php 5734 2012-01-31 09:14:09Z matt $
+ * @version $Id: VisitTime.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitTime
@@ -41,6 +41,9 @@ class Piwik_VisitTime extends Piwik_Plugin
 		return $hooks;
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
@@ -78,6 +81,9 @@ class Piwik_VisitTime extends Piwik_Plugin
 		Piwik_AddMenu('General_Visitors', 'VisitTime_SubmenuTimes', array('module' => 'VisitTime', 'action' => 'index'));
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getReportsWithGoalMetrics( $notification )
 	{
 		$dimensions =& $notification->getNotificationObject();
@@ -87,7 +93,10 @@ class Piwik_VisitTime extends Piwik_Plugin
                 			'action' => 'getVisitInformationPerServerTime',
     	);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getSegmentsMetadata($notification)
 	{
 		$segments =& $notification->getNotificationObject();
@@ -109,7 +118,11 @@ class Piwik_VisitTime extends Piwik_Plugin
        			'acceptedValues' => $acceptedValues
        );
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archivePeriod( $notification )
 	{
 		$archiveProcessing = $notification->getNotificationObject();
@@ -122,7 +135,11 @@ class Piwik_VisitTime extends Piwik_Plugin
 		);
 		$archiveProcessing->archiveDataTable($dataTableToSum);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	public function archiveDay( $notification )
 	{
 		$archiveProcessing = $notification->getNotificationObject();

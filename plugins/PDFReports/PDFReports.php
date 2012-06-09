@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PDFReports.php 6113 2012-03-25 20:04:22Z JulienM $
+ * @version $Id: PDFReports.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -48,7 +48,7 @@ class Piwik_PDFReports extends Piwik_Plugin
 	/**
 	 * Delete reports for the website
 	 *
-	 * @param Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	function deleteSiteReport( $notification )
 	{
@@ -62,13 +62,19 @@ class Piwik_PDFReports extends Piwik_Plugin
 			Piwik_PDFReports_API::getInstance()->deleteReport($idReport);
 		}
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getJsFiles( $notification )
 	{
 		$jsFiles = &$notification->getNotificationObject();
 		$jsFiles[] = "plugins/PDFReports/templates/pdf.js";
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getScheduledTasks ( $notification )
 	{
 		// Reports have to be sent when the period ends for all websites
@@ -139,7 +145,10 @@ class Piwik_PDFReports extends Piwik_Plugin
     {
     	Piwik_AddTopMenu( 'PDFReports_EmailReports', array('module' => 'PDFReports', 'action' => 'index'), true, 13);
     }
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
     function deleteUserReport($notification)
 	{
 		$userLogin = $notification->getNotificationObject();

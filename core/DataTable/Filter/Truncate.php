@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Truncate.php 5791 2012-02-09 05:58:45Z matt $
+ * @version $Id: Truncate.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -15,13 +15,22 @@
  * @subpackage Piwik_DataTable
  */
 class Piwik_DataTable_Filter_Truncate extends Piwik_DataTable_Filter
-{	
+{
+	/**
+	 * @param Piwik_DataTable  $table
+	 * @param int              $truncateAfter
+	 */
 	public function __construct( $table, $truncateAfter)
 	{
 		parent::__construct($table);
 		$this->truncateAfter = $truncateAfter;
 	}	
-	
+
+	/**
+	 * Truncates the table after X rows and adds a summary row
+	 *
+	 * @param Piwik_DataTable  $table
+	 */
 	public function filter($table)
 	{
 		$table->filter('AddSummaryRow', array($this->truncateAfter));

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ChartEvolution.php 5457 2011-11-22 10:15:49Z EZdesign $
+ * @version $Id: ChartEvolution.php 6363 2012-05-29 05:50:06Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -63,11 +63,13 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 		}
 		$this->visibleRows = $visibleRows;
 	}
-	
+
 	/**
 	 * This method is called for every row of every table in the DataTable_Array.
 	 * It incrementally builds the row picker configuration and determines whether
 	 * the row is initially visible or not.
+	 * @param string $rowLabel
+	 * @return bool
 	 */
 	protected function handleRowForRowPicker(&$rowLabel)
 	{
@@ -224,7 +226,8 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 				$parameters = array(
 							'idSite' => $idSite,
 							'period' => $period->getLabel(),
-							'date' => $dateInUrl->toString()
+							'date' => $dateInUrl->toString(),
+							'segment' => Piwik_Common::unsanitizeInputValue(Piwik_Common::getRequestVar('segment', false))
 				);
 				$hash = '';
 				if(!empty($queryStringAsHash))
@@ -249,10 +252,13 @@ class Piwik_ViewDataTable_GenerateGraphData_ChartEvolution extends Piwik_ViewDat
 			$this->view->setSelectableRows(array_values($this->rowPickerConfig));
 		}
 	}
-	
+
 	/**
 	 * Derive the series label from the row label and the column name.
 	 * If the row label is set, both the label and the column name are displayed.
+	 * @param string $rowLabel
+	 * @param string $columnName
+	 * @return string
 	 */
 	private function getSeriesLabel($rowLabel, $columnName)
 	{

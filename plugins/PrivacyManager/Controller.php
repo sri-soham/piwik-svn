@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6177 2012-04-07 22:25:10Z capedfuzz $
+ * @version $Id: Controller.php 6376 2012-05-29 11:50:57Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -62,8 +62,8 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		// delete logs settings
 		$settings['delete_logs_enable'] = Piwik_Common::getRequestVar("deleteEnable", 0);
 		$settings['delete_logs_schedule_lowest_interval'] = Piwik_Common::getRequestVar("deleteLowestInterval", 7);
-		$settings['delete_logs_older_than'] = ((int)Piwik_Common::getRequestVar("deleteOlderThan", 180) < 7) ?
-				7 : Piwik_Common::getRequestVar("deleteOlderThan", 180);
+		$settings['delete_logs_older_than'] = ((int)Piwik_Common::getRequestVar("deleteOlderThan", 180) < 1) ?
+				1 : Piwik_Common::getRequestVar("deleteOlderThan", 180);
 		
 		// delete reports settings
 		$settings['delete_reports_enable'] = Piwik_Common::getRequestVar("deleteReportsEnable", 0);
@@ -74,6 +74,8 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		$settings['delete_reports_keep_week_reports'] = Piwik_Common::getRequestVar("deleteReportsKeepWeek", 0);
 		$settings['delete_reports_keep_month_reports'] = Piwik_Common::getRequestVar("deleteReportsKeepMonth", 0);
 		$settings['delete_reports_keep_year_reports'] = Piwik_Common::getRequestVar("deleteReportsKeepYear", 0);
+		$settings['delete_reports_keep_range_reports'] = Piwik_Common::getRequestVar("deleteReportsKeepRange", 0);
+		$settings['delete_reports_keep_segment_reports'] = Piwik_Common::getRequestVar("deleteReportsKeepSegments", 0);
 		
 		$settings['delete_logs_max_rows_per_query'] = Piwik_PrivacyManager::DEFAULT_MAX_ROWS_PER_QUERY;
 		
@@ -95,6 +97,10 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		echo $view->render();
 	}
 
+	private function isDntSupport()
+	{
+		return Piwik_PluginsManager::getInstance()->isPluginActivated('DoNotTrack');
+	}
 	public function privacySettings()
 	{
 		Piwik::checkUserHasSomeAdminAccess();
@@ -107,6 +113,7 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 			$view->deleteData = $this->getDeleteDataInfo();
 			$view->deleteDbStats = $this->getDeleteDBSizeEstimate();
 			$view->anonymizeIP = $this->getAnonymizeIPInfo();
+			$view->dntSupport = $this->isDntSupport();
 		}
 		$view->language = Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
 
@@ -173,7 +180,8 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		$deletedDataSummary = Piwik_PrivacyManager::getPurgeEstimate($settings);
 		
 		// determine the DB size & purged DB size
-		$tableStatuses = Piwik_DBStats_API::getInstance()->getAllTablesStatus();
+		$metadataProvider = new Piwik_DBStats_MySQLMetadataProvider();
+		$tableStatuses = $metadataProvider->getAllTablesStatus();
 		
 		$totalBytes = 0;
 		foreach ($tableStatuses as $status)

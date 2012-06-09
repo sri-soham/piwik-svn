@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5917 2012-02-26 00:26:22Z matt $
+ * @version $Id: Controller.php 6266 2012-05-16 21:22:18Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Widgetize
@@ -65,7 +65,11 @@ class Piwik_Widgetize_Controller extends Piwik_Controller
 		$actionName = Piwik_Common::getRequestVar('actionToWidgetize');
 		$parameters = array ( $fetch = true );
 		$outputDataTable = Piwik_FrontController::getInstance()->fetchDispatch( $controllerName, $actionName, $parameters);
-		$view = Piwik_View::factory('iframe');
+		if($controllerName == 'Dashboard' && $actionName == 'index') {
+			$view = Piwik_View::factory('empty');
+		} else {
+			$view = Piwik_View::factory('iframe');
+		}
 		$this->setGeneralVariablesView($view);
 		$view->setXFrameOptions('allow');
 		$view->content = $outputDataTable;

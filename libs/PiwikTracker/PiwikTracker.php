@@ -11,7 +11,7 @@
  *  - CURL or STREAM extensions (to issue the http request to Piwik)
  *  
  * @license released under BSD License http://www.opensource.org/licenses/bsd-license.php
- * @version $Id: PiwikTracker.php 5978 2012-03-06 05:04:19Z matt $
+ * @version $Id: PiwikTracker.php 6450 2012-06-03 00:14:03Z matt $
  * @link http://piwik.org/docs/tracking-api/
  *
  * @category Piwik
@@ -90,6 +90,9 @@ class PiwikTracker
     		self::$URL = $apiUrl;
     	}
     	$this->visitorId = substr(md5(uniqid(rand(), true)), 0, self::LENGTH_VISITOR_ID);
+    	
+		// Allow debug while blocking the request
+    	$this->requestTimeout = 600;
     }
     
     /**
@@ -258,7 +261,7 @@ class PiwikTracker
      * Records a Goal conversion
      * 
      * @param int $idGoal Id Goal to record a conversion
-     * @param int $revenue Revenue for this conversion
+     * @param float $revenue Revenue for this conversion
      * @return string Response
      */
     public function doTrackGoal($idGoal, $revenue = false)
@@ -484,7 +487,7 @@ class PiwikTracker
     /**
      * @see doTrackGoal()
      * @param int $idGoal Id Goal to record a conversion
-     * @param int $revenue Revenue for this conversion
+     * @param float $revenue Revenue for this conversion
      * @return string URL to piwik.php with all parameters set to track the goal conversion
      */
     public function getUrlTrackGoal($idGoal, $revenue = false)
@@ -705,11 +708,35 @@ class PiwikTracker
     }
     
     /**
+     * Returns the maximum number of seconds the tracker will spend waiting for a response
+     * from Piwik. Defaults to 600 seconds.
+     */
+    public function getRequestTimeout()
+    {
+    	return $this->requestTimeout;
+    }
+	
+	/**
+	 * Sets the maximum number of seconds that the tracker will spend waiting for a response
+	 * from Piwik.
+	 * 
+	 * @param int $timeout
+	 */
+    public function setRequestTimeout( $timeout )
+    {
+    	if (!is_int($timeout) || $timeout < 0)
+    	{
+    		throw new Exception("Invalid value supplied for request timeout: $timeout");
+    	}
+    	
+    	$this->requestTimeout = $timeout;
+    }
+    
+    /**
      * @ignore
      */
     protected function sendRequest($url)
     {
-		$timeout = 600; // Allow debug while blocking the request
 		$response = '';
 
 		if(!$this->cookieSupport)
@@ -723,7 +750,7 @@ class PiwikTracker
 				CURLOPT_URL => $url,
 				CURLOPT_USERAGENT => $this->userAgent,
 				CURLOPT_HEADER => true,
-				CURLOPT_TIMEOUT => $timeout,
+				CURLOPT_TIMEOUT => $this->requestTimeout,
 				CURLOPT_RETURNTRANSFER => true,
 				CURLOPT_HTTPHEADER => array(
 					'Accept-Language: ' . $this->acceptLanguage,
@@ -746,7 +773,7 @@ class PiwikTracker
 					'user_agent' => $this->userAgent,
 					'header' => "Accept-Language: " . $this->acceptLanguage . "\r\n" .
 					            "Cookie: ".$this->requestCookie. "\r\n" ,
-					'timeout' => $timeout, // PHP 5.2.1
+					'timeout' => $this->requestTimeout, // PHP 5.2.1
 				)
 			);
 			$ctx = stream_context_create($stream_options);
@@ -767,6 +794,7 @@ class PiwikTracker
 			{
 				$cookie = $cookie[1];
 			}
+			// XDEBUG is a PHP Debugger 
 			if(strpos($cookie, 'XDEBUG') === false)
 			{
 				$this->requestCookie = $cookie;
@@ -808,7 +836,7 @@ class PiwikTracker
 			'&apiv=' . self::VERSION . 
 	        '&r=' . substr(strval(mt_rand()), 2, 6) .
     	
-    		// PHP DEBUGGING: Optional since debugger can be triggered remotely
+    		// XDEBUG_SESSIONS_START and KEY are related to the PHP Debugger, this can be ignored in other languages
     		(!empty($_GET['XDEBUG_SESSION_START']) ? '&XDEBUG_SESSION_START=' . @$_GET['XDEBUG_SESSION_START'] : '') . 
 	        (!empty($_GET['KEY']) ? '&KEY=' . @$_GET['KEY'] : '') .
     	 

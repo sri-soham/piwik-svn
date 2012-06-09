@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5453 2011-11-18 16:15:25Z EZdesign $
+ * @version $Id: Controller.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Provider
@@ -15,9 +15,11 @@
  * @package Piwik_Provider
  */
 class Piwik_Provider_Controller extends Piwik_Controller 
-{	
+{
 	/**
 	 * Provider
+	 * @param bool $fetch
+	 * @return string|void
 	 */
 	function getProvider($fetch = false)
 	{

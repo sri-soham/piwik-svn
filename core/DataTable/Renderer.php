@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Renderer.php 5534 2011-12-07 17:14:39Z vipsoft $
+ * @version $Id: Renderer.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -57,21 +57,35 @@ abstract class Piwik_DataTable_Renderer
 	 * @var int
 	 */
 	public $idSite = 'all';
-	
+
+
 	public function __construct()
 	{
 	}
-	
+
+	/**
+	 * Sets whether to render subtables or not
+	 *
+	 * @param bool  $enableRenderSubTable
+	 */
 	public function setRenderSubTables($enableRenderSubTable)
 	{
 		$this->renderSubTables = (bool)$enableRenderSubTable;
 	}
 
+	/**
+	 * @param bool  $bool
+	 */
 	public function setHideIdSubDatableFromResponse($bool)
 	{
 		$this->hideIdSubDatatable = (bool)$bool;
 	}
-	
+
+	/**
+	 * Returns whether to render subtables or not
+	 *
+	 * @return bool
+	 */
 	protected function isRenderSubtables()
 	{
 		return $this->renderSubTables;
@@ -82,7 +96,7 @@ abstract class Piwik_DataTable_Renderer
 	 */
 	protected function renderHeader()
 	{
-		@header('Content-Type: text/html; charset=utf-8');
+		@header('Content-Type: text/plain; charset=utf-8');
 	}
 
 	/**
@@ -107,10 +121,12 @@ abstract class Piwik_DataTable_Renderer
 	{
 		return $this->render();
 	}
-	
+
 	/**
 	 * Set the DataTable to be rendered
-	 * @param Piwik_DataTable|Piwik_DataTable_Simple|Piwik_DataTable_Array $table to be rendered
+	 *
+	 * @param Piwik_DataTable|Piwik_DataTable_Simple|Piwik_DataTable_Array  $table  table to be rendered
+	 * @throws Exception
 	 */
 	public function setTable($table)
 	{
@@ -121,10 +137,12 @@ abstract class Piwik_DataTable_Renderer
 		}
 		$this->table = $table;
 	}
-	
+
 	/**
 	 * Set the Exception to be rendered
-	 * @param Exception $exception to be rendered
+	 *
+	 * @param Exception  $exception  to be rendered
+	 * @throws Exception
 	 */
 	public function setException($exception)
 	{
@@ -136,6 +154,9 @@ abstract class Piwik_DataTable_Renderer
 	}
 	
 
+	/**
+	 * @var array
+	 */
 	static protected $availableRenderers = array(   'xml', 
         											'json', 
         											'csv', 
@@ -143,16 +164,22 @@ abstract class Piwik_DataTable_Renderer
         											'html', 
         											'php' 
 	);
-	
+
+	/**
+	 * Returns available renderers
+	 *
+	 * @return array
+	 */
 	static public function getRenderers()
 	{
 		return self::$availableRenderers;
 	}
-	
+
 	/**
 	 * Returns the DataTable associated to the output format $name
-	 * 
-	 * @throws exception If the renderer is unknown
+	 *
+	 * @param string  $name
+	 * @throws Exception If the renderer is unknown
 	 * @return Piwik_DataTable_Renderer
 	 */
 	static public function factory( $name )
@@ -165,7 +192,7 @@ abstract class Piwik_DataTable_Renderer
 			return new $className;			
 		} catch(Exception $e) {
 			$availableRenderers = implode(', ', self::getRenderers());
-			@header('Content-Type: text/html; charset=utf-8');
+			@header('Content-Type: text/plain; charset=utf-8');
 			throw new Exception(Piwik_TranslateException('General_ExceptionInvalidRendererFormat', array($name, $availableRenderers)));
 		}		
 	}
@@ -173,7 +200,7 @@ abstract class Piwik_DataTable_Renderer
 	/**
 	 * Returns $rawData after all applicable characters have been converted to HTML entities.
 	 * 
-	 * @param String $rawData to be converted
+	 * @param String  $rawData  data to be converted
 	 * @return String
 	 */
 	static protected function renderHtmlEntities( $rawData )
@@ -181,6 +208,12 @@ abstract class Piwik_DataTable_Renderer
 		return self::formatValueXml($rawData);
 	}
 
+	/**
+	 * Format a value to xml
+	 *
+	 * @param string|number|bool  $value  value to format
+	 * @return int|string
+	 */
 	public static function formatValueXml($value)
 	{
 		if(is_string($value)
@@ -198,10 +231,13 @@ abstract class Piwik_DataTable_Renderer
 		}
 		return $value;
 	}
-	
+
 	/**
 	 * Translate column names to the current language.
 	 * Used in subclasses.
+	 *
+	 * @param array  $names
+	 * @return array
 	 */
 	protected function translateColumnNames($names)
 	{
@@ -243,7 +279,10 @@ abstract class Piwik_DataTable_Renderer
 		
 		return $names;
 	}
-	
+
+	/**
+	 * @return array|null
+	 */
 	protected function getApiMetaData()
 	{
 		if ($this->apiMetaData === null)
@@ -267,24 +306,45 @@ abstract class Piwik_DataTable_Renderer
 		
 		return $this->apiMetaData;
 	}
-	
+
+	/**
+	 * Translates the given column name
+	 *
+	 * @param string  $column
+	 * @return mixed
+	 */
 	protected function translateColumnName($column)
 	{
 		$columns = array($column);
 		$columns = $this->translateColumnNames($columns);
 		return $columns[0];
 	}
-	
+
+	/**
+	 * Enables column translating
+	 *
+	 * @param bool  $bool
+	 */
 	public function setTranslateColumnNames($bool)
 	{
 		$this->translateColumnNames = $bool;
 	}
-	
+
+	/**
+	 * Sets the api method
+	 *
+	 * @param $method
+	 */
 	public function setApiMethod($method)
 	{
 		$this->apiMethod = $method;
 	}
-	
+
+	/**
+	 * Sets the site id
+	 *
+	 * @param int  $idSite
+	 */
 	public function setIdSite($idSite)
 	{
 		$this->idSite = $idSite;

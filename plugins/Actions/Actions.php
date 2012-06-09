@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Actions.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Actions.php 6363 2012-05-29 05:50:06Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Actions
@@ -24,7 +24,6 @@ class Piwik_Actions extends Piwik_Plugin
 	static protected $defaultActionName = null;
 	static protected $defaultActionNameWhenNotDefined = null;
 	static protected $defaultActionUrlWhenNotDefined = null;
-	static protected $limitLevelSubCategory = 10; // must be less than Piwik_DataTable::MAXIMUM_DEPTH_LEVEL_ALLOWED
 	protected $maximumRowsInDataTableLevelZero;
 	protected $maximumRowsInSubDataTable;
 	protected $columnToSortByBeforeTruncation;
@@ -40,7 +39,7 @@ class Piwik_Actions extends Piwik_Plugin
 		return $info;
 	}
 	
-	function getListHooksRegistered()
+	public function getListHooksRegistered()
 	{
 		$hooks = array(
 			'ArchiveProcessing_Day.compute' => 'archiveDay',
@@ -52,7 +51,10 @@ class Piwik_Actions extends Piwik_Plugin
 		);
 		return $hooks;
 	}
-	    
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getSegmentsMetadata($notification)
 	{
 		$segments =& $notification->getNotificationObject();
@@ -111,15 +113,20 @@ class Piwik_Actions extends Piwik_Plugin
         	'sqlFilter' => $sqlFilter,
         );
 	}
-    
-    /**
-     * Convert segment expression to an action ID or an SQL expression.
-     * 
-     * This method is used as a sqlFilter-callback for the segments of this plugin.
-     * Usually, these callbacks only return a value that should be compared to the
-     * column in the database. In this case, that doesn't work since multiple IDs
-     * can match an expression (e.g. "pageUrl=@foo").
-     */
+
+	/**
+	 * Convert segment expression to an action ID or an SQL expression.
+	 *
+	 * This method is used as a sqlFilter-callback for the segments of this plugin.
+	 * Usually, these callbacks only return a value that should be compared to the
+	 * column in the database. In this case, that doesn't work since multiple IDs
+	 * can match an expression (e.g. "pageUrl=@foo").
+	 * @param string $string
+	 * @param string $sqlField
+	 * @param string $matchType
+	 * @throws Exception
+	 * @return array|int|string
+	 */
 	function getIdActionFromSegment($string, $sqlField, $matchType='==')
 	{
 		// Field is visit_*_idaction_url or visit_*_idaction_name
@@ -167,7 +174,12 @@ class Piwik_Actions extends Piwik_Plugin
         	'bind' => $string
         );
 	}
-	
+
+	/**
+	 * Returns metadata for available reports
+	 *
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
@@ -289,11 +301,57 @@ class Piwik_Actions extends Piwik_Plugin
 			
 		);
 		
+		// entry page titles report
+		$reports[] = array(
+			'category' => Piwik_Translate('Actions_Actions'),
+			'name' => Piwik_Translate('Actions_EntryPageTitles'),
+			'module' => 'Actions',
+			'action' => 'getEntryPageTitles',
+			'dimension' => Piwik_Translate('Actions_ColumnPageName'),
+			'metrics' => array(
+				'entry_nb_visits' => Piwik_Translate('General_ColumnEntrances'),
+				'entry_bounce_count' => Piwik_Translate('General_ColumnBounces'),
+				'bounce_rate' => Piwik_Translate('General_ColumnBounceRate'),
+			),
+			'metricsDocumentation' => array(
+				'entry_nb_visits' => Piwik_Translate('General_ColumnEntrancesDocumentation'),
+				'entry_bounce_count' => Piwik_Translate('General_ColumnBouncesDocumentation'),
+				'bounce_rate' => Piwik_Translate('General_ColumnBounceRateForPageDocumentation')
+			),
+			'documentation' => Piwik_Translate('Actions_ExitPageTitlesReportDocumentation', '<br />')
+					.' '.Piwik_Translate('General_UsePlusMinusIconsDocumentation'),
+			'processedMetrics' => false,
+			'order' => 6
+		);
+		
+		// exit page titles report
+		$reports[] = array(
+			'category' => Piwik_Translate('Actions_Actions'),
+			'name' => Piwik_Translate('Actions_ExitPageTitles'),
+			'module' => 'Actions',
+			'action' => 'getExitPageTitles',
+			'dimension' => Piwik_Translate('Actions_ColumnPageName'),
+			'metrics' => array(
+				'exit_nb_visits' => Piwik_Translate('General_ColumnExits'),
+				'nb_visits' => Piwik_Translate('General_ColumnUniquePageviews'),
+				'exit_rate' => Piwik_Translate('General_ColumnExitRate')
+			),
+			'metricsDocumentation' => array(
+				'exit_nb_visits' => Piwik_Translate('General_ColumnExitsDocumentation'),
+				'nb_visits' => Piwik_Translate('General_ColumnUniquePageviewsDocumentation'),
+				'exit_rate' => Piwik_Translate('General_ColumnExitRateDocumentation')
+			),
+			'documentation' => Piwik_Translate('Actions_EntryPageTitlesReportDocumentation', '<br />')
+					.' '.Piwik_Translate('General_UsePlusMinusIconsDocumentation'),
+			'processedMetrics' => false,
+			'order' => 7
+		);
+    	
 		$documentation = array(
 			'nb_visits' => Piwik_Translate('Actions_ColumnUniqueClicksDocumentation'),
 			'nb_hits' => Piwik_Translate('Actions_ColumnClicksDocumentation')
 		);
-    	
+		
 		// outlinks report
 		$reports[] = array(
 			'category' => Piwik_Translate('Actions_Actions'),
@@ -310,7 +368,7 @@ class Piwik_Actions extends Piwik_Plugin
 					.Piwik_Translate('Actions_OutlinkDocumentation').'<br />'
 					.Piwik_Translate('General_UsePlusMinusIconsDocumentation'),
 			'processedMetrics' => false,
-			'order' => 6,
+			'order' => 8,
 		);
 		
 		// downloads report
@@ -327,18 +385,20 @@ class Piwik_Actions extends Piwik_Plugin
 			'metricsDocumentation' => $documentation,
 			'documentation' => Piwik_Translate('Actions_DownloadsReportDocumentation', '<br />'),
 			'processedMetrics' => false,
-			'order' => 7,
+			'order' => 9,
 		);
 	}
 	
 	function addWidgets()
 	{
-		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPagesEntry', 'Actions', 'getEntryPageUrls');
-		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPagesExit', 'Actions', 'getExitPageUrls');
 		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPages', 'Actions', 'getPageUrls');
 		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPageTitles', 'Actions', 'getPageTitles');
 		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuOutlinks', 'Actions', 'getOutlinks');
 		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuDownloads', 'Actions', 'getDownloads');
+		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPagesEntry', 'Actions', 'getEntryPageUrls');
+		Piwik_AddWidget( 'Actions_Actions', 'Actions_SubmenuPagesExit', 'Actions', 'getExitPageUrls');
+		Piwik_AddWidget( 'Actions_Actions', 'Actions_EntryPageTitles', 'Actions', 'getEntryPageTitles' );
+		Piwik_AddWidget( 'Actions_Actions', 'Actions_ExitPageTitles', 'Actions', 'getExitPageTitles' );
 	}
 	
 	function addMenus()
@@ -382,8 +442,15 @@ class Piwik_Actions extends Piwik_Plugin
 		$this->columnToSortByBeforeTruncation = Piwik_Archive::INDEX_NB_VISITS;
 		$this->maximumRowsInDataTableLevelZero = Piwik_Config::getInstance()->General['datatable_archiving_maximum_rows_actions'];
 		$this->maximumRowsInSubDataTable = Piwik_Config::getInstance()->General['datatable_archiving_maximum_rows_subtable_actions'];
+
+		// Piwik_DataTable::MAXIMUM_DEPTH_LEVEL_ALLOWED must be greater than the category level limit
+		Piwik_DataTable::setMaximumDepthLevelAllowedAtLeast(self::getSubCategoryLevelLimit() + 1);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archivePeriod( $notification )
 	{
 		$archiveProcessing = $notification->getNotificationObject();
@@ -412,9 +479,9 @@ class Piwik_Actions extends Piwik_Plugin
 	 * Compute all the actions along with their hierarchies.
 	 *
 	 * For each action we process the "interest statistics" :
-	 * visits, unique visitors, bouce count, sum visit length.
+	 * visits, unique visitors, bounce count, sum visit length.
 	 *
-	 *
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	public function archiveDay( $notification )
 	{
@@ -549,7 +616,17 @@ class Piwik_Actions extends Piwik_Plugin
 		// Record the final datasets
 		$this->archiveDayRecordInDatabase($archiveProcessing);
 	}
-	
+
+	/**
+	 * @param $select
+	 * @param $from
+	 * @param $where
+	 * @param $orderBy
+	 * @param $groupBy
+	 * @param $sprintfField
+	 * @param Piwik_ArchiveProcessing $archiveProcessing
+	 * @return int
+	 */
 	protected function archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy,
 			$sprintfField, $archiveProcessing)
 	{
@@ -694,7 +771,7 @@ class Piwik_Actions extends Piwik_Plugin
 			return array( trim($name) );
 		}
 
-		$split = explode($categoryDelimiter, $name, self::$limitLevelSubCategory);
+		$split = explode($categoryDelimiter, $name, self::getSubCategoryLevelLimit());
 		
 		// trim every category and remove empty categories
 		$split = array_map('trim', $split);
@@ -741,7 +818,12 @@ class Piwik_Actions extends Piwik_Plugin
 	const CACHE_PARSED_INDEX_NAME = 0;
 	const CACHE_PARSED_INDEX_TYPE = 1;
 	static $cacheParsedAction = array();
-	
+
+	/**
+	 * @param Zend_Db_Statement|PDOStatement $query
+	 * @param string|bool $fieldQueried
+	 * @return int
+	 */
 	protected function updateActionsTableWithRowQuery($query, $fieldQueried = false)
 	{
 		$rowsProcessed = 0;
@@ -880,6 +962,16 @@ class Piwik_Actions extends Piwik_Plugin
 			}
 		}
 		return $currentTable;
+	}
+	
+	/**
+	 * Returns the configured sub-category level limit.
+	 * 
+	 * @return int
+	 */
+	public static function getSubCategoryLevelLimit()
+	{
+		return Piwik_Config::getInstance()->General['action_category_level_limit'];
 	}
 }
 

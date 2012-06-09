@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DocumentationGenerator.php 6181 2012-04-10 09:26:12Z EZdesign $
+ * @version $Id: DocumentationGenerator.php 6412 2012-05-31 03:24:39Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -35,16 +35,21 @@ class Piwik_API_DocumentationGenerator
 			}
 		}
 	}
-	
+
 	/**
 	 * Returns a HTML page containing help for all the successfully loaded APIs.
-	 *  For each module it will return a mini help with the method names, parameters to give, 
+	 *  For each module it will return a mini help with the method names, parameters to give,
 	 * links to get the result in Xml/Csv/etc
 	 *
+	 * @param bool    $outputExampleUrls
+	 * @param string  $prefixUrls
 	 * @return string
 	 */
 	public function getAllInterfaceString( $outputExampleUrls = true, $prefixUrls = '' )
 	{
+		if(!empty($prefixUrls)) {
+			$prefixUrls = 'http://demo.piwik.org/';
+		}
 		$str = $toc = '';
 		$token_auth = "&token_auth=" . Piwik::getCurrentUserTokenAuth();
 		$parametersToSet = array(
@@ -113,14 +118,15 @@ class Piwik_API_DocumentationGenerator
 				$str";
 		return $str;
 	}
-	
+
 	/**
 	 * Returns a string containing links to examples on how to call a given method on a given API
 	 * It will export links to XML, CSV, HTML, JSON, PHP, etc.
-	 * It will not export links for methods such as deleteSite or deleteUser 
+	 * It will not export links for methods such as deleteSite or deleteUser
 	 *
-	 * @param string the class 
-	 * @param methodName the method
+	 * @param string  $class            the class
+	 * @param string  $methodName       the method
+	 * @param array   $parametersToSet  parameters to set
 	 * @return string|false when not possible
 	 */
 	public function getExampleUrl($class, $methodName, $parametersToSet = array())
@@ -210,9 +216,9 @@ class Piwik_API_DocumentationGenerator
 	/**
 	 * Returns the methods $class.$name parameters (and default value if provided) as a string.
 	 * 
-	 * @param string The class name
-	 * @param string The method name
-	 * @return string For example "(idSite, period, date = 'today')"
+	 * @param string  $class  The class name
+	 * @param string  $name   The method name
+	 * @return string  For example "(idSite, period, date = 'today')"
 	 */
 	public function getParametersString($class, $name)
 	{

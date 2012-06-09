@@ -3,7 +3,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Piwik.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: Piwik.php 6443 2012-06-01 15:37:28Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -25,10 +25,10 @@ class Piwik
 	const CLASSES_PREFIX = 'Piwik_';
 	const COMPRESSED_FILE_LOCATION = '/tmp/assets/';
 
-/*
- * Piwik periods
- */
-
+	/*
+	 * Piwik periods
+	 * @var arrray
+	 */
 	public static $idPeriods =  array(
 			'day'	=> 1,
 			'week'	=> 2,
@@ -42,23 +42,30 @@ class Piwik
 	 * -> Always process for day/week/month periods
 	 * For Year and Range, only process if it was enabled in the config file,
 	 *
-	 * @param string $periodLabel Period label (e.g., 'day')
+	 * @param string  $periodLabel  Period label (e.g., 'day')
 	 * @return bool
 	 */
 	static public function isUniqueVisitorsEnabled($periodLabel)
 	{
-		return in_array($periodLabel, array('day', 'week', 'month'))
-			|| Piwik_Config::getInstance()->General['enable_processing_unique_visitors_year_and_range'];
+		$generalSettings = Piwik_Config::getInstance()->General;
+		
+		$settingName = "enable_processing_unique_visitors_$periodLabel";
+		$result = !empty($generalSettings[$settingName]) && $generalSettings[$settingName] == 1;
+		
+		// check enable_processing_unique_visitors_year_and_range for backwards compatibility
+		if (($periodLabel == 'year' || $periodLabel == 'range')
+			&& isset($generalSettings['enable_processing_unique_visitors_year_and_range']))
+		{
+			$result |= $generalSettings['enable_processing_unique_visitors_year_and_range'] == 1;
+		}
+		
+		return $result;
 	}
-
-/*
- * Prefix/unprefix class name
- */
 	
 	/**
 	 * Prefix class name (if needed)
 	 *
-	 * @param string $class
+	 * @param string  $class
 	 * @return string
 	 */
 	static public function prefixClass( $class )
@@ -73,7 +80,7 @@ class Piwik
 	/**
 	 * Unprefix class name (if needed)
 	 *
-	 * @param string $class
+	 * @param string  $class
 	 * @return string
 	 */
 	static public function unprefixClass( $class )
@@ -85,10 +92,6 @@ class Piwik
 		}
 		return $class;
 	}
-
-/*
- * Installation / Uninstallation
- */
 
 	/**
 	 * Installation helper
@@ -111,7 +114,7 @@ class Piwik
 	 *
 	 * @since 0.6.3
 	 *
-	 * @return bool True if installed; false otherwise
+	 * @return bool  True if installed; false otherwise
 	 */
 	static public function isInstalled()
 	{
@@ -138,6 +141,7 @@ class Piwik
 	 * If not found, then tries to cache it and returns the value.
 	 *
 	 * If the Piwik URL changes (eg. Piwik moved to new server), the value will automatically be refreshed in the cache.
+	 *
 	 * @return string
 	 */
 	static public function getPiwikUrl()
@@ -183,7 +187,7 @@ class Piwik
 	/**
 	 * Set response header, e.g., HTTP/1.0 200 Ok
 	 *
-	 * @param string $status Status
+	 * @param string  $status  Status
 	 * @return bool
 	 */
 	static public function setHttpStatus($status)
@@ -210,7 +214,7 @@ class Piwik
 	 * @see http://support.microsoft.com/kb/316431/
 	 * @see RFC2616
 	 *
-	 * @param string $override One of "public", "private", "no-cache", or "no-store". (optional)
+	 * @param string  $override  One of "public", "private", "no-cache", or "no-store". (optional)
 	 */
 	static public function overrideCacheControlHeaders($override = null)
 	{
@@ -236,9 +240,9 @@ class Piwik
 	/**
 	 * Copy recursively from $source to $target.
 	 *
-	 * @param string $source eg. './tmp/latest'
-	 * @param string $target eg. '.'
-	 * @param bool   $excludePhp
+	 * @param string  $source      eg. './tmp/latest'
+	 * @param string  $target      eg. '.'
+	 * @param bool    $excludePhp
 	 */
 	static public function copyRecursive($source, $target, $excludePhp=false )
 	{
@@ -273,9 +277,10 @@ class Piwik
 	/**
 	 * Copy individual file from $source to $target.
 	 *
-	 * @param string $source eg. './tmp/latest/index.php'
-	 * @param string $target eg. './index.php'
-	 * @param bool   $excludePhp
+	 * @param string  $source      eg. './tmp/latest/index.php'
+	 * @param string  $dest        eg. './index.php'
+	 * @param bool    $excludePhp
+	 * @throws Exception
 	 * @return bool
 	 */
 	static public function copy($source, $dest, $excludePhp=false)
@@ -307,8 +312,8 @@ class Piwik
 	/**
 	 * Returns friendly error message explaining how to fix permissions 
 	 * 
-	 * @param $path to the directory missing permissions
-	 * @return string Error message
+	 * @param string  $path  to the directory missing permissions
+	 * @return string  Error message
 	 */
 	static public function getErrorMessageMissingPermissions($path)
 	{
@@ -334,8 +339,8 @@ class Piwik
 	/**
 	 * Recursively delete a directory
 	 *
-	 * @param string $dir Directory name
-	 * @param boolean $deleteRootToo Delete specified top-level directory as well
+	 * @param string   $dir            Directory name
+	 * @param boolean  $deleteRootToo  Delete specified top-level directory as well
 	 */
 	static public function unlinkRecursive($dir, $deleteRootToo)
 	{
@@ -367,9 +372,9 @@ class Piwik
 	 * Recursively find pathnames that match a pattern
 	 * @see glob()
 	 *
-	 * @param string $sDir directory
-	 * @param string $sPattern pattern
-	 * @param int $nFlags glob() flags
+	 * @param string  $sDir      directory
+	 * @param string  $sPattern  pattern
+	 * @param int     $nFlags    glob() flags
 	 * @return array
 	 */
 	public static function globr($sDir, $sPattern, $nFlags = NULL)
@@ -392,7 +397,7 @@ class Piwik
 	/**
 	 * Returns the help text displayed to suggest which command to run to give writable access to a file or directory
 	 * 
-	 * @param string $realpath
+	 * @param string  $realpath
 	 * @return string
 	 */
 	static private function getMakeWritableCommand($realpath)
@@ -408,7 +413,7 @@ class Piwik
 	 * Checks that the directories Piwik needs write access are actually writable
 	 * Displays a nice error page if permissions are missing on some directories
 	 *
-	 * @param array $directoriesToCheck Array of directory names to check
+	 * @param array  $directoriesToCheck  Array of directory names to check
 	 */
 	static public function checkDirectoriesWritableOrDie( $directoriesToCheck = null )
 	{
@@ -449,8 +454,8 @@ class Piwik
 	/**
 	 * Checks if directories are writable and create them if they do not exist.
 	 *
-	 * @param array $directoriesToCheck array of directories to check - if not given default Piwik directories that needs write permission are checked
-	 * @return array directory name => true|false (is writable)
+	 * @param array  $directoriesToCheck  array of directories to check - if not given default Piwik directories that needs write permission are checked
+	 * @return array  directory name => true|false (is writable)
 	 */
 	static public function checkDirectoriesWritable($directoriesToCheck = null)
 	{
@@ -494,8 +499,9 @@ class Piwik
 
 	/**
 	 * Check if this installation can be auto-updated.
-	 *
 	 * For performance, we look for clues rather than an exhaustive test.
+	 *
+	 * @return bool
 	 */
 	static public function canAutoUpdate()
 	{
@@ -560,10 +566,15 @@ class Piwik
 			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect);
 		}
 
+		// Allow/Deny lives in different modules depending on the Apache version
+		$allow = "<IfModule mod_access.c>\nAllow from all\n</IfModule>\n<IfModule !mod_access_compat>\n<IfModule mod_authz_host.c>\nAllow from all\n</IfModule>\n</IfModule>\n<IfModule mod_access_compat>\nAllow from all\n</IfModule>\n";
+		$deny = "<IfModule mod_access.c>\nDeny from all\n</IfModule>\n<IfModule !mod_access_compat>\n<IfModule mod_authz_host.c>\nDeny from all\n</IfModule>\n</IfModule>\n<IfModule mod_access_compat>\nDeny from all\n</IfModule>\n";
+
 		// more selective allow/deny filters
-		$allowAny = "<Files \"*\">\nAllow from all\nSatisfy any\n</Files>\n";
-		$allowStaticAssets = "<Files ~ \"\\.(test\.php|gif|ico|jpg|png|js|css|swf)$\">\nSatisfy any\nAllow from all\n</Files>\n";
-		$denyDirectPhp = "<Files ~ \"\\.(php|php4|php5|inc|tpl|in)$\">\nDeny from all\n</Files>\n";
+		$allowAny = "<Files \"*\">\n".$allow."Satisfy any\n</Files>\n";
+		$allowStaticAssets = "<Files ~ \"\\.(test\.php|gif|ico|jpg|png|js|css|swf)$\">\n".$allow."Satisfy any\n</Files>\n";
+		$denyDirectPhp = "<Files ~ \"\\.(php|php4|php5|inc|tpl|in)$\">\n".$deny."</Files>\n";
+
 		$directoriesToProtect = array(
 			'/js' => $allowAny,
 			'/libs' => $denyDirectPhp . $allowStaticAssets,
@@ -716,7 +727,7 @@ class Piwik
 	/**
 	 * Test if php output is compressed
 	 *
-	 * @return bool True if php output is (or suspected/likely) to be compressed
+	 * @return bool  True if php output is (or suspected/likely) to be compressed
 	 */
 	static public function isPhpOutputCompressed()
 	{
@@ -763,10 +774,10 @@ class Piwik
 	 * 		A future upgrade of this method would be to recreate the directory structure of the static file
 	 * 		within a /tmp/compressed-static-files directory.
 	 *
-	 * @param string $file The location of the static file to serve
-	 * @param string $contentType The content type of the static file.
-	 * @param bool $expireFarFuture If set to true, will set Expires: header in far future. 
-	 * 							Should be set to false for files that don't have a cache buster (eg. piwik.js)
+	 * @param string  $file             The location of the static file to serve
+	 * @param string  $contentType      The content type of the static file.
+	 * @param bool    $expireFarFuture  If set to true, will set Expires: header in far future.
+	 *                                  Should be set to false for files that don't have a cache buster (eg. piwik.js)
 	 */
 	static public function serveStaticFile($file, $contentType, $expireFarFuture = true)
 	{
@@ -897,10 +908,10 @@ class Piwik
 	/**
 	 * Create CSV (or other delimited) files
 	 *
-	 * @param string $filePath
-	 * @param array $fileSpec File specifications (delimiter, line terminator, etc)
-	 * @param array $rows Array of array corresponding to rows of values
-	 * @throw Exception if unable to create or write to file
+	 * @param string  $filePath  filename to create
+	 * @param array   $fileSpec  File specifications (delimiter, line terminator, etc)
+	 * @param array   $rows      Array of array corresponding to rows of values
+	 * @throws Exception  if unable to create or write to file
 	 */
 	static public function createCSVFile($filePath, $fileSpec, $rows)
 	{
@@ -953,7 +964,7 @@ class Piwik
 	/**
 	 * Set maximum script execution time.
 	 *
-	 * @param int max execution time in seconds (0 = no limit)
+	 * @param int  $executionTime  max execution time in seconds (0 = no limit)
 	 */
 	static public function setMaxExecutionTime($executionTime)
 	{
@@ -969,7 +980,7 @@ class Piwik
 	 * compile-time default, so ini_get('memory_limit') may return false.
 	 *
 	 * @see http://www.php.net/manual/en/faq.using.php#faq.using.shorthandbytes
-	 * @return int|false memory limit in megabytes, or false if there is no limit
+	 * @return int|false  memory limit in megabytes, or false if there is no limit
 	 */
 	static public function getMemoryLimitValue()
 	{
@@ -1001,8 +1012,8 @@ class Piwik
 	 *
 	 * Note: system settings may prevent scripts from overriding the master value
 	 *
-	 * @param int $minimumMemoryLimit
-	 * @return bool true if set; false otherwise
+	 * @param int  $minimumMemoryLimit
+	 * @return bool  true if set; false otherwise
 	 */
 	static public function setMemoryLimit($minimumMemoryLimit)
 	{
@@ -1019,7 +1030,7 @@ class Piwik
 	/**
 	 * Raise PHP memory limit if below the minimum required
 	 *
-	 * @return bool true if set; false otherwise
+	 * @return bool  true if set; false otherwise
 	 */
 	static public function raiseMemoryLimitIfNecessary()
 	{
@@ -1056,7 +1067,7 @@ class Piwik
 	/**
 	 * Log a message
 	 *
-	 * @param string $message
+	 * @param string  $message
 	 */
 	static public function log($message = '')
 	{
@@ -1079,6 +1090,10 @@ class Piwik
 		}
 	}
 
+	/**
+	 * Returns if logging should work
+	 * @return bool
+	 */
 	static public function shouldLoggerLog()
 	{
 		try {
@@ -1097,7 +1112,7 @@ class Piwik
 	/**
 	 * Trigger E_USER_ERROR with optional message
 	 *
-	 * @param string $message
+	 * @param string  $message
 	 */
 	static public function error($message = '')
 	{
@@ -1108,7 +1123,7 @@ class Piwik
 	 * Display the message in a nice red font with a nice icon
 	 * ... and dies
 	 *
-	 * @param string $message
+	 * @param string  $message
 	 */
 	static public function exitWithErrorMessage( $message )
 	{
@@ -1128,7 +1143,7 @@ class Piwik
 	/**
 	 * Get total number of queries
 	 *
-	 * @return int number of queries
+	 * @return int  number of queries
 	 */
 	static public function getQueryCount()
 	{
@@ -1139,7 +1154,7 @@ class Piwik
 	/**
 	 * Get total elapsed time (in seconds)
 	 *
-	 * @return int elapsed time
+	 * @return int  elapsed time
 	 */
 	static public function getDbElapsedSecs()
 	{
@@ -1160,7 +1175,7 @@ class Piwik
 	/**
 	 * Print profiling report for the tracker
 	 *
-	 * @param Piwik_Tracker_Db $db Tracker database object (or null)
+	 * @param Piwik_Tracker_Db  $db  Tracker database object (or null)
 	 */
 	static public function printSqlProfilingReportTracker( $db = null )
 	{
@@ -1199,6 +1214,7 @@ class Piwik
 	/**
 	 * Outputs SQL Profiling reports
 	 * It is automatically called when enabling the SQL profiling in the config file enable_sql_profiler
+	 * @throws Exception
 	 */
 	static function printSqlProfilingReportZend()
 	{
@@ -1256,7 +1272,7 @@ class Piwik
 	/**
 	 * Log a breakdown by query
 	 *
-	 * @param array $infoIndexedByQuery
+	 * @param array  $infoIndexedByQuery
 	 */
 	static private function getSqlProfilingQueryBreakdownOutput( $infoIndexedByQuery )
 	{
@@ -1288,8 +1304,8 @@ class Piwik
 	/**
 	 * Print memory leak
 	 *
-	 * @param string $prefix
-	 * @param string $suffix
+	 * @param string  $prefix
+	 * @param string  $suffix
 	 */
 	static public function printMemoryLeak($prefix = '', $suffix = '<br />')
 	{
@@ -1301,7 +1317,7 @@ class Piwik
 	/**
 	 * Print memory usage
 	 *
-	 * @param string $prefixString
+	 * @return string
 	 */
 	static public function getMemoryUsage()
 	{
@@ -1329,7 +1345,7 @@ class Piwik
 	/**
 	 * Returns a list of currency symbols
 	 *
-	 * @return array array( currencyCode => symbol, ... )
+	 * @return array  array( currencyCode => symbol, ... )
 	 */
 	static public function getCurrencyList()
 	{
@@ -1346,9 +1362,9 @@ class Piwik
 	 * Computes the division of i1 by i2. If either i1 or i2 are not number, or if i2 has a value of zero
 	 * we return 0 to avoid the division by zero.
 	 *
-	 * @param numeric $i1
-	 * @param numeric $i2
-	 * @return numeric The result of the division or zero
+	 * @param number  $i1
+	 * @param number  $i2
+	 * @return number The result of the division or zero
 	 */
 	static public function secureDiv( $i1, $i2 )
 	{
@@ -1362,10 +1378,10 @@ class Piwik
 	/**
 	 * Safely compute a percentage.  Return 0 to avoid division by zero.
 	 *
-	 * @param numeric $dividend
-	 * @param numeric $divisor
-	 * @param int $precision
-	 * @return numeric
+	 * @param number  $dividend
+	 * @param number  $divisor
+	 * @param int     $precision
+	 * @return number
 	 */
 	static public function getPercentageSafe($dividend, $divisor, $precision = 0)
 	{
@@ -1379,7 +1395,7 @@ class Piwik
 	/**
 	 * Get currency symbol for a site
 	 *
-	 * @param int $idSite
+	 * @param int  $idSite
 	 * @return string
 	 */
 	static public function getCurrency($idSite)
@@ -1397,11 +1413,11 @@ class Piwik
 
 	/**
 	 * For the given value, based on the column name, will apply: pretty time, pretty money
-	 * @param int $idSite
-	 * @param string $columnName
-	 * @param mixed $value
-	 * @param bool $htmlAllowed
-	 * @param string $timeAsSentence
+	 * @param int     $idSite
+	 * @param string  $columnName
+	 * @param mixed   $value
+	 * @param bool    $htmlAllowed
+	 * @param string  $timeAsSentence
 	 * @return string
 	 */
 	static public function getPrettyValue($idSite, $columnName, $value, $htmlAllowed, $timeAsSentence)
@@ -1430,8 +1446,9 @@ class Piwik
 	/**
 	 * Pretty format monetary value for a site
 	 *
-	 * @param numeric|string $value
-	 * @param int $idSite
+	 * @param int|string  $value
+	 * @param int         $idSite
+	 * @param bool        $htmlAllowed
 	 * @return string
 	 */
 	static public function getPrettyMoney($value, $idSite, $htmlAllowed = true)
@@ -1447,7 +1464,7 @@ class Piwik
 		$currencyAfter = '';
 		// manually put the currency symbol after the amount for euro
 		// (maybe more currencies prefer this notation?)
-		if(in_array($currencyBefore,array('€')))
+		if(in_array($currencyBefore,array('€', 'kr')))
 		{
 			$currencyAfter = $space.$currencyBefore;
 			$currencyBefore = '';
@@ -1475,20 +1492,22 @@ class Piwik
 	/**
 	 * Pretty format a memory size value
 	 *
-	 * @param numeric $size in bytes
+	 * @param number  $size       size in bytes
+	 * @param string  $unit       The specific unit to use, if any. If null, the unit is determined by $size.
+	 * @param int     $precision  The precision to use when rounding.
 	 * @return string
 	 */
-	static public function getPrettySizeFromBytes($size)
+	static public function getPrettySizeFromBytes( $size, $unit = null, $precision = 1 )
 	{
 		if ($size == 0)
 		{
 			return '0 M';
 		}
 		
-		$bytes = array('','K','M','G','T');
-		foreach($bytes as $val)
+		$units = array('B','K','M','G','T');
+		foreach($units as $currentUnit)
 		{
-			if($size > 1024)
+			if ($size >= 1024 && $unit != $currentUnit)
 			{
 				$size = $size / 1024;
 			}
@@ -1497,14 +1516,15 @@ class Piwik
 				break;
 			}
 		}
-		return round($size, 1)." ".$val;
+		return round($size, $precision)." ".$currentUnit;
 	}
-
+	
 	/**
 	 * Pretty format a time
 	 *
-	 * @param numeric $numberOfSeconds
-	 * @param bool If set to true, will output "5min 17s", if false "00:05:17"
+	 * @param int   $numberOfSeconds
+	 * @param bool  $displayTimeAsSentence  If set to true, will output "5min 17s", if false "00:05:17"
+	 * @param bool  $isHtml
 	 * @return string
 	 */
 	static public function getPrettyTimeFromSeconds($numberOfSeconds, $displayTimeAsSentence = true, $isHtml = true)
@@ -1558,12 +1578,29 @@ class Piwik
 		}
 		return $return;
 	}
+	
+	/**
+	 * Gets a prettified string representation of a number. The result will have
+	 * thousands separators and a decimal point specific to the current locale.
+	 * 
+	 * @param number  $value
+	 * @return string
+	 */
+	static public function getPrettyNumber( $value )
+	{
+		$locale = localeconv();
+		
+		$decimalPoint = $locale['decimal_point'];
+		$thousandsSeparator = $locale['thousands_sep'];
+		
+		return number_format($value, 0, $decimalPoint, $thousandsSeparator);
+	}
 
 	/**
 	 * Returns the Javascript code to be inserted on every page to track
 	 *
-	 * @param int $idSite
-	 * @param string $piwikUrl http://path/to/piwik/directory/
+	 * @param int     $idSite
+	 * @param string  $piwikUrl  http://path/to/piwik/directory/
 	 * @return string
 	 */
 	static public function getJavascriptCode($idSite, $piwikUrl)
@@ -1614,6 +1651,8 @@ class Piwik
 
 	/**
 	 * Segments to pre-process
+	 *
+	 * @return string
 	 */
 	static public function getKnownSegmentsToArchive()
 	{
@@ -1661,7 +1700,7 @@ class Piwik
 	/**
 	 * Get current user login
 	 *
-	 * @return string login ID
+	 * @return string  login ID
 	 */
 	static public function getCurrentUserLogin()
 	{
@@ -1671,7 +1710,7 @@ class Piwik
 	/**
 	 * Get current user's token auth
 	 *
-	 * @return string Token auth
+	 * @return string  Token auth
 	 */
 	static public function getCurrentUserTokenAuth()
 	{
@@ -1682,7 +1721,7 @@ class Piwik
 	 * Returns true if the current user is either the super user, or the user $theUser
 	 * Used when modifying user preference: this usually requires super user or being the user itself.
 	 *
-	 * @param string $theUser
+	 * @param string  $theUser
 	 * @return bool
 	 */
 	static public function isUserIsSuperUserOrTheUser( $theUser )
@@ -1698,8 +1737,8 @@ class Piwik
 	/**
 	 * Check that current user is either the specified user or the superuser
 	 *
-	 * @param string $theUser
-	 * @throws exception if the user is neither the super user nor the user $theUser
+	 * @param string  $theUser
+	 * @throws Piwik_Access_NoAccessException  if the user is neither the super user nor the user $theUser
 	 */
 	static public function checkUserIsSuperUserOrTheUser( $theUser )
 	{
@@ -1732,7 +1771,7 @@ class Piwik
 	/**
 	 * Is user the anonymous user?
 	 *
-	 * @return bool True if anonymouse; false otherwise
+	 * @return bool  True if anonymouse; false otherwise
 	 */
 	static public function isUserIsAnonymous()
 	{
@@ -1742,7 +1781,7 @@ class Piwik
 	/**
 	 * Checks if user is not the anonymous user.
 	 *
-	 * @throws Exception if user is anonymous.
+	 * @throws Piwik_Access_NoAccessException  if user is anonymous.
 	 */
 	static public function checkUserIsNotAnonymous()
 	{
@@ -1756,7 +1795,7 @@ class Piwik
 	 * Helper method user to set the current as Super User.
 	 * This should be used with great care as this gives the user all permissions.
 	 *
-	 * @param bool True to set current user as super user
+	 * @param bool  $bool  true to set current user as super user
 	 */
 	static public function setUserIsSuperUser( $bool = true )
 	{
@@ -1776,7 +1815,7 @@ class Piwik
 	/**
 	 * Returns true if the user has admin access to the sites
 	 *
-	 * @param mixed $idSites
+	 * @param mixed  $idSites
 	 * @return bool
 	 */
 	static public function isUserHasAdminAccess( $idSites )
@@ -1792,7 +1831,7 @@ class Piwik
 	/**
 	 * Check user has admin access to the sites
 	 *
-	 * @param mixed $idSites
+	 * @param mixed  $idSites
 	 * @throws Exception if user doesn't have admin access to the sites
 	 */
 	static public function checkUserHasAdminAccess( $idSites )
@@ -1828,7 +1867,7 @@ class Piwik
 	/**
 	 * Returns true if the user has view access to the sites
 	 *
-	 * @param mixed $idSites
+	 * @param mixed  $idSites
 	 * @return bool
 	 */
 	static public function isUserHasViewAccess( $idSites )
@@ -1844,7 +1883,7 @@ class Piwik
 	/**
 	 * Check user has view access to the sites
 	 *
-	 * @param mixed $idSites
+	 * @param mixed  $idSites
 	 * @throws Exception if user doesn't have view access to sites
 	 */
 	static public function checkUserHasViewAccess( $idSites )
@@ -1929,7 +1968,7 @@ class Piwik
 	 * array[]=value1&array[]=value2 in the URL.
 	 * This function will handle both cases and return the array.
 	 *
-	 * @param array|string $columns String or array
+	 * @param array|string  $columns
 	 * @return array
 	 */
 	static public function getArrayFromApiParameter($columns)
@@ -1945,10 +1984,10 @@ class Piwik
 	/**
 	 * Redirect to module (and action)
 	 *
-	 * @param string $newModule Target module
-	 * @param string $newAction Target action
-	 * @param array $parameters Parameters to modify in the URL
-	 * @return bool false if the URL to redirect to is already this URL
+	 * @param string  $newModule   Target module
+	 * @param string  $newAction   Target action
+	 * @param array   $parameters  Parameters to modify in the URL
+	 * @return bool  false if the URL to redirect to is already this URL
 	 */
 	static public function redirectToModule( $newModule, $newAction = '', $parameters = array() )
 	{
@@ -1965,6 +2004,7 @@ class Piwik
 
 	/**
 	 * Create database object and connect to database
+	 * @param array|null  $dbInfos
 	 */
 	static public function createDatabaseObject( $dbInfos = null )
 	{
@@ -2013,7 +2053,7 @@ class Piwik
 	/**
 	 * Check database connection character set is utf8.
 	 *
-	 * @return bool True if it is (or doesn't matter); false otherwise
+	 * @return bool  True if it is (or doesn't matter); false otherwise
 	 */
 	static public function isDatabaseConnectionUTF8()
 	{
@@ -2026,6 +2066,7 @@ class Piwik
 
 	/**
 	 * Create log object
+	 * @throws Exception
 	 */
 	static public function createLogObject()
 	{
@@ -2114,7 +2155,7 @@ class Piwik
 	/**
 	 * Returns true if the email is a valid email
 	 *
-	 * @param string email
+	 * @param string  $email
 	 * @return bool
 	 */
 	static public function isValidEmailString( $email )
@@ -2126,8 +2167,9 @@ class Piwik
 	 * Returns true if the login is valid.
 	 * Warning: does not check if the login already exists! You must use UsersManager_API->userExists as well.
 	 *
-	 * @param string $login
-	 * @return bool or throws exception
+	 * @param string  $userLogin
+	 * @throws Exception
+	 * @return bool
 	 */
 	static public function checkValidLoginString( $userLogin )
 	{
@@ -2151,7 +2193,7 @@ class Piwik
 	/**
 	 * Should Piwik check that the login & password have minimum length and valid characters?
 	 *
-	 * @return bool True if checks enabled; false otherwise
+	 * @return bool  True if checks enabled; false otherwise
 	 */
 	static public function isChecksEnabled()
 	{
@@ -2183,7 +2225,7 @@ class Piwik
 	 * (e.g., php >= 5.2, or compiled with EXPERIMENTAL_DATE_SUPPORT=1 for
 	 * php < 5.2).
 	 *
-	 * @return bool True if timezones supported; false otherwise
+	 * @return bool  True if timezones supported; false otherwise
 	 */
 	static public function isTimezoneSupportEnabled()
 	{
@@ -2202,7 +2244,7 @@ class Piwik
 	/**
 	 * Is the schema available?
 	 *
-	 * @return bool True if schema is available; false otherwise
+	 * @return bool  True if schema is available; false otherwise
 	 */
 	static public function isAvailable()
 	{
@@ -2212,8 +2254,8 @@ class Piwik
 	/**
 	 * Get the SQL to create a specific Piwik table
 	 *
-	 * @param string $tableName
-	 * @return string SQL
+	 * @param string  $tableName
+	 * @return string  SQL
 	 */
 	static public function getTableCreateSql( $tableName )
 	{
@@ -2223,7 +2265,7 @@ class Piwik
 	/**
 	 * Get the SQL to create Piwik tables
 	 *
-	 * @return array of strings containing SQL
+	 * @return array  array of strings containing SQL
 	 */
 	static public function getTablesCreateSql()
 	{
@@ -2233,7 +2275,7 @@ class Piwik
 	/**
 	 * Create database
 	 *
-	 * @param string $dbName
+	 * @param string|null  $dbName
 	 */
 	static public function createDatabase( $dbName = null )
 	{
@@ -2275,7 +2317,7 @@ class Piwik
 	/**
 	 * Drop specific tables
 	 *
-	 * @param array $doNotDelete Names of tables to not delete
+	 * @param array  $doNotDelete  Names of tables to not delete
 	 */
 	static public function dropTables( $doNotDelete = array() )
 	{
@@ -2286,7 +2328,7 @@ class Piwik
 	 * Names of all the prefixed tables in piwik
 	 * Doesn't use the DB
 	 *
-	 * @return array Table names
+	 * @return array  Table names
 	 */
 	static public function getTablesNames()
 	{
@@ -2296,8 +2338,8 @@ class Piwik
 	/**
 	 * Get list of tables installed
 	 *
-	 * @param bool $forceReload Invalidate cache
-	 * @return array Tables installed
+	 * @param bool  $forceReload  Invalidate cache
+	 * @return array  Tables installed
 	 */
 	static public function getTablesInstalled($forceReload = true)
 	{
@@ -2307,11 +2349,11 @@ class Piwik
 	/**
 	 * Batch insert into table from CSV (or other delimited) file.
 	 *
-	 * @param string $tableName Name of table
-	 * @param array $fields Field names
-	 * @param string $filePath Path name of a file.
-	 * @param array $fileSpec File specifications (delimiter, line terminator, etc)
-	 * @return bool True if successful; false otherwise
+	 * @param string  $tableName  Name of table
+	 * @param array   $fields     Field names
+	 * @param string  $filePath   Path name of a file.
+	 * @param array   $fileSpec   File specifications (delimiter, line terminator, etc)
+	 * @return bool  True if successful; false otherwise
 	 */
 	static public function createTableFromCSVFile($tableName, $fields, $filePath, $fileSpec)
 	{
@@ -2394,10 +2436,11 @@ class Piwik
 	 * Performs a batch insert into a specific table using either LOAD DATA INFILE or plain INSERTs,
 	 * as a fallback. On MySQL, LOAD DATA INFILE is 20x faster than a series of plain INSERTs.
 	 *
-	 * @param string $tableName PREFIXED table name! you must call Piwik_Common::prefixTable() before passing the table name
-	 * @param array $fields array of unquoted field names
-	 * @param array $values array of data to be inserted
-	 * @return bool True if the bulk LOAD was used, false if we fallback to plain INSERTs
+	 * @param string  $tableName  PREFIXED table name! you must call Piwik_Common::prefixTable() before passing the table name
+	 * @param array   $fields     array of unquoted field names
+	 * @param array   $values     array of data to be inserted
+	 * @throws Exception
+	 * @return bool  True if the bulk LOAD was used, false if we fallback to plain INSERTs
 	 */
 	static public function tableInsertBatch($tableName, $fields, $values)
 	{
@@ -2450,10 +2493,10 @@ class Piwik
 	 *
 	 * NOTE: you should use tableInsertBatch() which will fallback to this function if LOAD DATA INFILE not available
 	 *
-	 * @param string $tableName PREFIXED table name! you must call Piwik_Common::prefixTable() before passing the table name
-	 * @param array $fields array of unquoted field names
-	 * @param array $values array of data to be inserted
-	 * @param bool $ignoreWhenDuplicate Ignore new rows that contain unique key values that duplicate old rows
+	 * @param string  $tableName            PREFIXED table name! you must call Piwik_Common::prefixTable() before passing the table name
+	 * @param array   $fields               array of unquoted field names
+	 * @param array   $values               array of data to be inserted
+	 * @param bool    $ignoreWhenDuplicate  Ignore new rows that contain unique key values that duplicate old rows
 	 */
 	static public function tableInsertBatchIterate($tableName, $fields, $values, $ignoreWhenDuplicate = true)
 	{
@@ -2472,8 +2515,9 @@ class Piwik
 	/**
 	 * Generate advisory lock name
 	 *
-	 * @param int $idsite
-	 * @param Piwik_Period $period
+	 * @param int            $idsite
+	 * @param Piwik_Period   $period
+	 * @param Piwik_Segment  $segment
 	 * @return string
 	 */
 	static public function getArchiveProcessingLockName($idsite, $period, Piwik_Segment $segment)
@@ -2494,9 +2538,10 @@ class Piwik
 	/**
 	 * Get an advisory lock
 	 *
-	 * @param int $idsite
-	 * @param Piwik_Period $period
-	 * @return bool True if lock acquired; false otherwise
+	 * @param int            $idsite
+	 * @param Piwik_Period   $period
+	 * @param Piwik_Segment  $segment
+	 * @return bool  True if lock acquired; false otherwise
 	 */
 	static public function getArchiveProcessingLock($idsite, $period, $segment)
 	{
@@ -2526,8 +2571,9 @@ class Piwik
 	/**
 	 * Release an advisory lock
 	 *
-	 * @param int $idsite
-	 * @param Piwik_Period $period
+	 * @param int            $idsite
+	 * @param Piwik_Period   $period
+	 * @param Piwik_Segment  $segment
 	 * @return bool True if lock released; false otherwise
 	 */
 	static public function releaseArchiveProcessingLock($idsite, $period, $segment)

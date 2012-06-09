@@ -1,11 +1,11 @@
 <?php
 /**
- * Copyright 2009, 2010  Matthieu Aubry
+ * Copyright 2009, 2010  Matthieu Aubry & Piwik team
  * All rights reserved.
  *
  * @link http://dev.piwik.org/trac/browser/trunk/libs/UserAgentParser
  * @license http://www.opensource.org/licenses/bsd-license.php BSD License
- * @version $Id: UserAgentParser.php 6141 2012-03-31 14:04:24Z vipsoft $
+ * @version $Id: UserAgentParser.php 6362 2012-05-29 05:17:56Z capedfuzz $
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -312,6 +312,23 @@ class UserAgentParser
 			'BEOS'					=> 'BEO',
 			'Amiga'					=> 'AMI',
 			'AmigaOS'				=> 'AMI',
+		);
+	
+	// os family
+	// NOTE: The keys in this array are used by plugins/UserSettings/functions.php . Any  changes
+	// made here should also be made in that file.
+	static protected $osType = array(
+			'Windows' => array('WI8', 'WI7', 'WVI', 'WS3', 'WXP', 'W2K', 'WNT', 'WME', 'W98', 'W95'),
+			'Linux' => array('LIN'),
+			'Mac' => array('MAC'),
+			'iOS' => array('IPD', 'IPA', 'IPH'),
+			'Android' => array('AND'),
+			'Windows Mobile' => array('WPH', 'WMO', 'WCE'),
+			'Gaming Console' => array('WII', 'PS3'),
+			'Mobile Gaming Console' => array('PSP', 'NDS', 'DSI'),
+			'Unix' => array('SOS', 'AIX', 'HP-UX', 'BSD', 'NBS', 'OBS', 'DFB', 'SYL', 'IRI', 'T64'),
+			'Other Mobile' => array('MAE', 'WOS', 'POS', 'BLB', 'QNX', 'SYM', 'SBA'),
+			'Other' => array('VMS', 'OS2', 'BEOS', 'AMI')
 		);
 
 	static protected $browserIdToName;
@@ -638,5 +655,23 @@ class UserAgentParser
 			return self::$operatingSystemsIdToShortName[$osId];
 		}
 		return false;
+	}
+	
+	static public function getOperatingSystemIdFromName($osName)
+	{
+		return isset(self::$operatingSystems[$osName]) ? self::$operatingSystems[$osName] : false;
+	}
+	
+	static public function getOperatingSystemFamilyFromId($osId)
+	{
+		self::init();
+		foreach (self::$osType as $familyName => $aSystems)
+		{
+			if (in_array($osId, $aSystems))
+			{
+				return $familyName;
+			}
+		}
+		return 'unknown';
 	}
 }

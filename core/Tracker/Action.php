@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Action.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: Action.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -363,15 +363,17 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 	{
 		$this->timestamp = $timestamp;
 	}
-	
-	
+
+
 	/**
 	 * Records in the DB the association between the visit and this action.
-	 * 
-	 * @param int idVisit is the ID of the current visit in the DB table log_visit
-	 * @param int idRefererActionUrl is the ID of the last action done by the current visit. 
-	 * @param int timeSpentRefererAction is the number of seconds since the last action was done. 
-	 * 				It is directly related to idRefererActionUrl.
+	 *
+	 * @param int $idVisit is the ID of the current visit in the DB table log_visit
+	 * @param $visitorIdCookie
+	 * @param int $idRefererActionUrl is the ID of the last action done by the current visit.
+	 * @param $idRefererActionName
+	 * @param int $timeSpentRefererAction is the number of seconds since the last action was done.
+	 *                 It is directly related to idRefererActionUrl.
 	 */
 	 public function record( $idVisit, $visitorIdCookie, $idRefererActionUrl, $idRefererActionName, $timeSpentRefererAction)
 	 {

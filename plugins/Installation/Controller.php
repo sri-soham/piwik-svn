@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6207 2012-04-13 11:24:47Z vipsoft $
+ * @version $Id: Controller.php 6371 2012-05-29 09:13:39Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_Installation
@@ -144,6 +144,7 @@ class Piwik_Installation_Controller extends Piwik_Controller
 
 	/**
 	 * Installation Step 3: Database Set-up
+	 * @throws Exception|Zend_Db_Adapter_Exception
 	 */
 	function databaseSetup()
 	{
@@ -168,59 +169,19 @@ class Piwik_Installation_Controller extends Piwik_Controller
 
 		if($form->validate())
 		{
-			$adapter = $form->getSubmitValue('adapter');
-			$port = Piwik_Db_Adapter::getDefaultPortForAdapter($adapter);
-
-			$dbInfos = array(
-				'host'          => $form->getSubmitValue('host'),
-				'username'      => $form->getSubmitValue('username'),
-				'password'      => $form->getSubmitValue('password'),
-				'dbname'        => $form->getSubmitValue('dbname'),
-				'tables_prefix' => $form->getSubmitValue('tables_prefix'),
-				'adapter'       => $adapter,
-				'port'          => $port,
-			);
-			if(($portIndex = strpos($dbInfos['host'], '/')) !== false)
+			try
 			{
-				// unix_socket=/path/sock.n
-				$dbInfos['port'] = substr($dbInfos['host'], $portIndex);
-				$dbInfos['host'] = '';
-			}
-			else if(($portIndex = strpos($dbInfos['host'], ':')) !== false)
-			{
-				// host:port
-				$dbInfos['port'] = substr($dbInfos['host'], $portIndex + 1 );
-				$dbInfos['host'] = substr($dbInfos['host'], 0, $portIndex);
-			}
-
-			try{
-				try {
-					@Piwik::createDatabaseObject($dbInfos);
-					$this->session->databaseCreated = true;
-				} catch (Zend_Db_Adapter_Exception $e) {
-					$db = Piwik_Db_Adapter::factory($adapter, $dbInfos, $connect = false);
-
-					// database not found, we try to create  it
-					if($db->isErrNo($e, '1049'))
-					{
-						$dbInfosConnectOnly = $dbInfos;
-						$dbInfosConnectOnly['dbname'] = null;
-						@Piwik::createDatabaseObject($dbInfosConnectOnly);
-						@Piwik::createDatabase($dbInfos['dbname']);
-						$this->session->databaseCreated = true;
-					}
-					else
-					{
-						throw $e;
-					}
-				}
-
+				$dbInfos = $form->createDatabaseObject();
+				$this->session->databaseCreated = true;
+				
 				Piwik::checkDatabaseVersion();
 				$this->session->databaseVersionOk = true;
 
 				$this->session->db_infos = $dbInfos;
 				$this->redirectToNextStep( __FUNCTION__ );
-			} catch(Exception $e) {
+			}
+			catch (Exception $e)
+			{
 				$view->errorMessage = Piwik_Common::sanitizeInputValue($e->getMessage());
 			}
 		}
@@ -524,7 +485,7 @@ class Piwik_Installation_Controller extends Piwik_Controller
 
 		if(!file_exists(Piwik_Config::getLocalConfigPath()))
 		{
-			$this->addTrustedHosts();
+//			$this->addTrustedHosts();
 			$this->writeConfigFileFromSession();
 		}
 
@@ -692,10 +653,8 @@ class Piwik_Installation_Controller extends Piwik_Controller
 	 */
 	protected function extractHost($url)
 	{
-		$skipLocalHosts = array('localhost', '127.0.0.1', '[::1]');
-
 		$urlParts = parse_url($url);
-		if (isset($urlParts['host']) && strlen($host = $urlParts['host']) && !in_array($host, $skipLocalHosts))
+		if (isset($urlParts['host']) && strlen($host = $urlParts['host']))
 		{
 			return $host;
 		}
@@ -722,6 +681,7 @@ class Piwik_Installation_Controller extends Piwik_Controller
 			$trustedHosts[] = $host;
 		}
 
+		$trustedHosts = array_unique($trustedHosts);
 		if (count($trustedHosts))
 		{
 			$this->session->general_infos['trusted_hosts'] = $trustedHosts;

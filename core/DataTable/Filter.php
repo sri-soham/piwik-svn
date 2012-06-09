@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Filter.php 4169 2011-03-23 01:59:57Z matt $
+ * @version $Id: Filter.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -26,6 +26,15 @@
  */
 abstract class Piwik_DataTable_Filter
 {
+	/**
+	 * @var bool
+	 */
+	protected $enableRecursive = false;
+
+	/**
+	 * @throws Exception
+	 * @param Piwik_DataTable  $table
+	 */
 	public function __construct($table)
 	{
 		if(!($table instanceof Piwik_DataTable))
@@ -33,16 +42,30 @@ abstract class Piwik_DataTable_Filter
 			throw new Exception("The filter accepts only a Piwik_DataTable object.");
 		}
 	}
-	
+
+	/**
+	 * Filters the given data table
+	 *
+	 * @param Piwik_DataTable  $table
+	 */
 	abstract public function filter($table);
-	
-	protected $enableRecursive = false;
-	
+
+	/**
+	 * Enables/Disables the recursive mode
+	 *
+	 * @param bool  $bool
+	 */
 	public function enableRecursive($bool)
 	{
 		$this->enableRecursive = (bool)$bool;
 	}
-	
+
+	/**
+	 * Filters a subtable
+	 *
+	 * @param Piwik_DataTable_Row  $row
+	 * @return mixed
+	 */
 	public function filterSubTable(Piwik_DataTable_Row $row)
 	{
 		if(!$this->enableRecursive)

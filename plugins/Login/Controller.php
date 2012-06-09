@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6206 2012-04-12 19:00:15Z vipsoft $
+ * @version $Id: Controller.php 6370 2012-05-29 09:08:49Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Login
@@ -106,7 +106,7 @@ class Piwik_Login_Controller extends Piwik_Controller
 	/**
 	 * Form-less login
 	 * @see how to use it on http://piwik.org/faq/how-to/#faq_30
-	 * @param none
+	 * @throws Exception
 	 * @return void
 	 */
 	function logme()
@@ -194,7 +194,9 @@ class Piwik_Login_Controller extends Piwik_Controller
 
 	protected function getMessageExceptionNoAccess()
 	{
-		return Piwik_Translate('Login_InvalidNonceOrHeadersOrReferer', array('<a href="?module=Proxy&action=redirect&url='.urlencode('http://piwik.org/faq/how-to-install/#faq_98').'" target="_blank">', '</a>'));
+		$message = Piwik_Translate('Login_InvalidNonceOrHeadersOrReferer', array('<a href="?module=Proxy&action=redirect&url='.urlencode('http://piwik.org/faq/how-to-install/#faq_98').'" target="_blank">', '</a>'));
+		// Should mention trusted_hosts or link to FAQ
+		return $message;
 	}
 
 	/**
@@ -298,6 +300,7 @@ class Piwik_Login_Controller extends Piwik_Controller
 	 * @param string $loginMail user name or email address
 	 * @param string $token password reset token
 	 * @param string $password new password
+	 * @throws Exception
 	 * @return string failure message
 	 */
 	protected function resetPasswordFormValidated($loginMail, $token, $password)

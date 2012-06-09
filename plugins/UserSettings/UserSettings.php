@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserSettings.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: UserSettings.php 6362 2012-05-29 05:17:56Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
@@ -65,11 +65,11 @@ class Piwik_UserSettings extends Piwik_Plugin
 				'FF, IE, CH, SF, OP, etc.',
 				null,),
 		
-		// Only used as a Segment, not as a widget
-		array( 	false,
-				false,
+		// browser version
+		array( 	'UserSettings_VisitorSettings',
+				'UserSettings_ColumnBrowserVersion',
 				'UserSettings',
-				'getBrowser',
+				'getBrowserVersion',
 				'UserSettings_ColumnBrowserVersion',
 				'browserVersion',
 				'log_visit.config_browser_version',
@@ -125,6 +125,28 @@ class Piwik_UserSettings extends Piwik_Plugin
 				null,
 				null,
 				null),
+		
+		// operating system family
+		array(	'UserSettings_VisitorSettings',
+				'UserSettings_OperatingSystemFamily',
+				'UserSettings',
+				'getOSFamily',
+				'UserSettings_OperatingSystemFamily',
+				null,
+				null,
+				null,
+				null),
+		
+		// device type
+		array(	'UserSettings_VisitorSettings',
+				'UserSettings_MobileVsDesktop',
+				'UserSettings',
+				'getMobileVsDesktop',
+				'UserSettings_MobileVsDesktop',
+				null,
+				null,
+				null,
+				null),
 	);
 	
 	/*
@@ -146,7 +168,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 	/*
 	 * Registers reports metadata
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	public function getReportMetadata($notification)
 	{
@@ -192,7 +214,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 	/**
 	 * Get segments meta data
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 */
 	public function getSegmentsMetadata($notification)
 	{
@@ -240,7 +262,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 	 * by Browser, Browser family, etc. Some reports are built from the logs, some reports
 	 * are superset of an existing report (eg. Browser family is built from the Browser report)
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 * @return void
 	 */
 	function archiveDay( $notification )
@@ -304,7 +326,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 	/**
 	 * Period archiving: simply sums up daily archives
 	 *
-	 * @param Piwik_Event_Notification $notification
+	 * @param Piwik_Event_Notification $notification  notification object
 	 * @return void
 	 */
 	function archivePeriod( $notification )

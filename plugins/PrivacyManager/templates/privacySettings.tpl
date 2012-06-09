@@ -72,7 +72,7 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 
 <a name="deleteLogsAnchor"></a>
 <h2>{'PrivacyManager_DeleteDataSettings'|translate}</h2>
-<p>{'PrivacyManager_DeleteDataDescription'|translate}</p>
+<p>{'PrivacyManager_DeleteDataDescription'|translate} {'PrivacyManager_DeleteDataDescription2'|translate}</p>
 <form method="post" action="{url action=saveSettings form=formDeleteSettings token_auth=$token_auth}" id="formDeleteSettings" name="formMaskLength">
 	<table class="adminTable" style='width:800px;'>
 		<tr id='deleteLogSettingEnabled'>
@@ -104,7 +104,7 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 					<input type="text" id="deleteOlderThan" value="{$deleteData.config.delete_logs_older_than}" style="width:30px;"
 						   name="deleteOlderThan"/>
 					{'CoreHome_PeriodDays'|translate}</label><br/>
-				<span class="form-description">{'PrivacyManager_LeastDaysInput'|translate:"7"}</span>
+				<span class="form-description">{'PrivacyManager_LeastDaysInput'|translate:"1"}</span>
 			</td>
 			<td width="200">
 
@@ -143,11 +143,13 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 				<span class="form-description">{'PrivacyManager_LeastMonthsInput'|translate:"3"}</span><br/><br/>
 				<label><input type="checkbox" name="deleteReportsKeepBasic" value="1" {if $deleteData.config.delete_reports_keep_basic_metrics}checked="true"{/if}>{'PrivacyManager_KeepBasicMetrics'|translate}<span class="form-description">{'General_Recommended'|translate}</span></input>
 				</label><br/><br/>
-				{'PrivacyManager_KeepDataFor'|translate}<br/><br/>
+				{'PrivacyManager_KeepDataFor'|translate}<br/>
 				<label><input type="checkbox" name="deleteReportsKeepDay" value="1" {if $deleteData.config.delete_reports_keep_day_reports}checked="true"{/if}>{'General_DailyReports'|translate}</input></label><br/>
 				<label><input type="checkbox" name="deleteReportsKeepWeek" value="1" {if $deleteData.config.delete_reports_keep_week_reports}checked="true"{/if}>{'General_WeeklyReports'|translate}</input></label><br/>
 				<label><input type="checkbox" name="deleteReportsKeepMonth" value="1" {if $deleteData.config.delete_reports_keep_month_reports}checked="true"{/if}>{'General_MonthlyReports'|translate}<span class="form-description">{'General_Recommended'|translate}</span></input></label><br/>
 				<label><input type="checkbox" name="deleteReportsKeepYear" value="1" {if $deleteData.config.delete_reports_keep_year_reports}checked="true"{/if}>{'General_YearlyReports'|translate}<span class="form-description">{'General_Recommended'|translate}</span></input></label><br/>
+				<label><input type="checkbox" name="deleteReportsKeepRange" value="1" {if $deleteData.config.delete_reports_keep_range_reports}checked="true"{/if}>{'General_RangeReports'|translate}</input></label><br/><br/>
+				<label><input type="checkbox" name="deleteReportsKeepSegments" value="1" {if $deleteData.config.delete_reports_keep_segment_reports}checked="true"{/if}>{'PrivacyManager_KeepReportSegments'|translate}</input></label><br/>
 			</td>
 			<td width="200">
 			
@@ -193,6 +195,34 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 	<input type="button" value="{'General_Save'|translate}" id="deleteLogSettingsSubmit" class="submit"/>
 </form>
 
+
+
+<a name="DNT"></a>
+<h2>{'PrivacyManager_DoNotTrack_SupportDNTPreference'|translate}</h2>
+
+<table class="adminTable" style='width:800px;'>
+	<tr>
+		<td width="650">
+			<p>{if $dntSupport}
+			{assign var=action value=deactivate}
+			<b>{'PrivacyManager_DoNotTrack_Enabled'|translate}</b> <br/>{'PrivacyManager_DoNotTrack_EnabledMoreInfo'|translate}
+			{else}
+			{assign var=action value=activate}
+			{'PrivacyManager_DoNotTrack_Disabled'|translate} {'PrivacyManager_DoNotTrack_DisabledMoreInfo'|translate}
+			{/if}</p>
+			<span style='margin-left:20px'>
+			<a href='{url module=CorePluginsAdmin token_auth=$token_auth action=$action pluginName=DoNotTrack}#DNT'>&rsaquo; 
+			{if $dntSupport}{'PrivacyManager_DoNotTrack_Disable'|translate} {'General_NotRecommended'|translate}
+			{else}{'PrivacyManager_DoNotTrack_Enable'|translate} {'General_Recommended'|translate}{/if} 
+			<br />
+			</a></span>
+		</td>
+		<td width="200">
+			{'PrivacyManager_DoNotTrack_Description'|translate|inlineHelp}
+		</td>
+	</tr>
+</table>
+
 {/if}
 
 <a name="optOutAnchor"></a>
@@ -207,4 +237,5 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 {'CoreAdminHome_OptOutExplanationBis'|translate:"<a href='$optOutUrl' target='_blank'>":"</a>"}
 </p>
 
+<div style='height:100px'></div>
 {include file="CoreAdminHome/templates/footer.tpl"}

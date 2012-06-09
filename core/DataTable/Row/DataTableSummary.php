@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTableSummary.php 2968 2010-08-20 15:26:33Z vipsoft $
+ * @version $Id: DataTableSummary.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -23,6 +23,9 @@
  */
 class Piwik_DataTable_Row_DataTableSummary extends Piwik_DataTable_Row
 {
+	/**
+	 * @param Piwik_DataTable  $subTable
+	 */
 	function __construct($subTable)
 	{
 		parent::__construct();

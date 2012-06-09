@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitsSummary.php 5414 2011-11-08 14:13:00Z EZdesign $
+ * @version $Id: VisitsSummary.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitsSummary
@@ -39,7 +39,10 @@ class Piwik_VisitsSummary extends Piwik_Plugin
 			'Menu.add' => 'addMenu',
 		);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();

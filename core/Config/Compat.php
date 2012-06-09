@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Compat.php 6029 2012-03-10 04:00:05Z vipsoft $
+ * @version $Id: Compat.php 6446 2012-06-02 22:39:48Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -24,12 +24,16 @@
 class Piwik_Config_Compat_Array
 {
 	private $data;
+	/**
+	 * @var Piwik_Config_Compat
+	 */
 	private $parent;
 
 	/**
 	 * Constructor
 	 *
-	 * @param array $data configuration section
+	 * @param Piwik_Config_Compat  $parent
+	 * @param array                $data configuration section
 	 */
 	public function __construct($parent, array $data)
 	{
@@ -40,20 +44,20 @@ class Piwik_Config_Compat_Array
 	/**
 	 * Get value by name
 	 *
-	 * @param string $name
+	 * @param string  $name
 	 * @return mixed
 	 */
 	public function __get($name)
 	{
-		$tmp = $this->data[$name];
+		$tmp = isset($this->data[$name]) ? $this->data[$name] : false;
 		return is_array($tmp) ? new Piwik_Config_Compat_Array($this, $tmp) : $tmp;
 	}
 
 	/**
 	 * Set name, value pair
 	 *
-	 * @param string $name
-	 * @param mixed $value
+	 * @param string  $name
+	 * @param mixed  $value
 	 */
 	public function __set($name, $value)
 	{
@@ -118,7 +122,7 @@ class Piwik_Config_Compat
 	/**
 	 * Get value by name
 	 *
-	 * @param string $name
+	 * @param string  $name
 	 * @return mixed
 	 */
 	public function __get($name)
@@ -135,8 +139,8 @@ class Piwik_Config_Compat
 	/**
 	 * Set name, value pair
 	 *
-	 * @param string $name
-	 * @param mixed $value
+	 * @param string  $name
+	 * @param mixed   $value
 	 */
 	public function __set($name, $value)
 	{

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: testMinimumPhpVersion.php 6035 2012-03-12 09:25:53Z matt $
+ * @version $Id: testMinimumPhpVersion.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -66,7 +66,7 @@ else
  * Displays info/warning/error message in a friendly UI and exits.
  *
  * @param string $message Main message
- * @param string|false $optionalTrace Backtrace; will be displayed in lighter color
+ * @param bool|string $optionalTrace Backtrace; will be displayed in lighter color
  * @param bool $optionalLinks If true, will show links to the Piwik website for help
  */
 function Piwik_ExitWithMessage($message, $optionalTrace = false, $optionalLinks = false)

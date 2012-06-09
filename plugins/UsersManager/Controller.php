@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6028 2012-03-10 03:47:35Z vipsoft $
+ * @version $Id: Controller.php 6349 2012-05-28 09:42:59Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -174,7 +174,7 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		$this->checkTokenInUrl();
 
 		Piwik_Tracker_IgnoreCookie::setIgnoreCookie();
-		Piwik::redirectToModule('UsersManager', 'userSettings');
+		Piwik::redirectToModule('UsersManager', 'userSettings', array('token_auth'=> false));
 	}
 
 	/**
@@ -251,9 +251,10 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		}
 		echo $toReturn;
 	}
-	
+
 	/**
 	 * Records settings from the "User Settings" page
+	 * @throws Exception
 	 */
 	public function recordUserSettings()
 	{

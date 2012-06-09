@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Updater.php 5425 2011-11-10 13:17:21Z vipsoft $
+ * @version $Id: Updater.php 6300 2012-05-23 21:19:25Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -137,11 +137,12 @@ class Piwik_Updater
 		}
 		return 'Piwik_'. $componentName .'_Updates_' . $suffix;
 	}
-	
+
 	/**
 	 * Update the named component
 	 *
 	 * @param string $componentName 'core', or plugin name
+	 * @throws Exception|Piwik_Updater_UpdateErrorException
 	 * @return array of warning strings if applicable
 	 */
 	public function update($componentName)
@@ -224,10 +225,11 @@ class Piwik_Updater
 		}
 		return $componentsWithUpdateFile;
 	}
-	
+
 	/**
 	 * Construct list of outdated components
 	 *
+	 * @throws Exception
 	 * @return array array( componentName => array( oldVersion, newVersion), [...])
 	 */
 	public function getComponentsWithNewVersion()
@@ -293,6 +295,7 @@ class Piwik_Updater
 	 *
 	 * @param string $file Update script filename
 	 * @param array $sqlarray An array of SQL queries to be executed
+	 * @throws Piwik_Updater_UpdateErrorException
 	 */
 	static function updateDatabase($file, $sqlarray)
 	{

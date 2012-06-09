@@ -293,15 +293,14 @@
 
 {literal}
 <style type="text/css">
- hr {
+hr {
 	background:none repeat scroll 0 0 transparent;
-	border-color:-moz-use-text-color -moz-use-text-color #EEEEEE;
-	border-style:none none solid;
-	border-width:0 0 1px;
-	color:#CCCCCC;
+	border: 0 none #000;
+	border-bottom: 1px solid #ccc;
+	color:#eee;
 	margin:0 2em 0.5em;
 	padding:0 0 0.5em;
- }
+}
 
 </style>
 {/literal}

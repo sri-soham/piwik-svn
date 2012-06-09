@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitorInterest.php 5463 2011-11-22 21:40:43Z EZdesign $
+ * @version $Id: VisitorInterest.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitorInterest
@@ -39,6 +39,9 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		return $hooks;
 	}
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
@@ -186,6 +189,10 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 			array(364)
 		);
 
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	function archivePeriod( $notification )
 	{
 		$archiveProcessing = $notification->getNotificationObject();
@@ -200,7 +207,11 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		);
 		$archiveProcessing->archiveDataTable($dataTableToSum);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 * @return mixed
+	 */
 	public function archiveDay( $notification )
 	{
 		$this->archiveProcessing = $notification->getNotificationObject();
@@ -298,13 +309,19 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		$this->archiveProcessing->insertBlobRecord($recordName, $dataTable->getSerialized());
 		destroy($dataTable);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	static public function headerVisitsFrequency($notification)
 	{
 		$out =& $notification->getNotificationObject();
 		$out = '<div id="leftcolumn">';
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	static public function footerVisitsFrequency($notification)
 	{
 		$out =& $notification->getNotificationObject();

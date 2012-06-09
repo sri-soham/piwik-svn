@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Request.php 5758 2012-02-04 19:57:52Z EZdesign $
+ * @version $Id: Request.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -39,7 +39,13 @@
 class Piwik_API_Request
 {	
 	protected $request = null;
-	
+
+	/**
+	 * Returns the request array as string
+	 *
+	 * @param string|array  $request
+	 * @return array|null
+	 */
 	static public function getRequestArrayFromString($request)
 	{
 		$defaultRequest = $_GET + $_POST;
@@ -76,24 +82,25 @@ class Piwik_API_Request
 	
 	/**
 	 * Constructs the request to the API, given the request url
-	 * 
-	 * @param string GET request that defines the API call (must at least contain a "method" parameter) 
-	 *  Example: method=UserSettings.getWideScreen&idSite=1&date=yesterday&period=week&format=xml
-	 * 	If a request is not provided, then we use the $_GET and $_POST superglobal and fetch
-	 * 	the values directly from the HTTP GET query.
+	 *
+	 * @param string  $request  GET request that defines the API call (must at least contain a "method" parameter)
+	 *                          Example: method=UserSettings.getWideScreen&idSite=1&date=yesterday&period=week&format=xml
+	 *                          If a request is not provided, then we use the $_GET and $_POST superglobal and fetch
+	 *                          the values directly from the HTTP GET query.
 	 */
 	function __construct($request = null)
 	{
 		$this->request = self::getRequestArrayFromString($request);
 	}
-	
+
 	/**
 	 * Handles the request to the API.
 	 * It first checks that the method called (parameter 'method') is available in the module (it means that the method exists and is public)
 	 * It then reads the parameters from the request string and throws an exception if there are missing parameters.
 	 * It then calls the API Proxy which will call the requested method.
-	 * 
-	 * @return mixed The data resulting from the API call  
+	 *
+	 * @throws Piwik_FrontController_PluginDeactivatedException
+	 * @return mixed  The data resulting from the API call
 	 */
 	public function process()
 	{
@@ -132,7 +139,7 @@ class Piwik_API_Request
 	 * the current session will be authenticated using this token_auth.
 	 * It will overwrite the previous Auth object.
 	 * 
-	 * @param array $request If null, uses the default request ($_GET)
+	 * @param array  $request  If null, uses the default request ($_GET)
 	 * @return void
 	 */
 	static public function reloadAuthUsingTokenAuth($request = null)
@@ -146,12 +153,13 @@ class Piwik_API_Request
 			Piwik::raiseMemoryLimitIfNecessary();
 		}
 	}
-	
+
 	/**
 	 * Returns array( $class, $method) from the given string $class.$method
-	 * 
+	 *
+	 * @param string  $parameter
+	 * @throws Exception
 	 * @return array
-	 * @throws exception if the name is invalid
 	 */
 	private function extractModuleAndMethod($parameter)
 	{

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Goals.php 5574 2011-12-18 08:49:19Z matt $
+ * @version $Id: Goals.php 6398 2012-05-30 09:03:12Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -182,8 +182,14 @@ class Piwik_ViewDataTable_HtmlTable_Goals extends Piwik_ViewDataTable_HtmlTable
 		}
 		parent::setColumnsToDisplay($newColumnsNames);
 	}
-	
-	/** Find the appropriate metric documentation for a goal column */
+
+	/**
+	 * Find the appropriate metric documentation for a goal column
+	 * @param string $genericMetricName
+	 * @param string $metricName
+	 * @param string $goalName
+	 * @param int $idGoal
+	 */
 	private function setDynamicMetricDocumentation($genericMetricName, $metricName, $goalName, $idGoal)
 	{
 		if($idGoal == Piwik_Archive::LABEL_ECOMMERCE_ORDER)
@@ -270,5 +276,6 @@ class Piwik_ViewDataTable_HtmlTable_Goals extends Piwik_ViewDataTable_HtmlTable
 			// this ensures that the value is set to zero for all rows where the value was not set (no conversion)
     		$this->dataTable->filter('ColumnCallbackReplace', array($columnName, create_function('$value', 'return $value;')));
 		}
+		return true;
 	}
 }

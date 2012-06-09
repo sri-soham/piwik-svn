@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Month.php 2968 2010-08-20 15:26:33Z vipsoft $
+ * @version $Id: Month.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -18,6 +18,11 @@ class Piwik_Period_Month extends Piwik_Period
 {
 	protected $label = 'month';
 
+	/**
+	 * Returns the current period as a localized short string
+	 *
+	 * @return string
+	 */
 	public function getLocalizedShortString()
 	{
 		//"Aug 09"
@@ -25,18 +30,32 @@ class Piwik_Period_Month extends Piwik_Period
 		return $out;
 	}
 
+	/**
+	 * Returns the current period as a localized long string
+	 *
+	 * @return string
+	 */
 	public function getLocalizedLongString()
 	{
 		//"August 2009"
-		$out = $this->getDateStart()->getLocalized("%longMonth% %longYear%");
+		$out = $this->getDateStart()->getLocalized(Piwik_Translate('CoreHome_LongMonthFormat'));
 		return $out;
 	}
+
+	/**
+	 * Returns the current period as a string
+	 *
+	 * @return string
+	 */
 	public function getPrettyString()
 	{
 		$out = $this->getDateStart()->toString('Y-m');
 		return $out;
 	}
-	
+
+	/**
+	 * Generates the subperiods (one for each day in the month)
+	 */
 	protected function generate()
 	{
 		if($this->subperiodsProcessed)

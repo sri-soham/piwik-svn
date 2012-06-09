@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CoreAdminHome.php 6174 2012-04-07 02:30:49Z capedfuzz $
+ * @version $Id: CoreAdminHome.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -35,20 +35,26 @@ class Piwik_CoreAdminHome extends Piwik_Plugin
 			'TaskScheduler.getScheduledTasks' => 'getScheduledTasks',
 		);
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getScheduledTasks ( $notification )
 	{
 		$tasks = &$notification->getNotificationObject();
 		
-		// low priority since tables should be optimized after they are modified
-		$priority = Piwik_ScheduledTask::LOW_PRIORITY;
+		// lowest priority since tables should be optimized after they are modified
+		$priority = Piwik_ScheduledTask::LOWEST_PRIORITY;
 		$optimizeArchiveTableTask = new Piwik_ScheduledTask ( $this, 
 															'optimizeArchiveTable',
 															new Piwik_ScheduledTime_Daily(),
 															$priority );
 		$tasks[] = $optimizeArchiveTableTask;
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getCssFiles( $notification )
 	{
 		$cssFiles = &$notification->getNotificationObject();
@@ -58,7 +64,10 @@ class Piwik_CoreAdminHome extends Piwik_Plugin
 		$cssFiles[] = "themes/default/common.css";
 		$cssFiles[] = "plugins/CoreAdminHome/templates/styles.css";
 	}
-	
+
+	/**
+	 * @param Piwik_Event_Notification $notification  notification object
+	 */
 	function getJsFiles ( $notification ) 
 	{
 		$jsFiles = &$notification->getNotificationObject();
