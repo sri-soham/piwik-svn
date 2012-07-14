@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PrivacyManager.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: PrivacyManager.php 6484 2012-06-19 23:24:27Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -113,13 +113,16 @@ class Piwik_PrivacyManager extends Piwik_Plugin
 	{
 		$settings = array();
 		
-		// backwards compatibility: load old values in ini config if present
+		// load settings from ini config
 		try
 		{
 			$oldSettings = array(
+				'enable_auto_database_size_estimate',
+				
+				// backwards compatibility: load old values in ini config if present
 				'delete_logs_enable',
 				'delete_logs_schedule_lowest_interval',
-				'delete_logs_older_than'
+				'delete_logs_older_than',
 			);
 		
 			$deleteLogsSettings = Piwik_Config::getInstance()->Deletelogs;

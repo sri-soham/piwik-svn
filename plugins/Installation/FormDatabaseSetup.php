@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FormDatabaseSetup.php 6467 2012-06-04 19:57:49Z matt $
+ * @version $Id: FormDatabaseSetup.php 6483 2012-06-18 20:05:18Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Installation
@@ -148,7 +148,6 @@ class Piwik_Installation_FormDatabaseSetup extends Piwik_QuickForm2
  * - INSERT
  * - UPDATE
  * - DELETE
- * - LOCK TABLES
  * - DROP
  * - CREATE TEMPORARY TABLES
  * 
@@ -244,7 +243,8 @@ class Piwik_Installation_FormDatabaseSetup_Rule_checkUserPrivileges extends HTML
 	 * array maps privilege names with one or more SQL queries that can be used to test
 	 * if the current user has the privilege.
 	 * 
-	 * NOTE: LOAD DATA INFILE privilege is not **required** so its not checked.
+	 * NOTE: LOAD DATA INFILE & LOCK TABLES privileges are not **required** so they're
+	 * not checked.
 	 * 
 	 * @return array
 	 */
@@ -263,7 +263,6 @@ class Piwik_Installation_FormDatabaseSetup_Rule_checkUserPrivileges extends HTML
 			'INSERT' => 'INSERT INTO '.self::TEST_TABLE_NAME.' (value) VALUES (123)',
 			'UPDATE' => 'UPDATE '.self::TEST_TABLE_NAME.' SET value = 456 WHERE id = 1',
 			'DELETE' => 'DELETE FROM '.self::TEST_TABLE_NAME.' WHERE id = 1',
-			'LOCK TABLES' => array('LOCK TABLES '.self::TEST_TABLE_NAME.' WRITE', 'UNLOCK TABLES'),
 			'DROP' => 'DROP TABLE '.self::TEST_TABLE_NAME,
 			'CREATE TEMPORARY TABLES' => 'CREATE TEMPORARY TABLE '.self::TEST_TEMP_TABLE_NAME.' (
 											id INT AUTO_INCREMENT,

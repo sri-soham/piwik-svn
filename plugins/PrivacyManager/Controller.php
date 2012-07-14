@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6376 2012-05-29 11:50:57Z matt $
+ * @version $Id: Controller.php 6485 2012-06-20 03:57:35Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_PrivacyManager
@@ -91,7 +91,8 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		Piwik::checkUserIsSuperUser();
 		$view = Piwik_View::factory('databaseSize');
 		
-		$view->dbStats = $this->getDeleteDBSizeEstimate(true);
+		$forceEstimate = Piwik_Common::getRequestVar('forceEstimate', 0);
+		$view->dbStats = $this->getDeleteDBSizeEstimate($getSettingsFromQuery = true, $forceEstimate);
 		$view->language = Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
 		
 		echo $view->render();
@@ -111,9 +112,10 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 			$deleteLogs = array();
 
 			$view->deleteData = $this->getDeleteDataInfo();
-			$view->deleteDbStats = $this->getDeleteDBSizeEstimate();
 			$view->anonymizeIP = $this->getAnonymizeIPInfo();
 			$view->dntSupport = $this->isDntSupport();
+			$view->canDeleteLogActions = Piwik::isLockPrivilegeGranted();
+			$view->dbUser = Piwik_Config::getInstance()->database['username'];
 		}
 		$view->language = Piwik_LanguagesManager::getLanguageCodeForCurrentUser();
 
@@ -138,32 +140,27 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		$this->checkTokenInUrl();
 		
 		// if the request isn't a POST, redirect to index
-		if ($_SERVER["REQUEST_METHOD"] != "POST")
+		if ($_SERVER["REQUEST_METHOD"] != "POST"
+			&& !Piwik_Common::isPhpCliMode())
 		{
 			return $this->redirectToIndex('PrivacyManager', 'privacySettings');
 		}
 		
 		$settings = Piwik_PrivacyManager::getPurgeDataSettings();
-		
-		// execute the purge
 		if ($settings['delete_logs_enable'])
 		{
 			$logDataPurger = Piwik_PrivacyManager_LogDataPurger::make($settings);
 			$logDataPurger->purgeData();
 		}
-		
 		if ($settings['delete_reports_enable'])
 		{
 			$reportsPurger = Piwik_PrivacyManager_ReportsPurger::make(
 				$settings, Piwik_PrivacyManager::getAllMetricsToKeep());
 			$reportsPurger->purgeData(true);
 		}
-		
-		// re-calculate db size estimate
-		$this->getDatabaseSize();
 	}
 	
-	protected function getDeleteDBSizeEstimate( $getSettingsFromQuery = false )
+	protected function getDeleteDBSizeEstimate( $getSettingsFromQuery = false, $forceEstimate = false )
 	{
 		// get the purging settings & create two purger instances
 		if ($getSettingsFromQuery)
@@ -175,9 +172,7 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 			$settings = Piwik_PrivacyManager::getPurgeDataSettings();
 		}
 		
-		// maps tables whose data will be deleted with number of rows that will be deleted
-		// if a value is -1, it means the table will be dropped.
-		$deletedDataSummary = Piwik_PrivacyManager::getPurgeEstimate($settings);
+		$doDatabaseSizeEstimate = Piwik_Config::getInstance()->Deletelogs['enable_auto_database_size_estimate'];
 		
 		// determine the DB size & purged DB size
 		$metadataProvider = new Piwik_DBStats_MySQLMetadataProvider();
@@ -189,31 +184,40 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 			$totalBytes += $status['Data_length'] + $status['Index_length'];
 		}
 		
-		$totalAfterPurge = $totalBytes;
-		foreach ($tableStatuses as $status)
+		$result = array(
+			'currentSize' => Piwik::getPrettySizeFromBytes($totalBytes)
+		);
+		
+		// if the db size estimate feature is enabled, get the estimate
+		if ($doDatabaseSizeEstimate || $forceEstimate == 1)
 		{
-			$tableName = $status['Name'];
-			if (isset($deletedDataSummary[$tableName]))
+			// maps tables whose data will be deleted with number of rows that will be deleted
+			// if a value is -1, it means the table will be dropped.
+			$deletedDataSummary = Piwik_PrivacyManager::getPurgeEstimate($settings);
+		
+			$totalAfterPurge = $totalBytes;
+			foreach ($tableStatuses as $status)
 			{
-				$tableTotalBytes = $status['Data_length'] + $status['Index_length'];
+				$tableName = $status['Name'];
+				if (isset($deletedDataSummary[$tableName]))
+				{
+					$tableTotalBytes = $status['Data_length'] + $status['Index_length'];
 				
-				// if dropping the table
-				if ($deletedDataSummary[$tableName] === Piwik_PrivacyManager_ReportsPurger::DROP_TABLE)
-				{
-					$totalAfterPurge -= $tableTotalBytes;
-				}
-				else // if just deleting rows
-				{
-					$totalAfterPurge -= ($tableTotalBytes / $status['Rows']) * $deletedDataSummary[$tableName];
+					// if dropping the table
+					if ($deletedDataSummary[$tableName] === Piwik_PrivacyManager_ReportsPurger::DROP_TABLE)
+					{
+						$totalAfterPurge -= $tableTotalBytes;
+					}
+					else // if just deleting rows
+					{
+						$totalAfterPurge -= ($tableTotalBytes / $status['Rows']) * $deletedDataSummary[$tableName];
+					}
 				}
 			}
+			
+			$result['sizeAfterPurge'] = Piwik::getPrettySizeFromBytes($totalAfterPurge);
+			$result['spaceSaved'] = Piwik::getPrettySizeFromBytes($totalBytes - $totalAfterPurge);
 		}
-		
-		$result = array(
-			'currentSize' => Piwik::getPrettySizeFromBytes($totalBytes),
-			'sizeAfterPurge' => Piwik::getPrettySizeFromBytes($totalAfterPurge),
-			'spaceSaved' => Piwik::getPrettySizeFromBytes($totalBytes - $totalAfterPurge)
-		);
 		
 		return $result;
 	}
@@ -240,7 +244,7 @@ class Piwik_PrivacyManager_Controller extends Piwik_Controller_Admin
 		$taskScheduler = new Piwik_TaskScheduler();
 		$deleteDataInfos["config"] = Piwik_PrivacyManager::getPurgeDataSettings();
 		$deleteDataInfos["deleteTables"] =
-			implode(", ", Piwik_PrivacyManager_LogDataPurger::getDeleteTableLogTables());
+			"<br/>".implode(", ", Piwik_PrivacyManager_LogDataPurger::getDeleteTableLogTables());
 
 		$scheduleTimetable = $taskScheduler->getScheduledTimeForTask("Piwik_PrivacyManager", "deleteLogTables");
 

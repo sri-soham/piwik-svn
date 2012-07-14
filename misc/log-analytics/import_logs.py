@@ -5,7 +5,7 @@
 #
 # @link http://piwik.org
 # @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
-# @version $Id: import_logs.py 6433 2012-06-01 10:33:17Z Cyril $
+# @version $Id: import_logs.py 6474 2012-06-13 16:44:49Z Cyril $
 #
 # For more info see: http://piwik.org/log-analytics/
 
@@ -322,6 +322,11 @@ class Configuration(object):
             '--log-format-regex', dest='log_format_regex', default=None,
             help="Access log regular expression. For an example of a supported Regex, see the source code of this file. "
                  "Overrides --log-format-name"
+        )
+        option_parser.add_option(
+            '--log-hostname', dest='log_hostname', default=None,
+            help="Force this hostname for a log format that doesn't incldude it. All hits "
+            "will seem to came to this host"
         )
         option_parser.add_option(
             '--skip', dest='skip', default=0, type='int',
@@ -860,7 +865,7 @@ class DynamicResolver(object):
 
 
     def check_format(self, format):
-        if 'host' not in format.regex.groupindex:
+        if 'host' not in format.regex.groupindex and not config.options.log_hostname:
             fatal_error(
                 "the selected log format doesn't include the hostname: you must "
                 "specify the Piwik site ID with the --idsite argument"
@@ -1221,11 +1226,15 @@ class Parser(object):
             except (ValueError, IndexError):
                 # Some lines or formats don't have a length (e.g. 304 redirects, IIS logs)
                 hit.length = 0
-            try:
-                hit.host = match.group('host')
-            except IndexError:
-                # Some formats have no host.
-                pass
+
+            if config.options.log_hostname:
+                hit.host = config.options.log_hostname
+            else:
+                try:
+                    hit.host = match.group('host')
+                except IndexError:
+                    # Some formats have no host.
+                    pass
 
             # Check if the hit must be excluded.
             check_methods = inspect.getmembers(self, predicate=inspect.ismethod)

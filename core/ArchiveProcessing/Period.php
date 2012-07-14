@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Period.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: Period.php 6510 2012-07-13 20:05:39Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -23,9 +23,10 @@
  */
 class Piwik_ArchiveProcessing_Period extends Piwik_ArchiveProcessing
 {
-	/*
+	/**
 	 * Array of (column name before => column name renamed) of the columns for which sum operation is invalid. 
 	 * The summed value is not accurate and these columns will be renamed accordingly.
+     * @var array
 	 */
 	static public $invalidSummedColumnNameToRenamedName = array(
 		Piwik_Archive::INDEX_NB_UNIQ_VISITORS => Piwik_Archive::INDEX_SUM_DAILY_NB_UNIQ_VISITORS 

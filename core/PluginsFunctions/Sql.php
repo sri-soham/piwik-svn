@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sql.php 6415 2012-05-31 04:50:12Z matt $
+ * @version $Id: Sql.php 6486 2012-06-20 21:01:20Z SteveG $
  * 
  * @category Piwik
  * @package PluginsFunctions
@@ -107,8 +107,8 @@ class Piwik_Sql
 	/**
 	 * Fetches result from the database query as an array of associative arrays.
 	 * 
-	 * @param string	$sql		SQL query
-	 * @param array		$parameters	Parameters to bind in the query, array( param1 => value1, param2 => value2)
+	 * @param string  $sql         SQL query
+	 * @param array   $parameters  Parameters to bind in the query, array( param1 => value1, param2 => value2)
 	 * @return array
 	 */
 	static public function fetchAssoc($sql, $parameters = array())
@@ -181,7 +181,7 @@ class Piwik_Sql
 	 * @param string|array  $tablesToWrite  The table or tables to obtain 'write' locks on.
 	 * @return Zend_Db_Statement
 	 */
-	static public function lockTables( $tablesToRead, $tablesToWrite )
+	static public function lockTables( $tablesToRead, $tablesToWrite = array() )
 	{
 		if (!is_array($tablesToRead))
 		{
@@ -213,6 +213,153 @@ class Piwik_Sql
 	static public function unlockAllTables()
 	{
 		return self::exec("UNLOCK TABLES");
+	}
+	
+	/**
+	 * Performs a SELECT on a table one chunk at a time and returns the first
+	 * fetched value.
+	 * 
+	 * @param string $sql The SQL to perform. The last two conditions of the WHERE
+	 *                    expression must be as follows: 'id >= ? AND id < ?' where
+	 *                    'id' is the int id of the table. If $step < 0, the condition
+	 *                    should be 'id <= ? AND id > ?'.
+	 * @param int $first The minimum ID to loop from.
+	 * @param int $last The maximum ID to loop to.
+	 * @param int $step The maximum number of rows to scan in each smaller SELECT.
+	 * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+	 * @return array
+	 */
+	static public function segmentedFetchFirst( $sql, $first, $last, $step, $params )
+	{
+		$result = false;
+		if ($step > 0)
+		{
+			for ($i = $first; $result === false && $i <= $last; $i += $step)
+			{
+				$result = self::fetchOne($sql, array_merge($params, array($i, $i + $step)));
+			}
+		}
+		else
+		{
+			for ($i = $first; $result === false && $i >= $last; $i += $step)
+			{
+				$result = self::fetchOne($sql, array_merge($params, array($i, $i + $step)));
+			}
+		}
+		return $result;
+	}
+	
+	/**
+	 * Performs a SELECT on a table one chunk at a time and returns an array
+	 * of every fetched value.
+	 * 
+	 * @param string $sql The SQL to perform. The last two conditions of the WHERE
+	 *                    expression must be as follows: 'id >= ? AND id < ?' where
+	 *                    'id' is the int id of the table.
+	 * @param int $first The minimum ID to loop from.
+	 * @param int $last The maximum ID to loop to.
+	 * @param int $step The maximum number of rows to scan in each smaller SELECT.
+	 * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+	 * @return array
+	 */
+	static public function segmentedFetchOne( $sql, $first, $last, $step, $params )
+	{
+		$result = array();
+		if ($step > 0)
+		{
+			for ($i = $first; $i <= $last; $i += $step)
+			{
+				$result[] = self::fetchOne($sql, array_merge($params, array($i, $i + $step)));
+			}
+		}
+		else
+		{
+			for ($i = $first; $i >= $last; $i += $step)
+			{
+				$result[] = self::fetchOne($sql, array_merge($params, array($i, $i + $step)));
+			}
+		}
+		return $result;
+	}
+	
+	/**
+	 * Performs a SELECT on a table one chunk at a time and returns an array
+	 * of every fetched row.
+	 * 
+	 * @param string $sql The SQL to perform. The last two conditions of the WHERE
+	 *                    expression must be as follows: 'id >= ? AND id < ?' where
+	 *                    'id' is the int id of the table.
+	 * @param int $first The minimum ID to loop from.
+	 * @param int $last The maximum ID to loop to.
+	 * @param int $step The maximum number of rows to scan in each smaller SELECT.
+	 * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+	 * @return array
+	 */
+	static public function segmentedFetchAll( $sql, $first, $last, $step, $params )
+	{
+		$result = array();
+		if ($step > 0)
+		{
+			for ($i = $first; $i <= $last; $i += $step)
+			{
+				$currentParams = array_merge($params, array($i, $i + $step));
+				$result = array_merge($result, self::fetchAll($sql, $currentParams));
+			}
+		}
+		else
+		{
+			for ($i = $first; $i >= $last; $i += $step)
+			{
+				$currentParams = array_merge($params, array($i, $i + $step));
+				$result = array_merge($result, self::fetchAll($sql, $currentParams));
+			}
+		}
+		return $result;
+	}
+	
+	/**
+	 * Attempts to get a named lock. This function uses a timeout of 1s, but will
+	 * retry a set number of time.
+	 * 
+	 * @param string $lockName The lock name.
+	 * @param int $maxRetries The max number of times to retry.
+	 * @return bool true if the lock was obtained, false if otherwise.
+	 */
+	static public function getDbLock( $lockName, $maxRetries = 30 )
+	{
+		/*
+		 * the server (e.g., shared hosting) may have a low wait timeout
+		 * so instead of a single GET_LOCK() with a 30 second timeout,
+		 * we use a 1 second timeout and loop, to avoid losing our MySQL
+		 * connection
+		 */
+		$sql = 'SELECT GET_LOCK(?, 1)';
+
+		$db = Zend_Registry::get('db');
+
+		while ($maxRetries > 0)
+		{
+			if ($db->fetchOne($sql, array($lockName)) == '1')
+			{
+				return true;
+			}
+			$maxRetries--;
+		}
+		return false;
+	}
+	
+	/**
+	 * Releases a named lock.
+	 * 
+	 * @param string $lockName The lock name.
+	 * @return bool true if the lock was released, false if otherwise.
+	 */
+	static public function releaseDbLock( $lockName )
+	{
+		$sql = 'SELECT RELEASE_LOCK(?)';
+
+		$db = Zend_Registry::get('db');
+		return $db->fetchOne($sql, array($lockName)) == '1';
 	}
 }
 
@@ -354,7 +501,7 @@ function Piwik_DropTables( $tables )
  * @param string|array  $tablesToWrite  The table or tables to obtain 'write' locks on.
  * @return Zend_Db_Statement
  */
-function Piwik_LockTables( $tablesToRead, $tablesToWrite )
+function Piwik_LockTables( $tablesToRead, $tablesToWrite = array() )
 {
 	return Piwik_Sql::lockTables($tablesToRead, $tablesToWrite);
 }
@@ -369,5 +516,108 @@ function Piwik_LockTables( $tablesToRead, $tablesToWrite )
 function Piwik_UnlockAllTables()
 {
 	return Piwik_Sql::unlockAllTables();
+}
+
+/**
+ * Performs a SELECT on a table one chunk at a time and returns the first
+ * fetched value.
+ * 
+ * This function will break up a SELECT into several smaller SELECTs and
+ * should be used when performing a SELECT that can take a long time to finish.
+ * Using several smaller SELECTs will ensure that the table will not be locked
+ * for too long.
+ * 
+ * @see Piwik_Sql::segmentedFetchFirst
+ * 
+ * @param string $sql The SQL to perform. The last two conditions of the WHERE
+ *                    expression must be as follows: 'id >= ? AND id < ?' where
+ *                    'id' is the int id of the table.
+ * @param int $first The minimum ID to loop from.
+ * @param int $last The maximum ID to loop to.
+ * @param int $step The maximum number of rows to scan in each smaller SELECT.
+ * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+ * @return string
+ */
+function Piwik_SegmentedFetchFirst( $sql, $first, $last, $step, $params = array() )
+{
+	return Piwik_Sql::segmentedFetchFirst($sql, $first, $last, $step, $params);
+}
+
+/**
+ * Performs a SELECT on a table one chunk at a time and returns an array
+ * of every fetched value.
+ * 
+ * This function will break up a SELECT into several smaller SELECTs and
+ * should be used when performing a SELECT that can take a long time to finish.
+ * Using several smaller SELECTs will ensure that the table will not be locked
+ * for too long.
+ * 
+ * @see Piwik_Sql::segmentedFetchFirst
+ * 
+ * @param string $sql The SQL to perform. The last two conditions of the WHERE
+ *                    expression must be as follows: 'id >= ? AND id < ?' where
+ *                    'id' is the int id of the table.
+ * @param int $first The minimum ID to loop from.
+ * @param int $last The maximum ID to loop to.
+ * @param int $step The maximum number of rows to scan in each smaller SELECT.
+ * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+ * @return array
+ */
+function Piwik_SegmentedFetchOne( $sql, $first, $last, $step, $params = array() )
+{
+	return Piwik_Sql::segmentedFetchOne($sql, $first, $last, $step, $params);
+}
+
+/**
+ * Performs a SELECT on a table one chunk at a time and returns an array
+ * of every fetched row.
+ * 
+ * This function will break up a SELECT into several smaller SELECTs and
+ * should be used when performing a SELECT that can take a long time to finish.
+ * Using several smaller SELECTs will ensure that the table will not be locked
+ * for too long.
+ * 
+ * @see Piwik_Sql::segmentedFetchFirst
+ * 
+ * @param string $sql The SQL to perform. The last two conditions of the WHERE
+ *                    expression must be as follows: 'id >= ? AND id < ?' where
+ *                    'id' is the int id of the table.
+ * @param int $first The minimum ID to loop from.
+ * @param int $last The maximum ID to loop to.
+ * @param int $step The maximum number of rows to scan in each smaller SELECT.
+ * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
+ * @return array
+ */
+function Piwik_SegmentedFetchAll( $sql, $first, $last, $step, $params = array() )
+{
+	return Piwik_Sql::segmentedFetchAll($sql, $first, $last, $step, $params);
+}
+
+/**
+ * Attempts to get a named lock. This function uses a timeout of 1s, but will
+ * retry a set number of time.
+ * 
+ * @see Piwik_Sql::getDbLock
+ * 
+ * @param string $lockName The lock name.
+ * @param int $maxRetries The max number of times to retry.
+ * @return bool true if the lock was obtained, false if otherwise.
+ */
+function Piwik_GetDbLock( $lockName, $maxRetries = 30 )
+{
+	return Piwik_Sql::getDbLock($lockName, $maxRetries);
+}
+
+/**
+ * Releases a named lock.
+ * 
+ * @see Piwik_Sql::releaseDbLock
+ * 
+ * @param string $lockName The lock name.
+ * @return bool true if the lock was released, false if otherwise.
+ */
+function Piwik_ReleaseDbLock( $lockName )
+{
+	return Piwik_Sql::releaseDbLock($lockName);
 }
 

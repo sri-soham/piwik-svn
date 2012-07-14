@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: OneClickDone.php 6009 2012-03-09 03:03:30Z vipsoft $
+ * @version $Id: OneClickDone.php 6486 2012-06-20 21:01:20Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -47,7 +47,7 @@ class Piwik_View_OneClickDone
 	/**
 	 * Outputs the data.
 	 *
-	 * @return string html
+	 * @return string  html
 	 */
 	public function render()
 	{

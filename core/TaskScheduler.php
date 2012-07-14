@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: TaskScheduler.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: TaskScheduler.php 6510 2012-07-13 20:05:39Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -114,10 +114,13 @@ class Piwik_TaskScheduler
 		return self::$running;
 	}
 	
-	/*
-	 * return the timetable for a given task
-	 */
-	static public function getScheduledTimeForTask($className, $methodName) {
+    /**
+     * return the timetable for a given task
+     * @param string $className
+     * @param string $methodName
+     * @return mixed
+     */
+    static public function getScheduledTimeForTask($className, $methodName) {
 		// Gets the array where rescheduled timetables are stored
 		$option = Piwik_GetOption(self::TIMETABLE_OPTION_STRING);
 

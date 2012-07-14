@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Mysqli.php 6325 2012-05-26 21:08:06Z SteveG $
+ * @version $Id: Mysqli.php 6486 2012-06-20 21:01:20Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -19,13 +19,13 @@
 class Piwik_Tracker_Db_Mysqli extends Piwik_Tracker_Db
 {
 	protected $connection = null;
-	private $host;
-	private $port;
-	private $socket;
-	private $dbname;
-	private $username;
-	private $password;
-	private $charset;
+	protected $host;
+	protected $port;
+	protected $socket;
+	protected $dbname;
+	protected $username;
+	protected $password;
+	protected $charset;
 
 	/**
 	 * Builds the DB object
@@ -156,7 +156,7 @@ class Piwik_Tracker_Db_Mysqli extends Piwik_Tracker_Db
 	 *
 	 * @param string  $query       Query
 	 * @param array   $parameters  Parameters to bind
-	 * @throws Piwik_Tracker_Db_Exception if an exception occured
+	 * @throws Piwik_Tracker_Db_Exception if an exception occurred
 	 */
 	public function fetch( $query, $parameters = array() )
 	{
@@ -193,7 +193,7 @@ class Piwik_Tracker_Db_Mysqli extends Piwik_Tracker_Db
 	 * @param array|string  $parameters  Parameters to bind array('idsite'=> 1)
 	 * 
 	 * @return bool|resource  false if failed
-	 * @throws Piwik_Tracker_Db_Exception  if an exception occured
+	 * @throws Piwik_Tracker_Db_Exception  if an exception occurred
 	 */
 	public function query($query, $parameters = array()) 
 	{

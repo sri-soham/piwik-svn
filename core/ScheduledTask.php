@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ScheduledTask.php 6221 2012-04-22 00:39:12Z capedfuzz $
+ * @version $Id: ScheduledTask.php 6510 2012-07-13 20:05:39Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -61,7 +61,7 @@ class Piwik_ScheduledTask
 		$this->priority = $_priority;
 	}
 	
-	/*
+	/**
 	 * Returns class name
 	 * @return string
 	 */
@@ -70,7 +70,7 @@ class Piwik_ScheduledTask
 		return $this->className;
 	}
 
-	/*
+	/**
 	 * Returns method name
 	 * @return string
 	 */
@@ -79,7 +79,7 @@ class Piwik_ScheduledTask
 		return $this->methodName;
 	}
 
-	/*
+	/**
 	 * Returns scheduled time
 	 * @return Piwik_ScheduledTime
 	 */

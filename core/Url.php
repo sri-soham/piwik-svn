@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Url.php 6208 2012-04-14 21:01:43Z vipsoft $
+ * @version $Id: Url.php 6510 2012-07-13 20:05:39Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -159,7 +159,7 @@ class Piwik_Url
 		return 'http';
 	}
 
-	/*
+	/**
 	 * Validate "Host" (untrusted user input)
 	 *
 	 * @param string $host         Contents of Host: header from Request
@@ -167,7 +167,7 @@ class Piwik_Url
 	 *
 	 * @return boolean True if valid; false otherwise
 	 */
-	public function isValidHost($host, $trustedHosts)
+	static public function isValidHost($host, $trustedHosts)
 	{
 		// Only punctuation we allow is '[', ']', ':', '.' and '-'
 		$hostLength = Piwik_Common::strlen($host);

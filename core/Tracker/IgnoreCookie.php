@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: IgnoreCookie.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: IgnoreCookie.php 6486 2012-06-20 21:01:20Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -67,7 +67,7 @@ class Piwik_Tracker_IgnoreCookie
 	/**
 	 * Returns true if ignore (visit) cookie is present
 	 *
-	 * @return bool True if ignore cookie found; false otherwise
+	 * @return bool  True if ignore cookie found; false otherwise
 	 */
 	static public function isIgnoreCookieFound()
 	{

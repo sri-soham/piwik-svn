@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Version.php 6467 2012-06-04 19:57:49Z matt $
+ * @version $Id: Version.php 6478 2012-06-14 16:19:42Z JulienM $
  *
  * @category Piwik
  * @package Piwik
@@ -21,5 +21,5 @@ final class Piwik_Version
 	 * Current Piwik version
 	 * @var string
 	 */
-	const VERSION = '1.8.2';
+	const VERSION = '1.8.3-b1';
 }

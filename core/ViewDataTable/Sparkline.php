@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sparkline.php 6300 2012-05-23 21:19:25Z SteveG $
+ * @version $Id: Sparkline.php 6472 2012-06-12 09:18:57Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -52,9 +52,21 @@ class Piwik_ViewDataTable_Sparkline extends Piwik_ViewDataTable
 			$values = array_fill(0, 30, 0);
 			$this->isDataAvailable = false;
 		}
+
 		$graph = new Piwik_Visualization_Sparkline();
 		$graph->setValues($values);
-		$graph->main();
+
+        $height = Piwik_Common::getRequestVar('height', 0, 'int');
+        if (!empty($height)) {
+            $graph->setHeight($height);
+        }
+
+        $width = Piwik_Common::getRequestVar('width', 0, 'int');
+        if (!empty($width)) {
+            $graph->setWidth($width);
+        }
+
+        $graph->main();
 		
 		$this->view = $graph;
 	}

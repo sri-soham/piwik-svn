@@ -32,7 +32,7 @@ adapter			= PDO_MYSQL
 host 			= localhost
 username 		= root
 password 		= /soham/
-dbname			= piwik_svn
+dbname			= piwik_tests
 tables_prefix	= piwiktests_
 port			= 3306
 adapter 		= PDO_MYSQL
@@ -397,6 +397,7 @@ tracking_requests_require_authentication = 1
 delete_logs_enable = 0
 delete_logs_schedule_lowest_interval = 7
 delete_logs_older_than = 180
+enable_auto_database_size_estimate = 1
 
 [branding]
 ; custom logo
