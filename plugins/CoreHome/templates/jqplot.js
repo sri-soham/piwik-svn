@@ -8,7 +8,6 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
-var jqPlotTooltip = false;
 
 /**
  * Constructor function
@@ -390,8 +389,10 @@ JQPlot.prototype = {
 		};
 		
 		// pie charts have a different data format
-		for (var i = 0; i < this.data[0].length; i++) {
-			this.data[0][i] = [this.params.axes.xaxis.ticks[i], this.data[0][i]];
+		if (!(this.data[0][0] instanceof Array)) { // check if already in different format
+			for (var i = 0; i < this.data[0].length; i++) {
+				this.data[0][i] = [this.params.axes.xaxis.ticks[i], this.data[0][i]];
+			}
 		}
 	},
 	
@@ -532,44 +533,12 @@ JQPlot.prototype = {
 	
 	/** Show the tppltip. The DOM element is created on the fly. */
 	showTooltip: function(head, text) {
-		if (jqPlotTooltip === false) {
-			this.initTooltip();
-		}
-		jqPlotTooltip.html('<span class="tip-title">' + head + '</span><br />' + text);
-		jqPlotTooltip.show();
+		Piwik_Tooltip.showWithTitle(head, text);
 	},
 	
 	/** Hide the tooltip */
 	hideTooltip: function() {
-		if (jqPlotTooltip !== false) {
-			jqPlotTooltip.hide();
-		}
-	},
-	
-	/** Create and initialize the tooltip */
-	initTooltip: function() {
-		jqPlotTooltip = $(document.createElement('div'));
-		jqPlotTooltip.addClass('jqplot-tooltip');
-		$('body').prepend(jqPlotTooltip);
-		
-		$(document).mousemove(function(e) {
-			var tipWidth = jqPlotTooltip.outerWidth();
-			var maxX = $('body').innerWidth() - tipWidth - 25;
-			if (e.pageX < maxX) {
-				// tooltip right of mouse
-				jqPlotTooltip.css({
-					top: (e.pageY - 15) + "px",
-					left: (e.pageX + 15) + "px"
-				});
-			}
-			else {
-				// tooltip left of mouse
-				jqPlotTooltip.css({
-					top: (e.pageY - 15) + "px",
-					left: (e.pageX - 15 - tipWidth) + "px"
-				});
-			}
-		});
+		Piwik_Tooltip.hide();
 	},
 	
 	addSeriesPicker: function(targetDivId, lang) {

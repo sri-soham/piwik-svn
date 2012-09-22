@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GoalManager.php 6300 2012-05-23 21:19:25Z SteveG $
+ * @version $Id: GoalManager.php 6743 2012-08-14 03:30:08Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -234,12 +234,12 @@ class Piwik_Tracker_GoalManager
 	 * @param string $referrerCampaignName
 	 * @param string $referrerCampaignKeyword
 	 */
-	public function recordGoals($idSite, $visitorInformation, $visitCustomVariables, $action, $referrerTimestamp, $referrerUrl, $referrerCampaignName, $referrerCampaignKeyword)
+	public function recordGoals($idSite, $visitorInformation, $visitCustomVariables, $action, $referrerTimestamp, $referrerUrl, $referrerCampaignName, $referrerCampaignKeyword, $browserLanguage)
 	{
 		$location_country = isset($visitorInformation['location_country']) 
 							? $visitorInformation['location_country'] 
 							: Piwik_Common::getCountry( 
-									Piwik_Common::getBrowserLanguage(), 
+									$browserLanguage, 
 									$enableLanguageToCountryGuess = Piwik_Config::getInstance()->Tracker['enable_language_to_country_guess'],
 									$visitorInformation['location_ip'] 
 							);

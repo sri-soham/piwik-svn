@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: API.php 6974 2012-09-12 04:57:40Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Goals
@@ -55,11 +55,8 @@ class Piwik_Goals_API
 	{
 		//TODO calls to this function could be cached as static
 		// would help UI at least, since some UI requests would call this 2-3 times..
-		if(!is_array($idSite))
-		{
-			$idSite = Piwik_Site::getIdSitesFromIdSitesString($idSite);
-		}
-		if(empty($idSite)) 
+		$idSite = Piwik_Site::getIdSitesFromIdSitesString($idSite);
+		if(empty($idSite))
 		{
 			return array();
 		}

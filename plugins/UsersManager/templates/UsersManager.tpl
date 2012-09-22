@@ -31,31 +31,31 @@
 {/literal}
 
 <h2>{'UsersManager_ManageAccess'|translate}</h2>
-<p>{'UsersManager_MainDescription'|translate}</p>
 <div id="sites">
-<form method="post" action="{url action=index}" id="accessSites">
-	<p>{'UsersManager_Sites'|translate}: <select id="selectIdsite" name="idsite" onchange="changeSite()">
+	<section class="sites_selector_container">
+		<p>{'UsersManager_MainDescription'|translate}</p>
+		<div style="display:inline-block;margin-top:5px;">{'UsersManager_Sites'|translate}: </div>
 	
-	<optgroup label="{'UsersManager_AllWebsites'|translate}">
-		<option label="{'UsersManager_AllWebsites'|translate}" value="all" {if $idSiteSelected=='all'} selected="selected"{/if}>{'UsersManager_ApplyToAllWebsites'|translate}</option>
-	</optgroup>
-	
-	<optgroup label="{'UsersManager_Sites'|translate}">
-		{foreach from=$websites item=info}
-			<option value="{$info.idsite}" {if $idSiteSelected==$info.idsite} selected="selected"{/if}>{$info.name}</option>
-		{/foreach}
-	</optgroup>
-	
-	</select></p>
-</form>
+		{capture name=applyAllSitesText assign=applyAllSitesText}
+			<strong>{'UsersManager_ApplyToAllWebsites'|translate}</strong>
+		{/capture}
+		{include file="CoreHome/templates/sites_selection.tpl"
+			siteName=$defaultReportSiteName idSite=$idSiteSelected allSitesItemText=$applyAllSitesText
+			allWebsitesLinkLocation=top}
+	</section>
+	{literal}<script type="text/javascript">
+		window.autocompleteOnNewSiteSelect = function(siteId, siteName)
+		{
+			switchSite(siteId, siteName, false /* do not show main ajax loading animation */);
+		};
+	</script>{/literal}
 </div>
 
 {ajaxErrorDiv}
 {ajaxLoadingDiv}
-<div id="accessUpdated" class="ajaxSuccess">{'General_Done'|translate}!</div>
 
-<div class="entityContainer" style='width:500px'>
-	<table class="entityTable dataTable" id="access">
+<div class="entityContainer" style='width:600px'>
+	<table class="entityTable dataTable" id="access" style="display:inline-table;width:500px;">
 		<thead>
 		<tr>
 			<th class='first'>{'UsersManager_User'|translate}</th>
@@ -75,11 +75,18 @@
 			<td>{$usersAliasByLogin[$login]}</td>
 			<td id='noaccess'>{if $access=='noaccess' and $idSiteSelected!='all'}{$accesValid}{else}{$accesInvalid}{/if}&nbsp;</td>
 			<td id='view'>{if $access=='view' and $idSiteSelected!='all'}{$accesValid}{else}{$accesInvalid}{/if}&nbsp;</td>
-			<td id='admin'>{if $access=='admin' and $idSiteSelected!='all'}{$accesValid}{else}{$accesInvalid}{/if}&nbsp;</td>
+			<td id='admin'>
+				{if $login=='anonymous'}
+					N/A
+				{else}
+					{if $access=='admin' and $idSiteSelected!='all'}{$accesValid}{else}{$accesInvalid}{/if}&nbsp;
+				{/if}
+			</td>
 		</tr>
 		{/foreach}
 		</tbody>
 	</table>
+	<div id="accessUpdated" class="ajaxSuccess" style="display:none;vertical-align:top;">{'General_Done'|translate}!</div>
 </div>
 
 <div class="ui-confirm" id="confirm">

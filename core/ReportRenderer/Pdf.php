@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Pdf.php 5793 2012-02-09 22:45:26Z matt $
+ * @version $Id: Pdf.php 6925 2012-09-06 13:51:06Z JulienM $
  *
  * @category Piwik
  * @package Piwik_ReportRenderer
@@ -24,9 +24,8 @@ require_once PIWIK_INCLUDE_PATH . '/core/TCPDF.php';
 class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 {
 	const IMAGE_GRAPH_WIDTH_LANDSCAPE = 1050;
-	const IMAGE_GRAPH_HEIGHT_LANDSCAPE = 330;
 	const IMAGE_GRAPH_WIDTH_PORTRAIT = 760;
-	const IMAGE_GRAPH_HEIGHT_PORTRAIT = 220;
+	const IMAGE_GRAPH_HEIGHT = 220;
 
 	const LANDSCAPE = 'L';
 	const PORTRAIT = 'P';
@@ -36,6 +35,8 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 	const NO_DATA_ROW_COUNT = 6;
 	const MAX_GRAPH_REPORTS = 3;
 	const MAX_2COL_TABLE_REPORTS = 2;
+
+	const PDF_CONTENT_TYPE = 'pdf';
 
 	private $reportFontStyle = '';
 	private $reportSimpleFontSize = 9;
@@ -64,6 +65,7 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 	private $report;
 	private $reportMetadata;
 	private $displayGraph;
+	private $evolutionGraph;
 	private $displayTable;
 	private $reportColumns;
 	private $reportRowsMetadata;
@@ -88,8 +90,11 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 		switch ($locale)
 		{
 			case 'zh-tw':
-			case 'ja':
 				$reportFont = 'msungstdlight';
+				break;
+				
+			case 'ja':
+				$reportFont = 'kozgopromedium';
 				break;
 
 			case 'zh-cn':
@@ -114,7 +119,7 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 
 	public function sendToDisk($filename)
 	{
-		$filename = Piwik_ReportRenderer::appendExtension($filename, "pdf");
+		$filename = Piwik_ReportRenderer::appendExtension($filename, self::PDF_CONTENT_TYPE);
 		$outputFilename = Piwik_ReportRenderer::getOutputPath($filename);
 
 		$this->TCPDF->Output($outputFilename, 'F');
@@ -124,8 +129,19 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 
 	public function sendToBrowserDownload($filename)
 	{
-		$filename = Piwik_ReportRenderer::appendExtension($filename, "pdf");
+		$filename = Piwik_ReportRenderer::appendExtension($filename, self::PDF_CONTENT_TYPE);
 		$this->TCPDF->Output($filename, 'D');
+	}
+
+	public function sendToBrowserInline($filename)
+	{
+		$filename = Piwik_ReportRenderer::appendExtension($filename, self::PDF_CONTENT_TYPE);
+		$this->TCPDF->Output($filename, 'I');
+	}
+
+	public function getRenderedReport()
+	{
+		return $this->TCPDF->Output(null, 'S');
 	}
 
 	public function renderFrontPage($websiteName, $prettyDate, $description, $reportMetadata)
@@ -258,6 +274,7 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 		$this->reportMetadata = $processedReport['metadata'];
 		$this->reportRowsMetadata = $processedReport['reportMetadata'];
 		$this->displayGraph = $processedReport['displayGraph'];
+		$this->evolutionGraph = $processedReport['evolutionGraph'];
 		$this->displayTable = $processedReport['displayTable'];
 		list($this->report, $this->reportColumns) = self::processTableFormat($this->reportMetadata, $processedReport['reportData'], $processedReport['columns']);
 
@@ -380,17 +397,12 @@ class Piwik_ReportRenderer_Pdf extends Piwik_ReportRenderer
 	}
 	private function paintGraph()
 	{
-
-		if($this->orientation == self::PORTRAIT) {
-			$imageWidth = self::IMAGE_GRAPH_WIDTH_PORTRAIT;
-			$imageHeight = self::IMAGE_GRAPH_HEIGHT_PORTRAIT;
-		} else {
-			$imageWidth = self::IMAGE_GRAPH_WIDTH_LANDSCAPE;
-			$imageHeight = self::IMAGE_GRAPH_HEIGHT_LANDSCAPE;
-		}
-
-		$imageGraphUrl = $this->reportMetadata['imageGraphUrl'];
-		$imageGraph = parent::getStaticGraph($imageGraphUrl, $imageWidth, $imageHeight);
+		$imageGraph = parent::getStaticGraph(
+			$this->reportMetadata,
+			$this->orientation == self::PORTRAIT ? self::IMAGE_GRAPH_WIDTH_PORTRAIT : self::IMAGE_GRAPH_WIDTH_LANDSCAPE,
+			self::IMAGE_GRAPH_HEIGHT,
+			$this->evolutionGraph
+		);
 
 		$this->TCPDF->Image(
 			'@'.$imageGraph,

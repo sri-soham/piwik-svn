@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Dashboard.php 6253 2012-05-07 19:28:09Z SteveG $
+ * @version $Id: Dashboard.php 6958 2012-09-10 07:17:48Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Dashboard
@@ -44,7 +44,7 @@ class Piwik_Dashboard extends Piwik_Plugin
 		$nameless = 1;
 		foreach ($dashboards AS &$dashboard) {
 			if (!empty($dashboard['name'])) {
-				$dashboard['name'] = Piwik_Common::unsanitizeInputValue($dashboard['name']);
+				$dashboard['name'] = $dashboard['name'];
 			} else {
 				$dashboard['name'] = Piwik_Translate('Dashboard_DashboardOf', $login);
 				if($nameless > 1) {
@@ -62,6 +62,7 @@ class Piwik_Dashboard extends Piwik_Plugin
 				$dashboard['layout'] = Piwik_Common::json_decode($layout);
 				$nameless++;
 			}
+			$dashboard['name'] = Piwik_Common::unsanitizeInputValue($dashboard['name']);
 			$pos++;
 		}
 		return $dashboards;
@@ -89,7 +90,19 @@ class Piwik_Dashboard extends Piwik_Plugin
 
 	public function addTopMenu()
 	{
-		Piwik_AddTopMenu('General_Dashboard', array('module' => 'CoreHome', 'action' => 'index'), true, 1);
+		$tooltip = false;
+		try
+		{
+			$idSite = Piwik_Common::getRequestVar('idSite');
+			$tooltip = Piwik_Translate('Dashboard_TopLinkTooltip', Piwik_Site::getNameFor($idSite));
+		}
+		catch (Exception $ex)
+		{
+			// if no idSite parameter, show no tooltip
+		}
+		
+		$urlParams = array('module' => 'CoreHome', 'action' => 'index');
+		Piwik_AddTopMenu('General_Dashboard', $urlParams, true, 1, $isHTML = false, $tooltip);
 	}
 
 	/**

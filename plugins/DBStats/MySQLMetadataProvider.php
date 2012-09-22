@@ -251,7 +251,9 @@ class Piwik_DBStats_MySQLMetadataProvider
 				$reduceArchiveRowName = array($this, 'reduceArchiveRowName');
 				$table->filter('GroupBy', array('label', $reduceArchiveRowName));
 				
-				Piwik_SetOption($dataTableOptionName, reset($table->getSerialized()));
+				$serializedTables = $table->getSerialized();
+				$serializedTable = reset($serializedTables);
+				Piwik_SetOption($dataTableOptionName, $serializedTable);
 			}
 			
 			// add estimated_size column
@@ -270,6 +272,10 @@ class Piwik_DBStats_MySQLMetadataProvider
 	 */
 	public function getEstimatedRowsSize( $row_count, $status )
 	{
+		if($status['Rows'] == 0)
+		{
+			return 0;
+		}
 		$avgRowSize = ($status['Data_length'] + $status['Index_length']) / $status['Rows'];
 		return $avgRowSize * $row_count;
 	}
@@ -298,9 +304,12 @@ class Piwik_DBStats_MySQLMetadataProvider
 				$fixedSizeColumnLength += $this->sizeOfMySQLColumn($columnType);
 			}
 		}
-		
 		// calculate the average row size
-		$avgRowSize = $status['Index_length'] / $status['Rows'] + $fixedSizeColumnLength;
+		if($status['Rows'] == 0) {
+			$avgRowSize = 0;
+		} else {
+			$avgRowSize = $status['Index_length'] / $status['Rows'] + $fixedSizeColumnLength;
+		}
 		
 		// calculate the row set's size
 		return $avgRowSize * $row_count + $blob_size + $name_size;

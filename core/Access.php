@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Access.php 6325 2012-05-26 21:08:06Z SteveG $
+ * @version $Id: Access.php 6974 2012-09-12 04:57:40Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -189,6 +189,7 @@ class Piwik_Access
 	{
 		$this->isSuperUser = true;
 		$this->idsitesByAccess['superuser'] = Piwik_SitesManager_API::getInstance()->getAllSitesId();
+		$this->login = Piwik_Config::getInstance()->superuser['login'];
 		return true;
 	}
 
@@ -393,10 +394,7 @@ class Piwik_Access
 			$idSites = $this->getSitesIdWithAtLeastViewAccess();
 		}
 		
-		if(!is_array($idSites))
-		{
-			$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
-		}
+		$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
 		if(empty($idSites))
 		{
 			throw new Piwik_Access_NoAccessException("The parameter 'idSite=' is missing from the request.");

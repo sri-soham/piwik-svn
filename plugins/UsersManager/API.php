@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: API.php 6974 2012-09-12 04:57:40Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -315,16 +315,6 @@ class Piwik_UsersManager_API
 		Piwik::checkValidLoginString($userLogin);
 	}
 	
-	private function checkPassword($password)
-	{
-		if(!$this->isValidPasswordString($password))
-		{
-			throw new Exception(Piwik_TranslateException('UsersManager_ExceptionInvalidPassword', array(self::PASSWORD_MIN_LENGTH, self::PASSWORD_MAX_LENGTH)));
-		}
-	}
-	const PASSWORD_MIN_LENGTH = 6;
-	const PASSWORD_MAX_LENGTH = 26;
-	
 	private function checkEmail($email)
 	{
 		if($this->userEmailExists($email))
@@ -347,13 +337,6 @@ class Piwik_UsersManager_API
 		return $alias;
 	}
 	
-	private function getCleanPassword($password)
-	{
-		// if change here, should also edit the installation process 
-		// to change how the root pwd is saved in the config file
-		return md5($password);
-	}
-		
 	/**
 	 * Add a user in the database.
 	 * A user is defined by 
@@ -378,10 +361,10 @@ class Piwik_UsersManager_API
 		$this->checkEmail($email);
 
 		$password = Piwik_Common::unsanitizeInputValue($password);
-		$this->checkPassword($password);
+		Piwik_UsersManager::checkPassword($password);
 
 		$alias = $this->getCleanAlias($alias,$userLogin);
-		$passwordTransformed = $this->getCleanPassword($password);
+		$passwordTransformed = Piwik_UsersManager::getPasswordHash($password);
 		
 		$token_auth = $this->getTokenAuth($userLogin, $passwordTransformed);
 		
@@ -412,7 +395,8 @@ class Piwik_UsersManager_API
 	 * 
 	 * @see addUser() for all the parameters
 	 */
-	public function updateUser(  $userLogin, $password = false, $email = false, $alias = false )
+	public function updateUser( $userLogin, $password = false, $email = false, $alias = false,
+								  $_isPasswordHashed = false )
 	{
 		Piwik::checkUserIsSuperUserOrTheUser($userLogin);
 		$this->checkUserIsNotAnonymous( $userLogin );
@@ -426,8 +410,11 @@ class Piwik_UsersManager_API
 		else
 		{
 			$password = Piwik_Common::unsanitizeInputValue($password);
-			$this->checkPassword($password);
-			$password = $this->getCleanPassword($password);
+			if (!$_isPasswordHashed)
+			{
+				Piwik_UsersManager::checkPassword($password);
+				$password = Piwik_UsersManager::getPasswordHash($password);
+			}
 		}
 
 		if(empty($alias))
@@ -502,7 +489,7 @@ class Piwik_UsersManager_API
 	}
 	
 	/**
-	 * Returns true if user with given email (userEmail) is known in the database
+	 * Returns true if user with given email (userEmail) is known in the database, or the super user
 	 *
 	 * @return bool true if the user is known
 	 */
@@ -512,7 +499,8 @@ class Piwik_UsersManager_API
 		$count = Piwik_FetchOne("SELECT count(*) 
 								FROM ".Piwik_Common::prefixTable("user"). " 
 								WHERE email = ?", $userEmail);
-		return $count != 0;	
+		return $count != 0
+				||  Piwik_Config::getInstance()->superuser['email'] == $userEmail;
 	}
 	
 	/**
@@ -551,11 +539,15 @@ class Piwik_UsersManager_API
 			$idSites = Piwik_SitesManager_API::getInstance()->getSitesIdWithAdminAccess();
 		}
 		// in case the idSites is an integer we build an array		
-		elseif(!is_array($idSites))
+		else
 		{
 			$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
 		}
-		
+
+		if(empty($idSites))
+		{
+			throw new Exception('Specify at least one website ID in &idSites=');
+		}
 		// it is possible to set user access on websites only for the websites admin
 		// basically an admin can give the view or the admin access to any user for the websites he manages
 		Piwik::checkUserHasAdminAccess( $idSites );
@@ -703,22 +695,5 @@ class Piwik_UsersManager_API
 			throw new Exception(Piwik_TranslateException('UsersManager_ExceptionPasswordMD5HashExpected'));
 		}
 		return md5($userLogin . $md5Password );
-	}
-	
-	/**
-	 * Returns true if the password is complex enough (at least 6 characters and max 26 characters)
-	 * 
-	 * @param string email
-	 * @return bool
-	 */
-	private function isValidPasswordString( $input )
-	{
-		if(!Piwik::isChecksEnabled()
-			&& !empty($input))
-		{
-			return true;
-		}
-		$l = strlen($input);
-		return $l >= self::PASSWORD_MIN_LENGTH && $l <= self::PASSWORD_MAX_LENGTH;
 	}
 }

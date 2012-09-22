@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleRssWidget.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: ExampleRssWidget.php 6769 2012-08-15 13:56:23Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleRssWidget
@@ -60,17 +60,31 @@ class Piwik_ExampleRssWidget_Controller extends Piwik_Controller
 {
 	function rssPiwik()
 	{
-		$rss = new Piwik_ExampleRssWidget_Rss('http://feeds.feedburner.com/Piwik');
-		$rss->showDescription(true);
-		echo $rss->get();
+		try {
+			$rss = new Piwik_ExampleRssWidget_Rss('http://feeds.feedburner.com/Piwik');
+			$rss->showDescription(true);
+			echo $rss->get();
+		} catch(Exception $e) {
+			$this->error($e);
+		}
 	}
 	function rssChangelog()
 	{
-		$rss = new Piwik_ExampleRssWidget_Rss('http://feeds.feedburner.com/PiwikReleases');
-		$rss->setCountPosts(1);
-		$rss->showDescription(false);
-		$rss->showContent(true);
-		echo $rss->get();
+		try {
+			$rss = new Piwik_ExampleRssWidget_Rss('http://feeds.feedburner.com/PiwikReleases');
+			$rss->setCountPosts(1);
+			$rss->showDescription(false);
+			$rss->showContent(true);
+			echo $rss->get();
+		} catch(Exception $e) {
+			$this->error($e);
+		}
+	}
+	protected function error($e)
+	{
+		echo '<div class="pk-emptyDataTable">' 
+			. Piwik_Translate('General_ErrorRequest') 
+			. ' - ' . $e->getMessage() . '</div>';
 	}
 }
 

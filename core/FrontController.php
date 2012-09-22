@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FrontController.php 6417 2012-05-31 05:34:08Z matt $
+ * @version $Id: FrontController.php 7025 2012-09-19 22:20:56Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -140,7 +140,8 @@ class Piwik_FrontController
 			Piwik_PostEvent('FrontController.NoAccessException', $e);					
 		} catch(Exception $e) {
 			$debugTrace = $e->getTraceAsString();
-			Piwik_ExitWithMessage($e->getMessage(), Piwik::shouldLoggerLog() ? $debugTrace : '', true);
+			$message = Piwik_Common::sanitizeInputValue($e->getMessage());
+			Piwik_ExitWithMessage($message, Piwik::shouldLoggerLog() ? $debugTrace : '', true);
 		}
 	}
 	
@@ -193,6 +194,27 @@ class Piwik_FrontController
 	}
 
 	/**
+	 * Loads the config file and assign to the global registry
+	 * This is overriden in tests to ensure test config file is used
+	 */
+	protected function createConfigObject()
+	{
+		$exceptionToThrow = false;
+		try {
+			Piwik::createConfigObject();
+		} catch(Exception $e) {
+			Piwik_PostEvent('FrontController.NoConfigurationFile', $e, $info = array(), $pending = true);
+			$exceptionToThrow = $e;
+		}
+		return $exceptionToThrow;
+	}
+	
+	protected function createAccessObject()
+	{
+		Piwik::createAccessObject();
+	}
+	
+	/**
 	 * Must be called before dispatch()
 	 * - checks that directories are writable,
 	 * - loads the configuration file,
@@ -230,49 +252,16 @@ class Piwik_FrontController
 
 			Piwik_Translate::getInstance()->loadEnglishTranslation();
 
-			$exceptionToThrow = false;
-
-			try {
-				Piwik::createConfigObject();
-			} catch(Exception $e) {
-				Piwik_PostEvent('FrontController.NoConfigurationFile', $e, $info = array(), $pending = true);
-				$exceptionToThrow = $e;
-			}
+			$exceptionToThrow = $this->createConfigObject();
 
 			if(Piwik_Session::isFileBasedSessions())
 			{
 				Piwik_Session::start();
 			}
 
-			if(Piwik_Config::getInstance()->General['maintenance_mode'] == 1
-				&& !Piwik_Common::isPhpCliMode())
-			{
-				$format = Piwik_Common::getRequestVar('format', '');
-				$exception = new Exception("Piwik is in scheduled maintenance. Please come back later.");
-				if(empty($format))
-				{
-					throw $exception;
-				}
-				$response = new Piwik_API_ResponseBuilder( $format );
-				echo $response->getResponseException( $exception );
-				exit;
-			}
+			$this->handleMaintenanceMode();
+			$this->handleSSLRedirection();
 
-			
-			if(!Piwik_Common::isPhpCliMode()
-				&& Piwik_Config::getInstance()->General['force_ssl'] == 1
-				&& !Piwik::isHttps()
-				// Specifically disable for the opt out iframe 
-				&& !(Piwik_Common::getRequestVar('module', '') == 'CoreAdminHome'
-					&& Piwik_Common::getRequestVar('action', '') == 'optOut')
-			)
-			{
-				$url = Piwik_Url::getCurrentUrl();
-				$url = str_replace("http://", "https://", $url);
-				Piwik_Url::redirectToUrl($url);
-			}
-				
-				
 			$pluginsManager = Piwik_PluginsManager::getInstance();
 			$pluginsToLoad = Piwik_Config::getInstance()->Plugins['Plugins'];
 			$pluginsManager->loadPlugins( $pluginsToLoad );
@@ -296,7 +285,7 @@ class Piwik_FrontController
 			Piwik::createLogObject();
 			
 			// creating the access object, so that core/Updates/* can enforce Super User and use some APIs
-			Piwik::createAccessObject();
+			$this->createAccessObject();
 			Piwik_PostEvent('FrontController.dispatchCoreAndPluginUpdatesScreen');
 
 			Piwik_PluginsManager::getInstance()->installLoadedPlugins();
@@ -343,6 +332,50 @@ class Piwik_FrontController
 		
 //		Piwik::log('End FrontController->init() - Request: '. var_export($_REQUEST, true));
 	}
+	
+	protected function handleMaintenanceMode()
+	{
+		if(Piwik_Config::getInstance()->General['maintenance_mode'] == 1
+			&& !Piwik_Common::isPhpCliMode())
+		{
+			$format = Piwik_Common::getRequestVar('format', '');
+			
+			$message = "Piwik is in scheduled maintenance. Please come back later."
+					 . " The administrator can disable maintenance by editing the file piwik/config/config.ini.php and removing the following: "
+					 . " maintenance_mode=1 ";
+			if(Piwik_Config::getInstance()->Tracker['record_statistics'] == 0)
+			{
+				$message .= ' and record_statistics=0';
+			}
+			
+			$exception = new Exception($message);
+			// extend explain how to re-enable
+			// show error message when record stats = 0 
+			if(empty($format))
+			{
+				throw $exception;
+			}
+			$response = new Piwik_API_ResponseBuilder( $format );
+			echo $response->getResponseException( $exception );
+			exit;
+		}
+	}
+	
+	protected function handleSSLRedirection()
+	{
+		if(!Piwik_Common::isPhpCliMode()
+			&& Piwik_Config::getInstance()->General['force_ssl'] == 1
+			&& !Piwik::isHttps()
+			// Specifically disable for the opt out iframe 
+			&& !(Piwik_Common::getRequestVar('module', '') == 'CoreAdminHome'
+				&& Piwik_Common::getRequestVar('action', '') == 'optOut')
+		)
+		{
+			$url = Piwik_Url::getCurrentUrl();
+			$url = str_replace("http://", "https://", $url);
+			Piwik_Url::redirectToUrl($url);
+		}
+	}
 }
 
 /**
@@ -355,7 +388,7 @@ class Piwik_FrontController_PluginDeactivatedException extends Exception
 {
 	function __construct($module)
 	{
-		parent::__construct("The plugin '$module' is not activated. You can activate the plugin on the 'Plugins admin' page.");
+		parent::__construct("The plugin $module is not enabled. You can activate the plugin on Settings > Plugins page in Piwik.");
 	}
 }
 

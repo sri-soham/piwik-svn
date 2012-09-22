@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleFeedburner.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: ExampleFeedburner.php 6848 2012-08-20 23:18:38Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleFeedburner
@@ -53,7 +53,7 @@ class Piwik_ExampleFeedburner extends Piwik_Plugin
 	}
 }
 
-Piwik_AddWidget('Example Widgets', 'Feedburner statistics', 'ExampleFeedburner', 'feedburner');
+Piwik_AddWidget('Example Widgets', 'Feedburner Statistics', 'ExampleFeedburner', 'feedburner');
 
 /**
  *
@@ -79,7 +79,13 @@ class Piwik_ExampleFeedburner_Controller extends Piwik_Controller
 		}
 		$view->feedburnerFeedName = $feedburnerFeedName;
 		$view->idSite = $idSite;
-		$view->fbStats = $this->getFeedData($feedburnerFeedName);
+		
+		try {
+			$stats = $this->getFeedData($feedburnerFeedName);
+		} catch(Exception $e) {
+			$stats = $e->getMessage();
+		}
+		$view->fbStats = $stats;
 		echo $view->render();
 	}
 

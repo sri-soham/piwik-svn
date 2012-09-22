@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphData.php 6324 2012-05-26 19:39:16Z capedfuzz $
+ * @version $Id: GenerateGraphData.php 6596 2012-07-30 20:01:36Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -231,6 +231,12 @@ abstract class Piwik_ViewDataTable_GenerateGraphData extends Piwik_ViewDataTable
 		$this->view->setAxisYLabels($columnNameToTranslation);
 		$this->view->setAxisYUnit($this->yAxisUnit);
 		$this->view->setDisplayPercentageInTooltip($this->displayPercentageInTooltip);
+		
+		// show_all_ticks is not real query param, it is set by GenerateGraphHTML.
+		if (Piwik_Common::getRequestVar('show_all_ticks', 0) == 1)
+		{
+			$this->view->showAllTicks();
+		}
 		
 		$units = $this->getUnitsForColumnsToDisplay();
 		$this->view->setAxisYUnits($units);

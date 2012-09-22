@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ReportRenderer.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: ReportRenderer.php 6918 2012-09-04 21:44:26Z JulienM $
  * 
  * @category Piwik
  * @package Piwik
@@ -35,8 +35,6 @@ abstract class Piwik_ReportRenderer
 		self::HTML_FORMAT,
 	);
 
-	protected $renderImageInline = false;
-
 	/**
 	 * Return the ReportRenderer associated to the renderer type $rendererType
 	 *
@@ -66,18 +64,6 @@ abstract class Piwik_ReportRenderer
 	}
 
 	/**
-	 * Currently only used for HTML reports.
-	 * When sent by mail, images are attached to the mail: renderImageInline = false
-	 * When downloaded, images are included base64 encoded in the report body: renderImageInline = true
-	 *
-	 * @param boolean $renderImageInline
-	 */
-	public function setRenderImageInline($renderImageInline)
-	{
-		$this->renderImageInline = $renderImageInline;
-	}
-
-	/**
 	 * Initialize locale settings.
 	 * If not called, locale settings defaults to 'en'
 	 *
@@ -99,6 +85,18 @@ abstract class Piwik_ReportRenderer
 	 * @param string $filename without path & without format extension
 	 */
 	abstract public function sendToBrowserDownload($filename);
+
+	/**
+	 * Output rendering to browser
+	 *
+	 * @param string $filename without path & without format extension
+	 */
+	abstract public function sendToBrowserInline($filename);
+
+	/**
+	 * Get rendered report
+	 */
+	abstract public function getRenderedReport();
 
 	/**
 	 * Generate the first page.
@@ -172,6 +170,13 @@ abstract class Piwik_ReportRenderer
 		header('Content-Type: ' . $contentType);
 		header('Content-Disposition: attachment; filename="'.str_replace('"', '\'', basename($filename)).'";');
 		header('Content-Length: '.strlen($content));
+
+		echo $content;
+	}
+
+	protected static function inlineToBrowser($contentType, $content)
+	{
+		header('Content-Type: ' . $contentType);
 		echo $content;
 	}
 
@@ -215,7 +220,14 @@ abstract class Piwik_ReportRenderer
 		);
 	}
 
-	public static function getStaticGraph($imageGraphUrl, $width, $height) {
+	public static function getStaticGraph($reportMetadata, $width, $height, $evolution) {
+
+		$imageGraphUrl = $reportMetadata['imageGraphUrl'];
+
+		if($evolution && !empty($reportMetadata['imageGraphEvolutionUrl']))
+		{
+			$imageGraphUrl = $reportMetadata['imageGraphEvolutionUrl'];
+		}
 
 		$request = new Piwik_API_Request(
 			$imageGraphUrl .

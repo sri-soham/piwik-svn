@@ -5,7 +5,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6410 2012-05-31 00:16:14Z matt $
+ * @version $Id: API.php 7022 2012-09-19 09:20:43Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_API
@@ -36,7 +36,10 @@ class Piwik_API extends Piwik_Plugin {
 	
 	public function addTopMenu() 
 	{
-		Piwik_AddTopMenu('General_API', array('module' => 'API', 'action' => 'listAllAPI'), true, 7);
+		$apiUrlParams = array('module' => 'API', 'action' => 'listAllAPI');
+		$tooltip = Piwik_Translate('API_TopLinkTooltip');
+		
+		Piwik_AddTopMenu('General_API', $apiUrlParams, true, 7, $isHTML = false, $tooltip);
 		
 		if(empty($_SERVER['HTTP_USER_AGENT']))
 		{
@@ -472,10 +475,11 @@ class Piwik_API_API
      * Loads reports metadata, then return the requested one,
      * matching optional API parameters.
      */
-	public function getMetadata($idSite, $apiModule, $apiAction, $apiParameters = array(), $language = false, $period = false, $date = false)
+	public function getMetadata($idSite, $apiModule, $apiAction, $apiParameters = array(), $language = false,
+								$period = false, $date = false, $hideMetricsDoc = false, $showSubtableReports = false)
     {
     	Piwik_Translate::getInstance()->reloadLanguage($language);
-    	$reportsMetadata = $this->getReportMetadata($idSite, $period, $date);
+    	$reportsMetadata = $this->getReportMetadata($idSite, $period, $date, $hideMetricsDoc, $showSubtableReports);
     	
     	foreach($reportsMetadata as $report)
     	{
@@ -516,7 +520,8 @@ class Piwik_API_API
 	 * @param string $idSites Comma separated list of website Ids
 	 * @return array
 	 */
-	public function getReportMetadata($idSites = '', $period = false, $date = false)
+	public function getReportMetadata($idSites = '', $period = false, $date = false, $hideMetricsDoc = false,
+									  $showSubtableReports = false)
 	{
 		$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
 		if(!empty($idSites))
@@ -535,7 +540,14 @@ class Piwik_API_API
 			if (!isset($availableReport['processedMetrics'])) {
 				$availableReport['processedMetrics'] = $this->getDefaultProcessedMetrics();
 			}
-			if (!isset($availableReport['metricsDocumentation'])) {
+			
+			if ($hideMetricsDoc) // remove metric documentation if it's not wanted
+			{
+				unset($availableReport['metricsDocumentation']);
+			}
+			else if (!isset($availableReport['metricsDocumentation']))
+			{
+				// set metric documentation to default if it's not set 
 				$availableReport['metricsDocumentation'] = $this->getDefaultMetricsDocumentation();
 			}
 		}
@@ -602,6 +614,18 @@ class Piwik_API_API
 			unset($availableReport['order']);
 		}
 		
+		// remove subtable reports
+		if (!$showSubtableReports)
+		{
+			foreach ($availableReports as $idx => $report)
+			{
+				if (isset($report['isSubtableReport']) && $report['isSubtableReport'])
+				{
+					unset($availableReports[$idx]);
+				}
+			}
+		}
+		
 		return $availableReports;
 	}
 	
@@ -643,7 +667,9 @@ class Piwik_API_API
 		$availableReports[] = $metadata;
 	}
 
-	public function getProcessedReport($idSite, $period, $date, $apiModule, $apiAction, $segment = false, $apiParameters = false, $idGoal = false, $language = false, $showTimer = true)
+	public function getProcessedReport( $idSite, $period, $date, $apiModule, $apiAction, $segment = false,
+										$apiParameters = false, $idGoal = false, $language = false,
+										$showTimer = true, $hideMetricsDoc = false, $idSubtable = false)
     {
     	$timer = new Piwik_Timer();
     	if($apiParameters === false)
@@ -656,7 +682,8 @@ class Piwik_API_API
 			$apiParameters['idGoal'] = $idGoal;
 		}
         // Is this report found in the Metadata available reports?
-        $reportMetadata = $this->getMetadata($idSite, $apiModule, $apiAction, $apiParameters, $language, $period, $date);
+        $reportMetadata = $this->getMetadata($idSite, $apiModule, $apiAction, $apiParameters, $language,
+        									 $period, $date, $hideMetricsDoc, $showSubtableReports = true);
         if(empty($reportMetadata))
         {
         	throw new Exception("Requested report $apiModule.$apiAction for Website id=$idSite not found in the list of available reports. \n");
@@ -672,6 +699,7 @@ class Piwik_API_API
 			'format' => 'original',
 			'serialize' => '0',
 			'language' => $language,
+			'idSubtable' => $idSubtable,
 		));
 		if(!empty($segment)) $parameters['segment'] = $segment;
 		
@@ -691,23 +719,8 @@ class Piwik_API_API
     	}
     	$website = new Piwik_Site($idSite);
 //    	$segment = new Piwik_Segment($segment, $idSite);
-
-		if(Piwik_Archive::isMultiplePeriod($date, $period))
-		{
-			$period =  new Piwik_Period_Range($period, $date);
-		}
-		else
-		{
-			if($period == 'range')
-			{
-				$period = new Piwik_Period_Range($period, $date);
-			}
-			else
-			{
-				$period = Piwik_Period::factory($period, Piwik_Date::factory($date));
-			}
-		}
-
+		
+		$period = Piwik_Period::advancedFactory($period, $date);
 		$period = $period->getLocalizedLongString();
     	
     	$return = array(
@@ -744,7 +757,8 @@ class Piwik_API_API
     private function handleTableReport($idSite, $dataTable, &$reportMetadata, $hasDimension)
     {
     	$columns = $reportMetadata['metrics'];
-
+    	$columns = $this->hideShowMetrics($columns);
+    	
 		if($hasDimension)
 		{
 			$columns = array_merge(
@@ -819,6 +833,50 @@ class Piwik_API_API
     		$columns,
     		$rowsMetadata
     	);
+    }
+    
+    /**
+     * Removes column names from an array based on the values in the hideColumns,
+     * showColumns query parameters. This is a hack that provides the ColumnDelete
+     * filter functionality in processed reports.
+     * 
+     * @param array $columns List of metrics shown in a processed report.
+     * @return array Filtered list of metrics.
+     */
+    private function hideShowMetrics( $columns )
+    {
+    	// remove columns if hideColumns query parameters exist
+    	$columnsToRemove = Piwik_Common::getRequestVar('hideColumns', '');
+    	if ($columnsToRemove != '')
+    	{
+    		$columnsToRemove = explode(',', $columnsToRemove);
+    		foreach ($columnsToRemove as $name)
+    		{
+    			// if a column to remove is in the column list, remove it
+    			if (isset($columns[$name]))
+    			{
+    				unset($columns[$name]);
+    			}
+    		}
+    	}
+		
+		// remove columns if showColumns query parameters exist
+    	$columnsToKeep = Piwik_Common::getRequestVar('showColumns', '');
+    	if ($columnsToKeep != '')
+    	{
+    		$columnsToKeep = explode(',', $columnsToKeep);
+    		foreach ($columns as $name => $ignore)
+    		{
+    			// if the current column should not be kept, remove it
+    			$idx = array_search($name, $columnsToKeep);
+    			if ($idx === FALSE) // if $name is not in $columnsToKeep
+    			{
+    				unset($columns[$name]);
+    			}
+    		}
+    	}
+    	
+    	return $columns;
     }
 
 	/**
@@ -925,6 +983,7 @@ class Piwik_API_API
 		if(is_null($order))
 		{
 			$order = array(
+				Piwik_Translate('General_MultiSitesSummary'),
 				Piwik_Translate('VisitsSummary_VisitsSummary'),
 				Piwik_Translate('Goals_Ecommerce'),
 				Piwik_Translate('Actions_Actions'),
@@ -1058,24 +1117,61 @@ class Piwik_API_API
 	 * 
 	 * @return array
 	 */
-	public function getRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $label, $segment = false, $column = false, $language = false)
+	public function getRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $label = false, $segment = false, $column = false, $language = false, $idGoal = false)
     {
+		// validation of requested $period & $date
+		if ($period == 'range')
+		{
+			// load days in the range
+			$period = 'day';
+		}
+
+		if(!Piwik_Archive::isMultiplePeriod($date, $period))
+		{
+			throw new Exception("Row evolutions can not be processed with this combination of \'date\' and \'period\' parameters.");
+		}
+
 		// this is needed because Piwik_API_Proxy uses Piwik_Common::getRequestVar which in turn
 		// uses Piwik_Common::sanitizeInputValue. This causes the > that separates recursive labels
 		// to become &gt; and we need to undo that here.
 		$label = Piwik_Common::unsanitizeInputValue($label);
-		
-		$labels = explode(',', $label);
-		$labels = array_map('urldecode', $labels);
-		$labels = array_unique($labels);
-		
-		if (count($labels) > 1)
+
+		if($label)
 		{
-			$data = $this->getMultiRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels, $segment, $column, $language);
+			$labels = explode(',', $label);
+			$labels = array_map('urldecode', $labels);
+			$labels = array_unique($labels);
 		}
 		else
 		{
-			$data = $this->getSingleRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels[0], $segment, $language);
+			$range = new Piwik_Period_Range($period, $date);
+			$lastDate = $range->getDateEnd();
+
+			// retrieve top labels for the most recent period
+			$mostRecentDataTable = $this->loadRowEvolutionDataFromAPI(
+				$idSite,
+				$period,
+				$lastDate,
+				$apiModule,
+				$apiAction,
+				null,
+				$segment,
+				$idGoal
+			);
+
+			$labels = $mostRecentDataTable->getColumn('label');
+
+			//@review $labelCount can be equal to 0, this means there are no data what should this API return in that case?
+			if(!count($labels)) return null;
+		}
+
+		if (count($labels) > 1)
+		{
+			$data = $this->getMultiRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels, $segment, $column, $language, $idGoal);
+		}
+		else
+		{
+			$data = $this->getSingleRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels[0], $segment, $language, $idGoal);
 		}
 		return $data;
 	}
@@ -1084,12 +1180,12 @@ class Piwik_API_API
 	 * Get row evolution for a single label 
 	 * @return array containing  report data, metadata, label, logo
 	 */
-	private function getSingleRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $label, $segment, $language=false)
+	private function getSingleRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $label, $segment, $language=false, $idGoal = false)
 	{
-		$metadata = $this->getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language);
+		$metadata = $this->getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language, $idGoal);
 		$metricNames = array_keys($metadata['metrics']);
 		
-		$dataTable = $this->loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label, $segment);
+		$dataTable = $this->loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label, $segment, $idGoal);
 		
 		$logo = $actualLabel = false;
 		$urlFound = false;
@@ -1160,17 +1256,12 @@ class Piwik_API_API
 	 * @param $apiAction
 	 * @param $label
 	 * @param $segment
+	 * @param $idGoal
 	 * @throws Exception
-	 * @return Piwik_DataTable_Array
+	 * @return Piwik_DataTable_Array|Piwik_DataTable
 	 */
-	private function loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label, $segment)
+	private function loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label = false, $segment = false, $idGoal = false)
 	{	
-		if ($period == 'range')
-		{
-			// load days in the range
-			$period = 'day';
-		}
-		
 		$parameters = array(
 			'method' => $apiModule.'.'.$apiAction,
 			'label' => $label,
@@ -1180,10 +1271,20 @@ class Piwik_API_API
 			'format' => 'original',
 			'serialize' => '0',
 			'segment' => $segment,
+			'idGoal' => $idGoal
 		);
 		
 		// add "processed metrics" like actions per visit or bounce rate
-		if ($apiModule != 'Actions')
+		// note: some reports should not be filtered with AddColumnProcessedMetrics
+		// specifically, reports without the Piwik_Archive::INDEX_NB_VISITS metric such as Goals.getVisitsUntilConversion & Goal.getDaysToConversion
+		// this is because the AddColumnProcessedMetrics filter removes all datable rows lacking this metric
+		if
+		(
+			$apiModule != 'Actions'
+			&&
+			($apiModule != 'Goals' || ($apiAction != 'getVisitsUntilConversion' && $apiAction != 'getDaysToConversion'))
+			&& $label // do not request processed metrics when retrieving top n labels
+		)
 		{
 			$parameters['filter_add_columns_when_show_all_columns'] = '1';
 		}
@@ -1192,15 +1293,9 @@ class Piwik_API_API
         $request = new Piwik_API_Request($url);
 		
 		try {
-        	$dataTable = $request->process();
-        } catch (Exception $e) {
-        	throw new Exception("API returned an error: ".$e->getMessage()."\n");
-        }
-		
-		if (!($dataTable instanceof Piwik_DataTable_Array))
-		{
-			throw new Exception("API didn't return a DataTable array. Maybe you used "
-				."a single date (i.e. not YYYY-MM-DD,YYYY-MM-DD)");
+			$dataTable = $request->process();
+		} catch (Exception $e) {
+			throw new Exception("API returned an error: ".$e->getMessage()."\n");
 		}
 		
 		return $dataTable;
@@ -1215,12 +1310,17 @@ class Piwik_API_API
 	 * @param $apiModule
 	 * @param $apiAction
 	 * @param $language
+	 * @param $idGoal
 	 * @throws Exception
 	 * @return array
 	 */
-	private function getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language)
+	private function getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language, $idGoal = false)
 	{
-		$reportMetadata = $this->getMetadata($idSite, $apiModule, $apiAction, $apiParameters = false, $language, $period, $date);
+		$apiParameters = array();
+		if(!empty($idGoal)) {
+			$apiParameters = array( 'idGoal' => $idGoal);
+		}
+		$reportMetadata = $this->getMetadata($idSite, $apiModule, $apiAction, $apiParameters, $language, $period, $date, $hideMetricsDoc = false, $showSubtableReports = true);
 		
         if (empty($reportMetadata))
         {
@@ -1325,11 +1425,11 @@ class Piwik_API_API
 	}
 	
 	/** Get row evolution for a multiple labels */
-	private function getMultiRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels, $segment, $column, $language=false)
+	private function getMultiRowEvolution($idSite, $period, $date, $apiModule, $apiAction, $labels, $segment, $column, $language=false, $idGoal=false)
 	{
 		$actualLabels = $logos = array();
 		
-		$metadata = $this->getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language);
+		$metadata = $this->getRowEvolutionMetaData($idSite, $period, $date, $apiModule, $apiAction, $language, $idGoal);
 		
 		if (!isset($metadata['metrics'][$column]))
 		{
@@ -1343,7 +1443,7 @@ class Piwik_API_API
 		$dataTableMetadata = false;
 		foreach ($labels as $labelIndex => $label)
 		{
-			$dataTable = $this->loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label, $segment);
+			$dataTable = $this->loadRowEvolutionDataFromAPI($idSite, $period, $date, $apiModule, $apiAction, $label, $segment, $idGoal);
 			
 			$dataTablesPerLabel[$labelIndex] = $dataTable->getArray();
 			if (!$dataTableMetadata)
@@ -1450,4 +1550,26 @@ class Piwik_API_API
 		);
 	}
 	
+	/**
+	 * Performs multiple API requests at once and returns every result.
+	 * 
+	 * @param array $urls The array of API requests.
+	 */
+	public function getBulkRequest( $urls )
+	{
+		if (empty($urls))
+		{
+			return array();
+		}
+		
+		$urls = Piwik_Common::unsanitizeInputValues($urls);
+		
+		$result = array();
+		foreach ($urls as $url)
+		{
+			$req = new Piwik_API_Request($url);
+			$result[] = $req->process();
+		}
+		return $result;
+	}
 }

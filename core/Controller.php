@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6400 2012-05-30 09:50:00Z matt $
+ * @version $Id: Controller.php 7025 2012-09-19 22:20:56Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -439,15 +439,7 @@ abstract class Piwik_Controller
 				$period = new Piwik_Period_Range($periodStr, $rawDate, $this->site->getTimezone());
 			}
 			$view->rawDate = $rawDate;
-			
-			if ($period instanceof Piwik_Period_Month) // show month name when period is for a month
-			{
-				$view->prettyDate = $period->getLocalizedLongString();
-			}
-			else
-			{
-				$view->prettyDate = $period->getPrettyString();
-			}
+			$view->prettyDate = self::getCalendarPrettyDate($period);
 			
 			$view->siteName = $this->site->getName();
 			$view->siteMainUrl = $this->site->getMainUrl();
@@ -644,7 +636,7 @@ abstract class Piwik_Controller
 		if(Piwik::isUserIsSuperUser())
 		{
 			Piwik_ExitWithMessage("Error: no website was found in this Piwik installation. 
-			<br />Check the table '". Piwik_Common::prefixTable('site') ."' that should contain your Piwik websites.", false, true);
+			<br />Check the table '". Piwik_Common::prefixTable('site') ."' in your database, it should contain your Piwik websites.", false, true);
 		}
 		
 		$currentLogin = Piwik::getCurrentUserLogin();
@@ -756,6 +748,24 @@ abstract class Piwik_Controller
 	{
 		if(Piwik_Common::getRequestVar('token_auth', false) != Piwik::getCurrentUserTokenAuth()) {
 			throw new Piwik_Access_NoAccessException(Piwik_TranslateException('General_ExceptionInvalidToken'));
+		}
+	}
+	
+	/**
+	 * Returns pretty date for use in period selector widget.
+	 * 
+	 * @param Piwik_Period $period
+	 * @return string
+	 */
+	public static function getCalendarPrettyDate($period)
+	{
+		if ($period instanceof Piwik_Period_Month) // show month name when period is for a month
+		{
+			return $period->getLocalizedLongString();
+		}
+		else
+		{
+			return $period->getPrettyString();
 		}
 	}
 }

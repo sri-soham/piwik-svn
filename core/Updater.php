@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Updater.php 6300 2012-05-23 21:19:25Z SteveG $
+ * @version $Id: Updater.php 6814 2012-08-17 14:53:21Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -28,8 +28,8 @@ class Piwik_Updater
 	
 	public $pathUpdateFileCore;
 	public $pathUpdateFilePlugins;
-
 	private $componentsToCheck = array();
+	private $hasMajorDbUpdate = false;
 	
 	public function __construct()
 	{
@@ -98,6 +98,17 @@ class Piwik_Updater
 	}
 
 	/**
+	 * Does one of the new versions involve a major database update?
+	 * Note: getSqlQueriesToExecute() must be called before this method!
+	 * 
+	 * @return bool
+	 */
+	public function hasMajorDbUpdate()
+	{
+		return $this->hasMajorDbUpdate;
+	}
+
+	/**
 	 * Returns the list of SQL queries that would be executed during the update
 	 * 
 	 * @return array of SQL queries 
@@ -118,6 +129,8 @@ class Piwik_Updater
 					foreach($queriesForComponent as $query => $error) {
 						$queries[] = $query.';';
 					}
+					
+					$this->hasMajorDbUpdate = $this->hasMajorDbUpdate || call_user_func( array($className, 'isMajorUpdate'));
 				}
 			}
 			// unfortunately had to extract this query from the Piwik_Option class
@@ -265,7 +278,8 @@ class Piwik_Updater
 			{
 				if($name === 'core')
 				{
-					$currentVersion = '0.2.9';
+					// This should not happen
+					$currentVersion = Piwik_Version::VERSION;
 				}
 				else
 				{

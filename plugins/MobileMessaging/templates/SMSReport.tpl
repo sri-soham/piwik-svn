@@ -1,12 +1,16 @@
 {strip}
 	{$prettyDate}.{literal} {/literal}
+
+	{if empty($reportRows)}
+		{'CoreHome_ThereIsNoDataForThisReport'|translate}
+	{/if}
+
 	{foreach name=reportRows from=$reportRows item=row key=rowId}
 
 		{assign var=rowMetrics value=$row->getColumns()}
 		{assign var=rowMetadata value=$reportRowsMetadata[$rowId]->getColumns()}
 
-		{*website name (if there is more than one site)*}
-		{if !$smarty.foreach.reportRows.first or !$smarty.foreach.reportRows.last}
+		{if $displaySiteName}
 			{$rowMetrics.label}:{literal} {/literal}
 		{/if}
 

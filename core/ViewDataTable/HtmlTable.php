@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: HtmlTable.php 6300 2012-05-23 21:19:25Z SteveG $
+ * @version $Id: HtmlTable.php 7036 2012-09-21 20:37:53Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -223,6 +223,14 @@ class Piwik_ViewDataTable_HtmlTable extends Piwik_ViewDataTable
 	 */
 	public function disableRowEvolution()
 	{
-		$this->viewProperties['disable_row_evolution'] = true;
+		$this->variablesDefault['disable_row_evolution'] = true;
+	}
+	
+	/**
+	 * Disables row actions.
+	 */
+	public function disableRowActions()
+	{
+		$this->variablesDefault['disable_row_actions'] = true;
 	}
 }

@@ -1,5 +1,68 @@
 /**
- * DataTable RowActions
+ * Registry for row actions
+ * 
+ * Plugins can call DataTable_RowActions_Registry.register() from their JS
+ * files in order to add new actions to arbitrary data tables. The register()
+ * method takes an object containing:
+ * - name: string identifying the action. must be short, no spaces.
+ * - dataTableIcon: path to the icon for the action
+ * - createInstance: a factory method to create an instance of the appropriate
+ *                   subclass of DataTable_RowAction
+ * - isAvailable: a method to determine whether the action is available in a
+ *                given row of a data table
+ */
+var DataTable_RowActions_Registry = {
+	
+	registry: [],
+	
+	register: function(action) {
+		this.registry.push(action);
+	},
+	
+	getAvailableActions: function(dataTableParams, tr) {
+		if (dataTableParams.disable_row_actions == '1')
+		{
+			return [];
+		}
+		
+		var available = [];
+		for (var i = 0; i < this.registry.length; i++) {
+			if (this.registry[i].isAvailable(dataTableParams, tr)) {
+				available.push(this.registry[i]);
+			}
+		}
+		return available;
+	}
+	
+};
+
+// Register Row Evolution (also servers as example)
+DataTable_RowActions_Registry.register({
+	
+	name: 'RowEvolution',
+	
+	dataTableIcon: 'themes/default/images/row_evolution.png',
+	
+	createInstance: function(dataTable) {
+		return new DataTable_RowActions_RowEvolution(dataTable);
+	},
+	
+	isAvailable: function(dataTableParams, tr) {
+		return (
+			typeof dataTableParams.disable_row_evolution == 'undefined'
+			|| dataTableParams.disable_row_evolution == "0"
+		) && (
+			typeof dataTableParams.flat == 'undefined'
+			|| dataTableParams.flat == "0"
+		);
+	}
+
+});
+
+
+
+/**
+ * DataTable Row Actions
  *
  * The lifecycle of an action is as follows:
  * - for each data table, a new instance of the action is created using the factory
@@ -13,25 +76,15 @@
  */
 
 
-/**
- * Factory function for creating action instances dynamically.
- * It's designed to decouple the row actions from the data table code.
- * Also, custom actions can be added more easily this way.
- */
-function DataTable_RowActions_Factory(actionName, dataTable) {
-	var className = 'DataTable_RowActions_' + actionName;
-	eval('if (typeof ' + className + ' == "undefined") alert("Invalid action: ' + className + '");' +
-		'var instance = new ' + className + '(dataTable)');
-	return instance;
-}
-
-
 //
 // BASE CLASS
 //
 
 function DataTable_RowAction(dataTable) {
 	this.dataTable = dataTable;
+	
+	// has to be overridden in subclasses
+	this.trEventName = 'piwikTriggerRowAction';
 }
 
 /** Initialize a row when the table is loaded */
@@ -43,13 +96,13 @@ DataTable_RowAction.prototype.initTr = function(tr) {
 	// for multi-row evolution) wouldn't be possible. Also, sub-tables might have different
 	// API actions. For the label filter to work, we need to use the parent action.
 	// We use jQuery events to let subtables access their parents.
-	tr.bind('piwikTriggerRowAction', function(e, params) {
+	tr.bind(self.trEventName, function(e, params) {
 		self.trigger($(this), params.originalEvent, params.label);
 	});
 };
 
 /**
- * This method is called from the click event and the piwikTriggerRowAction event.
+ * This method is called from the click event and the tr event (see this.trEventName).
  * It derives the label and calls performAction.
  */
 DataTable_RowAction.prototype.trigger = function(tr, e, subTableLabel) {
@@ -63,7 +116,7 @@ DataTable_RowAction.prototype.trigger = function(tr, e, subTableLabel) {
 	// handle sub tables in nested reports: forward to parent
 	var subtable = tr.closest('table');
 	if (subtable.is('.subDataTable')) {
-		subtable.closest('tr').prev().trigger('piwikTriggerRowAction', {
+		subtable.closest('tr').prev().trigger(this.trEventName, {
 			label: label,
 			originalEvent: e
 		});
@@ -83,7 +136,7 @@ DataTable_RowAction.prototype.trigger = function(tr, e, subTableLabel) {
 				if (!ptr.hasClass(findLevel)) {
 					continue;
 				}
-				ptr.trigger('piwikTriggerRowAction', {
+				ptr.trigger(this.trEventName, {
 					label: label,
 					originalEvent: e
 				});
@@ -139,7 +192,8 @@ DataTable_RowAction.prototype.doOpenPopover = function(parameter) {
 
 function DataTable_RowActions_RowEvolution(dataTable) {
 	this.dataTable = dataTable;
-
+	this.trEventName = 'piwikTriggerRowEvolution';
+	
 	/** The rows to be compared in multi row evolution */
 	this.multiEvolutionRows = [];
 }

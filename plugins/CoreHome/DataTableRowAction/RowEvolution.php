@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: RowEvolution.php 6421 2012-05-31 10:54:39Z matt $
+ * @version $Id: RowEvolution.php 7020 2012-09-19 07:54:02Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -137,7 +137,7 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 		
 		$parameters = array(
 			'method' => 'API.getRowEvolution',
-			'label' => $this->label,
+			'label' => urlencode($this->label),
 			'apiModule' => $apiModule,
 			'apiAction' => $apiAction,
 			'idSite' => $this->idSite,

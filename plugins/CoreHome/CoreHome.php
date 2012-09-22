@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CoreHome.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: CoreHome.php 7035 2012-09-21 13:30:18Z EZdesign $
  *
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -67,8 +67,10 @@ class Piwik_CoreHome extends Piwik_Plugin
 		$jsFiles[] = "libs/swfobject/swfobject.js";
 		$jsFiles[] = "libs/javascript/sprintf.js";
 		$jsFiles[] = "themes/default/common.js";
+		$jsFiles[] = "plugins/CoreHome/templates/tooltip.js";
 		$jsFiles[] = "plugins/CoreHome/templates/datatable.js";
 		$jsFiles[] = "plugins/CoreHome/templates/datatable_rowactions.js";
+		$jsFiles[] = "plugins/CoreHome/templates/popover.js";
 		$jsFiles[] = "plugins/CoreHome/templates/broadcast.js";
 		$jsFiles[] = "plugins/CoreHome/templates/menu.js";
 		$jsFiles[] = "plugins/CoreHome/templates/calendar.js";

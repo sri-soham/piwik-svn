@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6363 2012-05-29 05:50:06Z matt $
+ * @version $Id: Controller.php 6972 2012-09-11 09:08:36Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserCountryMap
@@ -30,6 +30,8 @@ class Piwik_UserCountryMap_Controller extends Piwik_Controller
 		$token_auth = Piwik::getCurrentUserTokenAuth();
 		
 		$view = Piwik_View::factory('worldmap');
+
+		// will be escaped in the template
 		$view->dataUrl = "?module=API"
 			. "&method=API.getProcessedReport&format=XML"
 			. "&apiModule=UserCountry&apiAction=getCountry"
@@ -58,19 +60,25 @@ class Piwik_UserCountryMap_Controller extends Piwik_Controller
 			. '&filter_limit=-1'
 		);
 		$metaData = $request->process();
-		
+
 		$metrics = array();
-		foreach ($metaData[0]['metrics'] as $id => $val)
+		if(!is_array($metaData))
 		{
-			if (Piwik_Common::getRequestVar('period') == 'day' || $id != 'nb_uniq_visitors') {
+			throw new Exception("Error while requesting Map reports for website " . (int)$idSite);
+		}
+		else
+		{
+			foreach ($metaData[0]['metrics'] as $id => $val)
+			{
+				if (Piwik_Common::getRequestVar('period') == 'day' || $id != 'nb_uniq_visitors') {
+					$metrics[] = array($id, $val);
+				}
+			}
+			foreach ($metaData[0]['processedMetrics'] as $id => $val)
+			{
 				$metrics[] = array($id, $val);
 			}
-		} 
-		foreach ($metaData[0]['processedMetrics'] as $id => $val) 
-		{
-			$metrics[] = array($id, $val);
 		}
-		
 		$view->metrics = $metrics;
 		$view->defaultMetric = 'nb_visits';
 		echo $view->render();

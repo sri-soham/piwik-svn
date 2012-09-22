@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ViewDataTable.php 6436 2012-06-01 13:53:33Z matt $
+ * @version $Id: ViewDataTable.php 6873 2012-08-25 10:02:08Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -302,15 +302,18 @@ abstract class Piwik_ViewDataTable
 		$this->viewProperties['show_pagination_control'] = Piwik_Common::getRequestVar('show_pagination_control', true);
 		$this->viewProperties['show_footer'] = Piwik_Common::getRequestVar('show_footer', true);
 		$this->viewProperties['show_footer_icons'] = ($this->idSubtable == false);
+		$this->viewProperties['show_related_reports'] = Piwik_Common::getRequestVar('show_related_reports', true);
 		$this->viewProperties['apiMethodToRequestDataTable'] = $this->apiMethodToRequestDataTable;
 		$this->viewProperties['uniqueId'] = $this->getUniqueIdViewDataTable();
 		$this->viewProperties['exportLimit'] = Piwik_Config::getInstance()->General['API_datatable_default_limit'];
+
 		$this->viewProperties['highlight_summary_row'] = false;
 		$this->viewProperties['metadata'] = array();
 		
 		$this->viewProperties['relatedReports'] = array();
 		$this->viewProperties['title'] = 'unknown';
 		$this->viewProperties['self_url'] = $this->getBaseReportUrl($currentControllerName, $currentControllerAction);
+		$this->viewProperties['tooltip_metadata_name'] = false;
 		
 		$standardColumnNameToTranslation = array_merge(
 			Piwik_API_API::getInstance()->getDefaultMetrics(),
@@ -439,6 +442,7 @@ abstract class Piwik_ViewDataTable
 	/**
 	 * Hook called after the dataTable has been loaded from the API
 	 * Can be used to add, delete or modify the data freshly loaded
+	 * 
 	 * @return bool
 	 */
 	protected function postDataTableLoadedFromAPI()
@@ -468,7 +472,7 @@ abstract class Piwik_ViewDataTable
 			$this->dataTable->filter($filterName, $filterParameters);
 		}
 		
-		if(0 == Piwik_Common::getRequestVar('disable_generic_filters', '0', 'string'))
+		if (!$this->areGenericFiltersDisabled())
 		{
 			// Second, generic filters (Sort, Limit, Replace Column Names, etc.)
 			$requestString = $this->getRequestString();
@@ -479,12 +483,12 @@ abstract class Piwik_ViewDataTable
 			{
 				$request['filter_sort_column'] = $request['filter_sort_order'] = '';
 			}
+			
 			$genericFilter = new Piwik_API_DataTableGenericFilter($request);
 			$genericFilter->filter($this->dataTable);
 		}
 		
-		if (!isset($this->variablesDefault['disable_queued_filters'])
-			|| !$this->variablesDefault['disable_queued_filters'])
+		if (!$this->areQueuedFiltersDisabled())
 		{
 			// Finally, apply datatable filters that were queued (should be 'presentation' filters that
 			// do not affect the number of rows)
@@ -496,6 +500,40 @@ abstract class Piwik_ViewDataTable
 			}
 		}
 		return true;
+	}
+	
+	/**
+	 * Returns true if generic filters have been disabled, false if otherwise.
+	 * 
+	 * @return bool
+	 */
+	private function areGenericFiltersDisabled()
+	{
+		// if disable_generic_filters query param is set to '1', generic filters are disabled
+		if (Piwik_Common::getRequestVar('disable_generic_filters', '0', 'string') == 1)
+		{
+			return true;
+		}
+		
+		// if $this->disableGenericFilters() was called, generic filters are disabled
+		if (isset($this->variablesDefault['disable_generic_filters'])
+			&& $this->variablesDefault['disable_generic_filters'] === true)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Returns true if queued filters have been disabled, false if otherwise.
+	 * 
+	 * @return bool
+	 */
+	private function areQueuedFiltersDisabled()
+	{
+		return isset($this->variablesDefault['disable_queued_filters'])
+			&& $this->variablesDefault['disable_queued_filters'];
 	}
 	
 	/**
@@ -939,6 +977,14 @@ abstract class Piwik_ViewDataTable
 	}
 
 	/**
+	 * Whether or not to show related reports in the footer
+	 */
+	public function disableShowRelatedReports()
+	{
+		$this->viewProperties['show_related_reports'] = false;
+	}
+
+	/**
 	 * Whether or not to show the export to RSS feed icon
 	 */
 	public function disableShowExportAsRssFeed()
@@ -1215,6 +1261,14 @@ abstract class Piwik_ViewDataTable
 	public function setHighlightSummaryRow( $highlightSummaryRow )
 	{
 		$this->viewProperties['highlight_summary_row'] = $highlightSummaryRow;
+	}
+	
+	/**
+	 * Sets the name of the metadata to use for a custom tooltip.
+	 */
+	public function setTooltipMetadataName( $metadataName )
+	{
+		$this->viewProperties['tooltip_metadata_name'] = $metadataName;
 	}
 	
 	/**

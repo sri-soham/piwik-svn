@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTable.php 6331 2012-05-28 00:54:34Z capedfuzz $
+ * @version $Id: DataTable.php 6998 2012-09-15 23:35:32Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -465,18 +465,22 @@ class Piwik_DataTable
 	public function getRowFromLabel( $label )
 	{
 		$rowId = $this->getRowIdFromLabel($label);
-		if(is_int($rowId))
+		if($rowId instanceof Piwik_DataTable_Row)
+		{
+			return $rowId;
+		}
+		if(is_int($rowId) && isset($this->rows[$rowId]))
 		{
 			return $this->rows[$rowId];
 		}
-		return $rowId;
+		return false;
 	}
 
 	/**
 	 * Returns the row id for the givel label
 	 *
 	 * @param string  $label  Value of the column 'label' of the row to return
-	 * @return bool|null
+	 * @return int|Row
 	 */
 	public function getRowIdFromLabel($label)
 	{
@@ -783,6 +787,11 @@ class Piwik_DataTable
 		$this->deleteColumns(array($name));
 	}
 
+	public function __sleep()
+	{
+		return array('rows', 'parents', 'summaryRow');
+	}
+	
 	/**
 	 * Rename a column in all rows
 	 *
@@ -1038,6 +1047,11 @@ class Piwik_DataTable
 			$addToRows[self::ID_PARENTS] = $this->parents;
 		}
 		$aSerializedDataTable[$forcedId] = serialize($this->rows + $addToRows);
+		foreach($this->rows as &$row)
+		{
+			$row->cleanPostSerialize();
+		}
+		
 		return $aSerializedDataTable;
 	}
 
@@ -1328,6 +1342,10 @@ class Piwik_DataTable
 	 */
 	public function getMetadata( $name )
 	{
+		if (!isset($this->metadata[$name]))
+		{
+			return false;
+		}
 		return $this->metadata[$name];
 	}
 	

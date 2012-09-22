@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ResponseBuilder.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: ResponseBuilder.php 6837 2012-08-19 17:17:17Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -229,39 +229,43 @@ class Piwik_API_ResponseBuilder
 	 */
 	protected function handleSuccess( $message = 'ok' )
 	{
-		switch($this->outputFormat)
+		// return a success message only if no content has already been buffered, useful when APIs return raw text or html content to the browser
+		if(!ob_get_contents())
 		{
-			case 'xml':
-				@header("Content-Type: text/xml;charset=utf-8");
-				$return = 
-					"<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" .
-					"<result>\n".
-					"\t<success message=\"".$message."\" />\n".
-					"</result>";
-			break;
-			case 'json':
-				@header( "Content-Type: application/json" );
-				$return = '{"result":"success", "message":"'.$message.'"}';
-			break;
-			case 'php':
-				$return = array('result' => 'success', 'message' => $message);
-				if($this->caseRendererPHPSerialize())
-				{
-					$return = serialize($return);
-				}
-			break;
-			
-			case 'csv':
-				@header("Content-Type: application/vnd.ms-excel");
-				@header("Content-Disposition: attachment; filename=piwik-report-export.csv");	
-				$return = "message\n".$message;
-			break;
-			
-			default:
-				$return = 'Success:'.$message;
-			break;
+			switch($this->outputFormat)
+			{
+				case 'xml':
+					@header("Content-Type: text/xml;charset=utf-8");
+					$return =
+						"<?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" .
+						"<result>\n".
+						"\t<success message=\"".$message."\" />\n".
+						"</result>";
+				break;
+				case 'json':
+					@header( "Content-Type: application/json" );
+					$return = '{"result":"success", "message":"'.$message.'"}';
+				break;
+				case 'php':
+					$return = array('result' => 'success', 'message' => $message);
+					if($this->caseRendererPHPSerialize())
+					{
+						$return = serialize($return);
+					}
+				break;
+
+				case 'csv':
+					@header("Content-Type: application/vnd.ms-excel");
+					@header("Content-Disposition: attachment; filename=piwik-report-export.csv");
+					$return = "message\n".$message;
+				break;
+
+				default:
+					$return = 'Success:'.$message;
+				break;
+			}
+			return $return;
 		}
-		return $return;
 	}
 
 	/**
@@ -299,6 +303,15 @@ class Piwik_API_ResponseBuilder
 		if(Piwik_Common::getRequestVar('disable_queued_filters', 'false', 'string', $this->request) == 'false')
 		{
 			$datatable->applyQueuedFilters();
+		}
+		
+		// use the ColumnDelete filter if hideColumns/showColumns is provided (must be done
+		// after queued filters are run so processed metrics can be removed, too)
+		$hideColumns = Piwik_Common::getRequestVar('hideColumns', '', 'string', $this->request);
+		$showColumns = Piwik_Common::getRequestVar('showColumns', '', 'string', $this->request);
+		if ($hideColumns !== '' || $showColumns !== '')
+		{
+			$datatable->filter('ColumnDelete', array($hideColumns, $showColumns));
 		}
 		
 		// if requested, flatten nested tables

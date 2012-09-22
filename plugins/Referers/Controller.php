@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6031 2012-03-10 16:11:26Z vipsoft $
+ * @version $Id: Controller.php 6612 2012-07-31 09:10:14Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Referers
@@ -216,6 +216,7 @@ class Piwik_Referers_Controller extends Piwik_Controller
 		$view->disableExcludeLowPopulation();
 		$view->setColumnsToDisplay( array('label','nb_visits') );
 		$view->setColumnTranslation('label', Piwik_Translate('Referers_ColumnWebsitePage'));
+		$view->setTooltipMetadataName('url');
 		return $this->renderView($view, $fetch);
 	}
 	
@@ -372,11 +373,16 @@ class Piwik_Referers_Controller extends Piwik_Controller
 		$request = new Piwik_API_Request($topPageUrlRequest);
 		$request = $request->process();
 		$tables = $request->getArray();
-		$topPageUrls = $tables[key($tables)];
-		$topPageUrls = $topPageUrls->getRowsMetadata('url');
-		$tmpTopPageUrls = array_values($topPageUrls);
-		$topPageUrl = current($tmpTopPageUrls);
 		
+		$topPageUrl = false;
+		$first = key($tables);
+		if(!empty($first))
+		{
+			$topPageUrls = $tables[$first];
+			$topPageUrls = $topPageUrls->getRowsMetadata('url');
+			$tmpTopPageUrls = array_values($topPageUrls);
+			$topPageUrl = current($tmpTopPageUrls);
+		}
 		if(empty($topPageUrl))
 		{
 			$topPageUrl = $this->site->getMainUrl();

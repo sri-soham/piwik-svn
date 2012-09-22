@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6156 2012-04-03 21:15:52Z SteveG $
+ * @version $Id: Controller.php 6801 2012-08-17 03:19:21Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Dashboard
@@ -184,6 +184,10 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 										  FROM '.Piwik_Common::prefixTable('user_dashboard') .
 										' WHERE login = ?', array($login));
 
+			if(empty($nextId)) {
+				$nextId = 1;
+			}
+			
 			$name = urldecode(Piwik_Common::getRequestVar('name', '', 'string'));
 			$type = urldecode(Piwik_Common::getRequestVar('type', 'default', 'string'));
 			$layout = '{}';
@@ -361,8 +365,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 	{
 	    return array(
 	        array(100),
-	        array(50,50), array(75,25), array(25,75),
-	        array(33,33,33), array(50,25,25), array(25,50,25), array(25,25,50),
+	        array(50,50), array(67,33), array(33,67),
+	        array(33,33,33), array(40,30,30), array(30,40,30), array(30,30,40),
 	        array(25,25,25,25)
 	    );
 	}
