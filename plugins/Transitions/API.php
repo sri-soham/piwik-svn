@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 7032 2012-09-21 09:19:53Z EZdesign $
+ * @version $Id: API.php 7074 2012-09-27 13:29:17Z EZdesign $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Transitions
@@ -28,19 +28,40 @@ class Piwik_Transitions_API
 	}
 	
 	/**
-	 * This method combines various reports (both from this and from other plugins) and
-	 * returns a complete report. The report is used in the Transitions API to load all
-	 * data at once.
+	 * This method returns a complete report.
+	 * It is used in the Transitions API to load all data at once.
 	 */
 	public function getFullReport($pageUrl, $idSite, $period, $date, $segment = false, $limitBeforeGrouping = false)
 	{
 		Piwik::checkUserHasViewAccess($idSite);
 		
+		// get idaction of page url
+		$actionsPlugin = new Piwik_Actions;
 		$pageUrl = Piwik_Common::unsanitizeInputValue($pageUrl);
+		$idaction = $actionsPlugin->getIdActionFromSegment($pageUrl, 'idaction');
 		
-		$report = array();
-		$this->addMainPageMetricsToReport($report, $pageUrl, $idSite, $period, $date, $segment);
-		$this->addLiveTransitionsDataToReport($report, $pageUrl, $idSite, $period, $date, $segment, $limitBeforeGrouping);
+		// prepare archive processing that can be used by the archiving code
+		$archiveProcessing = new Piwik_ArchiveProcessing_Day();
+		$archiveProcessing->setSite(new Piwik_Site($idSite));
+		$archiveProcessing->setPeriod(Piwik_Period::advancedFactory($period, $date));
+		$archiveProcessing->setSegment(new Piwik_Segment($segment, $idSite));
+		$archiveProcessing->initForLiveUsage();
+		
+		// prepare the report
+		$report = array(
+			'date' => Piwik_Period_Day::advancedFactory($period, $date)->getLocalizedShortString()
+		);
+		
+		// add data to the report
+		$transitionsArchiving = new Piwik_Transitions;
+		$this->addInternalReferrers($transitionsArchiving, $archiveProcessing, $report, $idaction, $limitBeforeGrouping);
+		$this->addFollowingActions($transitionsArchiving, $archiveProcessing, $report, $idaction, $limitBeforeGrouping);
+		$this->addExternalReferrers($transitionsArchiving, $archiveProcessing, $report, $idaction, $limitBeforeGrouping);
+		
+		// derive the number of exits from the other metrics
+		$report['pageMetrics']['exits'] = $report['pageMetrics']['pageviews']
+				- $transitionsArchiving->getTotalTransitionsToFollowingActions()
+				- $report['pageMetrics']['loops'];
 		
 		// replace column names in the data tables
 		$columnNames = array(
@@ -60,102 +81,70 @@ class Piwik_Transitions_API
 	}
 
 	/**
-	 * Add the main metrics (pageviews, exits, bounces) to the full report.
-	 * Data is loaded from Actions.getPageUrls using the label filter.
+	 * Add the internal referrers to the report:
+	 * previous pages
+	 * 
+	 * @param $transitionsArchiving Piwik_Transitions
+	 * @param $archiveProcessing
+	 * @param $report
+	 * @param $idaction
+	 * @param $limitBeforeGrouping
+	 * @throws Exception
 	 */
-	private function addMainPageMetricsToReport(&$report, $pageUrl, $idSite, $period, $date, $segment)
-	{
-		$label = Piwik_Actions::getActionExplodedNames($pageUrl, Piwik_Tracker_Action::TYPE_ACTION_URL);
-		if (count($label) == 1)
+	private function addInternalReferrers($transitionsArchiving, $archiveProcessing, &$report,
+				$idaction, $limitBeforeGrouping) {
+		
+		$data = $transitionsArchiving->queryInternalReferrers(
+					$idaction, $archiveProcessing, $limitBeforeGrouping);
+				
+		if ($data['pageviews'] == 0)
 		{
-			$label = $label[0];
-		}
-		else
-		{
-			$label = array_map('urlencode', $label);
-			$label = implode('>', $label);
+			throw new Exception('NoDataForUrl');
 		}
 		
-		$parameters = array(
-			'method' => 'Actions.getPageUrls',
-			'idSite' => $idSite,
-			'period' => $period,
-			'date' => $date,
-			'label' => $label,
-			'format' => 'original',
-			'serialize' => '0',
-			'expanded' => '0'
-		);
-		if (!empty($segment))
-		{
-			$parameters['segment'] = $segment;
-		}
-		
-		$url = Piwik_Url::getQueryStringFromParameters($parameters);
-		$request = new Piwik_API_Request($url);
-		try
-		{
-			/** @var $dataTable Piwik_DataTable */
-			$dataTable = $request->process();
-		}
-		catch(Exception $e)
-		{
-			throw new Exception("Actions.getPageUrls returned an error: ".$e->getMessage()."\n");
-		}
-		
-		if ($dataTable->getRowsCount() == 0)
-		{
-			throw new Exception("The label '$label' could not be found in Actions.getPageUrls\n");
-		}
-		
-		$row = $dataTable->getFirstRow();
-
-        if ($row !== false) {
-            $report['pageMetrics'] = array(
-                'pageviews' => intval($row->getColumn('nb_hits')),
-                'exits'     => intval($row->getColumn('exit_nb_visits')),
-                'bounces'   => intval($row->getColumn('entry_bounce_count'))
-            );
-        } else {
-            $report['pageMetrics'] = array(
-                'pageviews' => 0,
-                'exits'     => 0,
-                'bounces'   => 0
-            );
-        }
+		$report['previousPages'] = &$data['previousPages'];
+		$report['pageMetrics']['loops'] = $data['loops'];
+		$report['pageMetrics']['pageviews'] = $data['pageviews'];
 	}
 
 	/**
-	 * Add transitions data to the report.
-	 * Fake ArchiveProcessing to do the queries live.
+	 * Add the following actions to the report:
+	 * following pages, downloads, outlinks
+	 * 
+	 * @param $transitionsArchiving Piwik_Transitions
+	 * @param $archiveProcessing
+	 * @param $report
+	 * @param $idaction
+	 * @param $limitBeforeGrouping
 	 */
-	private function addLiveTransitionsDataToReport(&$report, $pageUrl, $idSite, $period, $date,
-				$segment, $limitBeforeGrouping)
-	{
-		// get idaction of page url
-		$actionsPlugin = new Piwik_Actions;
-		$idaction = $actionsPlugin->getIdActionFromSegment($pageUrl, 'idaction');
+	private function addFollowingActions($transitionsArchiving, $archiveProcessing, &$report,
+				$idaction, $limitBeforeGrouping) {
 		
-		// prepare archive processing that can be reused by the archiving code
-		$archiveProcessing = new Piwik_ArchiveProcessing_Day();
-		$archiveProcessing->setSite(new Piwik_Site($idSite));
-		$archiveProcessing->setPeriod(Piwik_Period::advancedFactory($period, $date));
-		$archiveProcessing->setSegment(new Piwik_Segment($segment, $idSite));
-		$archiveProcessing->initForLiveUsage();
+		$data = $transitionsArchiving->queryFollowingActions(
+					$idaction, $archiveProcessing, $limitBeforeGrouping);
 		
-		// launch the archiving code - but live
-		$transitionsArchiving = new Piwik_Transitions;
-		
-		$data = $transitionsArchiving->queryInternalReferrers($idaction, $archiveProcessing, $limitBeforeGrouping);
-		$report['previousPages'] = &$data['previousPages'];
-		$report['pageMetrics']['loops'] = intval($data['loops']);
-		
-		$data = $transitionsArchiving->queryFollowingActions($idaction, $archiveProcessing, $limitBeforeGrouping);
-		foreach ($data as $tableName => $table) {
+		foreach ($data as $tableName => $table)
+		{
 			$report[$tableName] = $table;
 		}
+	}
+
+	/**
+	 * Add the external referrers to the report:
+	 * direct entries, websites, campaigns, search engines
+	 * 
+	 * @param $transitionsArchiving
+	 * @param $archiveProcessing
+	 * @param $report
+	 * @param $idaction
+	 * @param $limitBeforeGrouping
+	 */
+	private function addExternalReferrers($transitionsArchiving, $archiveProcessing, &$report,
+					$idaction, $limitBeforeGrouping) {
 		
-		$data = $transitionsArchiving->queryExternalReferrers($idaction, $archiveProcessing, $limitBeforeGrouping);
+		/** @var $transitionsArchiving Piwik_Transitions */
+		$data = $transitionsArchiving->queryExternalReferrers(
+					$idaction, $archiveProcessing, $limitBeforeGrouping);
 		
 		$report['pageMetrics']['entries'] = 0;
 		$report['referrers'] = array();

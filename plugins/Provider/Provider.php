@@ -78,27 +78,16 @@ class Piwik_Provider extends Piwik_Plugin
 	
 	function install()
 	{
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
 		// add column hostname / hostname ext in the visit table
-		$query = "ALTER IGNORE TABLE `".Piwik_Common::prefixTable('log_visit')."` ADD `location_provider` VARCHAR( 100 ) NULL";
-		
-		// if the column already exist do not throw error. Could be installed twice...
-		try {
-			Piwik_Exec($query);
-		}
-		catch(Exception $e) {
-			if(!Zend_Registry::get('db')->isErrNo($e, '1060'))
-			{
-				throw $e;
-			}
-		}
-
+		$LogVisit->addColLocationProvider();
 	}
 	
 	function uninstall()
 	{
-		// add column hostname / hostname ext in the visit table
-		$query = "ALTER TABLE `".Piwik_Common::prefixTable('log_visit')."` DROP `location_provider`";
-		Piwik_Exec($query);
+		// remove column hostname / hostname ext in the visit table
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
+		$LogVisit->removeColLocationProvider();
 	}
 	
 	function addWidget()

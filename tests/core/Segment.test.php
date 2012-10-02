@@ -12,6 +12,11 @@ class Test_Piwik_Segment extends UnitTestCase
         parent::setUp();
         Piwik::createConfigObject();
 		Piwik_Config::getInstance()->setTestEnvironment();	
+		// 2012-09-15
+		// Piwik_Db_DAO_XXX_Generic class is used in the Piwik_Segment and Piwik_SegmentExpression classes
+		// To create Generic class, db connection is needed. That is the
+		// reason for creating the database object; otherwise it is not needed.
+		Piwik::createDatabaseObject();
 
 		// setup the access layer (required in Segment contrustor testing if anonymous is allowed to use segments)
 		$pseudoMockAccess = new FakeAccess;

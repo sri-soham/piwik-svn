@@ -3,7 +3,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Piwik.php 6856 2012-08-21 22:28:13Z capedfuzz $
+ * @version $Id: Piwik.php 6510 2012-07-13 20:05:39Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -563,7 +563,7 @@ class Piwik
 		);
 		foreach($directoriesToProtect as $directoryToProtect)
 		{
-			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $overwrite = true);
+			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect);
 		}
 
 		// Allow/Deny lives in different modules depending on the Apache version
@@ -583,7 +583,7 @@ class Piwik
 		);
 		foreach($directoriesToProtect as $directoryToProtect => $content)
 		{
-			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $overwrite = true, $content);
+			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $content);
 		}
 	}
 
@@ -1191,9 +1191,8 @@ class Piwik
 		{
 			$db = Piwik_Tracker::getDatabase();
 		}
-		$tableName = Piwik_Common::prefixTable('log_profiling');
-
-		$all = $db->fetchAll('SELECT * FROM '.$tableName );
+		$LogProfiling = Piwik_Db_Factory::getDAO('log_profiling', $db);
+		$all = $LogProfiling->getAll();
 		if($all === false)
 		{
 			return;
@@ -1428,7 +1427,7 @@ class Piwik
 			return Piwik::getPrettyTimeFromSeconds($value, $timeAsSentence);
 		}
 		// Add revenue symbol to revenues
-		if(strpos($columnName, 'revenue') !== false && strpos($columnName, 'evolution') === false)
+		if(strpos($columnName, 'revenue') !== false)
 		{
 			return Piwik::getPrettyMoney($value, $idSite, $htmlAllowed);
 		}
@@ -2356,25 +2355,6 @@ class Piwik
 	{
 		return Piwik_Db_Schema::getInstance()->getTablesInstalled($forceReload);
 	}
-	
-	/**
-	 * Returns all table names archive_*
-	 * 
-	 * @return array 
-	 */
-	static public function getTablesArchivesInstalled()
-	{
-		$archiveTables = array();
-		$tables = Piwik::getTablesInstalled();
-		foreach($tables as $table)
-		{
-			if(strpos($table, 'archive_') !== false)
-			{
-				$archiveTables[] = $table;
-			}
-		}
-		return $archiveTables;
-	}
 
 	/**
 	 * Batch insert into table from CSV (or other delimited) file.
@@ -2530,67 +2510,18 @@ class Piwik
 	 */
 	static public function tableInsertBatchIterate($tableName, $fields, $values, $ignoreWhenDuplicate = true)
 	{
-		$fieldList = '('.join(',', $fields).')';
-		$ignore = $ignoreWhenDuplicate ? 'IGNORE' : '';
-
-		foreach($values as $row) {
-			$query = "INSERT $ignore
-					INTO ".$tableName."
-					$fieldList
-					VALUES (".Piwik_Common::getSqlStringFieldsArray($row).")";
-			Piwik_Query($query, $row);
+		$isArchive = strpos($tableName, 'archive');
+		if ($isArchive === false)
+		{
+			$Generic = Piwik_Db_Factory::getGeneric();
+			$Generic->insertIgnoreBatch($tableName, $fields, $values, $ignoreWhenDuplicate);
 		}
-	}
-
-	/**
-	 * Generate advisory lock name
-	 *
-	 * @param int            $idsite
-	 * @param Piwik_Period   $period
-	 * @param Piwik_Segment  $segment
-	 * @return string
-	 */
-	static public function getArchiveProcessingLockName($idsite, $period, Piwik_Segment $segment)
-	{
-		$config = Piwik_Config::getInstance();
-
-		$lockName = 'piwik.'
-			. $config->database['dbname'] . '.'
-			. $config->database['tables_prefix'] . '/'
-			. $idsite . '/'
-			. (!$segment->isEmpty() ? $segment->getHash().'/' : '' )
-			. $period->getId() . '/'
-			. $period->getDateStart()->toString('Y-m-d') . ','
-			. $period->getDateEnd()->toString('Y-m-d');
-		return $lockName .'/'. md5($lockName . Piwik_Common::getSalt());
-	}
-
-	/**
-	 * Get an advisory lock
-	 *
-	 * @param int            $idsite
-	 * @param Piwik_Period   $period
-	 * @param Piwik_Segment  $segment
-	 * @return bool  True if lock acquired; false otherwise
-	 */
-	static public function getArchiveProcessingLock($idsite, $period, $segment)
-	{
-		$lockName = self::getArchiveProcessingLockName($idsite, $period, $segment);
-		return Piwik_GetDbLock($lockName, $maxRetries = 30);
-	}
-
-	/**
-	 * Release an advisory lock
-	 *
-	 * @param int            $idsite
-	 * @param Piwik_Period   $period
-	 * @param Piwik_Segment  $segment
-	 * @return bool True if lock released; false otherwise
-	 */
-	static public function releaseArchiveProcessingLock($idsite, $period, $segment)
-	{
-		$lockName = self::getArchiveProcessingLockName($idsite, $period, $segment);
-		return Piwik_ReleaseDbLock($lockName);
+		else
+		{
+			// archive_blob_* tables need special handling for the "value" column
+			$Archive = Piwik_Db_Factory::getDAO('archive');
+			$Archive->insertIgnoreBatch($tableName, $fields, $values, $ignoreWhenDuplicate);
+		}
 	}
 	
 	/**

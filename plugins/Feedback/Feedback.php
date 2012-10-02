@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Feedback.php 6828 2012-08-18 22:48:37Z capedfuzz $
+ * @version $Id: Feedback.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_Feedback
@@ -37,14 +37,7 @@ class Piwik_Feedback extends Piwik_Plugin
 
 	public function addTopMenu()
 	{
-		Piwik_AddTopMenu(
-			'General_GiveUsYourFeedback',
-			array('module' => 'Feedback', 'action' => 'index'),
-			true,
-			$order = 20,
-			$isHTML = false,
-			$tooltip = Piwik_Translate('Feedback_TopLinkTooltip')
-		);
+		Piwik_AddTopMenu('General_GiveUsYourFeedback', array('module' => 'Feedback', 'action' => 'index'), true, $order = 20);
 	}
 
 	/**

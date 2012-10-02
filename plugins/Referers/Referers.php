@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Referers.php 7024 2012-09-19 10:53:53Z matt $
+ * @version $Id: Referers.php 6363 2012-05-29 05:50:06Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Referers
@@ -64,7 +64,6 @@ class Piwik_Referers extends Piwik_Plugin
         			'module' => 'Referers',
         			'action' => 'getRefererType',
         			'dimension' => Piwik_Translate('Referers_ColumnRefererType'),
-					'constantRowsCount' => true,
         			'documentation' => Piwik_Translate('Referers_TypeReportDocumentation').'<br />'
         					.'<b>'.Piwik_Translate('Referers_DirectEntry').':</b> '.Piwik_Translate('Referers_DirectEntryDocumentation').'<br />'
         					.'<b>'.Piwik_Translate('Referers_SearchEngines').':</b> '.Piwik_Translate('Referers_SearchEnginesDocumentation',
@@ -75,7 +74,6 @@ class Piwik_Referers extends Piwik_Plugin
         							array('<br />', '&quot;'.Piwik_Translate('Referers_SubmenuCampaigns').'&quot;')),
         			'order' => 1,
         		),
-        		
         		array(
         			'category' => Piwik_Translate('Referers_Referers'),
         			'name'   => Piwik_Translate('Referers_Keywords'),
@@ -84,84 +82,39 @@ class Piwik_Referers extends Piwik_Plugin
 					'actionToLoadSubTables' => 'getSearchEnginesFromKeywordId',
         			'dimension' => Piwik_Translate('Referers_ColumnKeyword'),
         			'documentation' => Piwik_Translate('Referers_KeywordsReportDocumentation', '<br />'),
-        			'actionToLoadSubTables' => 'getSearchEnginesFromKeywordId',
         			'order' => 3,
         		),
-				array( // subtable report
-					'category' => Piwik_Translate('Referers_Referers'),
-					'name'   => Piwik_Translate('Referers_Keywords'),
-					'module' => 'Referers',
-					'action' => 'getSearchEnginesFromKeywordId',
-					'dimension' => Piwik_Translate('Referers_ColumnSearchEngine'),
-					'documentation' => Piwik_Translate('Referers_KeywordsReportDocumentation', '<br />'),
-					'isSubtableReport' => true,
-					'order' => 4
-				),
-				
         		array(
         			'category'  => Piwik_Translate('Referers_Referers'),
         			'name'   => Piwik_Translate('Referers_Websites'),
         			'module' => 'Referers',
         			'action' => 'getWebsites',
+					'actionToLoadSubTables' => 'getUrlsFromWebsiteId',
         			'dimension' => Piwik_Translate('Referers_ColumnWebsite'),
         			'documentation' => Piwik_Translate('Referers_WebsitesReportDocumentation', '<br />'),
-					'actionToLoadSubTables' => 'getUrlsFromWebsiteId',
         			'order' => 5
-				),
-				array( // subtable report
-					'category' => Piwik_Translate('Referers_Referers'),
-					'name' => Piwik_Translate('Referers_Websites'),
-					'module' => 'Referers',
-					'action' => 'getUrlsFromWebsiteId',
-					'dimension' => Piwik_Translate('Referers_ColumnWebsitePage'),
-					'documentation' => Piwik_Translate('Referers_WebsitesReportDocumentation', '<br />'),
-					'isSubtableReport' => true,
-					'order' => 6,
-				),
-				
+        		),
         		array(
         			'category'  => Piwik_Translate('Referers_Referers'),
         			'name'   => Piwik_Translate('Referers_SearchEngines'),
         			'module' => 'Referers',
         			'action' => 'getSearchEngines',
+					'actionToLoadSubTables' => 'getKeywordsFromSearchEngineId',
         			'dimension' => Piwik_Translate('Referers_ColumnSearchEngine'),
         			'documentation' => Piwik_Translate('Referers_SearchEnginesReportDocumentation', '<br />'),
-					'actionToLoadSubTables' => 'getKeywordsFromSearchEngineId',
         			'order' => 7,
         		),
-				array( // subtable report
-					'category'  => Piwik_Translate('Referers_Referers'),
-					'name'   => Piwik_Translate('Referers_SearchEngines'),
-					'module' => 'Referers',
-					'action' => 'getKeywordsFromSearchEngineId',
-					'dimension' => Piwik_Translate('Referers_ColumnKeyword'),
-					'documentation' => Piwik_Translate('Referers_SearchEnginesReportDocumentation', '<br />'),
-					'isSubtableReport' => true,
-					'order' => 8,
-				),
-				
         		array(
         			'category'  => Piwik_Translate('Referers_Referers'),
         			'name'   => Piwik_Translate('Referers_Campaigns'),
         			'module' => 'Referers',
         			'action' => 'getCampaigns',
+					'actionToLoadSubTables' => 'getKeywordsFromCampaignId',
         			'dimension' => Piwik_Translate('Referers_ColumnCampaign'),
         			'documentation' => Piwik_Translate('Referers_CampaignsReportDocumentation',
         					array('<br />', '<a href="http://piwik.org/docs/tracking-campaigns/" target="_blank">', '</a>')),
-					'actionToLoadSubTables' => 'getKeywordsFromCampaignId',
         			'order' => 9,
         		),
-				array( // subtable report
-					'category' => Piwik_Translate('Referers_Referers'),
-					'name' => Piwik_Translate('Referers_Campaigns'),
-					'module' => 'Referers',
-					'action' => 'getKeywordsFromCampaignId',
-					'dimension' => Piwik_Translate('Referers_ColumnKeyword'),
-					'documentation' => Piwik_Translate('Referers_CampaignsReportDocumentation',
-						array('<br />', '<a href="http://piwik.org/docs/tracking-campaigns/" target="_blank">', '</a>')),
-					'isSubtableReport' => true,
-					'order' => 10,
-				),
     	));
 	}
 
@@ -399,7 +352,7 @@ class Piwik_Referers extends Piwik_Plugin
 	 * @throws Exception
 	 * @return void
 	 */
-	protected function archiveDayAggregateVisits(Piwik_ArchiveProcessing_Day $archiveProcessing)
+	protected function archiveDayAggregateVisits(Piwik_ArchiveProcessing $archiveProcessing)
 	{
 	    $dimension = array("referer_type", "referer_name", "referer_keyword", "referer_url");
 	    $query = $archiveProcessing->queryVisitsByDimension($dimension);

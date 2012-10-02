@@ -37,6 +37,11 @@ class Piwik_Option
 	static private $instance = null;
 
 	/**
+	 *	Single dao class
+	 */
+	static private $dao = null;
+
+	/**
 	 * Returns Singleton instance
 	 *
 	 * @return Piwik_Option
@@ -46,6 +51,7 @@ class Piwik_Option
 		if (self::$instance == null)
 		{
 			self::$instance = new self;
+			self::$dao = Piwik_Db_Factory::getDAO('option');
 		}
 		return self::$instance;
 	}
@@ -68,9 +74,8 @@ class Piwik_Option
 		{
 			return $this->all[$name];
 		}
-		$value = Piwik_FetchOne( 'SELECT option_value '. 
-							'FROM `' . Piwik_Common::prefixTable('option') . '`'.
-							'WHERE option_name = ?', $name);
+		
+		$value = self::$dao->getValueByName($name);
 		if($value === false)
 		{
 			return false;
@@ -89,10 +94,7 @@ class Piwik_Option
 	public function set($name, $value, $autoload = 0)
 	{
 		$autoload = (int)$autoload;
-		Piwik_Query('INSERT INTO `'. Piwik_Common::prefixTable('option') . '` (option_name, option_value, autoload) '.
-					' VALUES (?, ?, ?) '.
-					' ON DUPLICATE KEY UPDATE option_value = ?', 
-					array($name, $value, $autoload, $value));
+		self::$dao->addRecord($name, $value, $autoload);
 		$this->all[$name] = $value;
 	}
 
@@ -104,16 +106,7 @@ class Piwik_Option
 	 */
 	public function delete($name, $value = null)
 	{
-		$sql = 'DELETE FROM `'. Piwik_Common::prefixTable('option') . '` WHERE option_name = ?';
-		$bind[] = $name;
-
-		if(isset($value))
-		{
-			$sql .= ' AND option_value = ?';
-			$bind[] = $value;
-		}
-
-		Piwik_Query($sql, $bind);
+		self::$dao->delete($name, $value);
 
 		$this->clearCache();
 	}
@@ -127,16 +120,7 @@ class Piwik_Option
 	 */
 	public function deleteLike($name, $value = null)
 	{
-		$sql = 'DELETE FROM `'. Piwik_Common::prefixTable('option') . '` WHERE option_name LIKE ?';
-		$bind[] = $name;
-
-		if(isset($value))
-		{
-			$sql .= ' AND option_value = ?';
-			$bind[] = $value;
-		}
-
-		Piwik_Query($sql, $bind);
+		self::$dao->deleteLike($name, $value);
 
 		$this->clearCache();
 	}
@@ -153,9 +137,7 @@ class Piwik_Option
 			return;
 		}
 
-		$all = Piwik_FetchAll('SELECT option_value, option_name
-								FROM `'. Piwik_Common::prefixTable('option') . '` 
-								WHERE autoload = 1');
+		$all = self::$dao->getAllAutoload();
 		foreach($all as $option)
 		{
 			$this->all[$option['option_name']] = $option['option_value'];

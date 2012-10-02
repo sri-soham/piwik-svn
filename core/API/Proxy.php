@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Proxy.php 6885 2012-08-29 21:50:07Z capedfuzz $
+ * @version $Id: Proxy.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -35,7 +35,7 @@ class Piwik_API_Proxy
 	protected $alreadyRegistered = array();
 	
 	private $metadataArray = array();
-	private $hideIgnoredFunctions = true;
+	public $hideIgnoredFunctions = true;
 	
 	// when a parameter doesn't have a default value we use this
 	private $noDefaultValue;
@@ -251,20 +251,6 @@ class Piwik_API_Proxy
 	public function getModuleNameFromClassName( $className )
 	{
 		return str_replace(array('Piwik_', '_API'), '', $className);
-	}
-	
-	/**
-	 * Sets whether to hide '@ignore'd functions from method metadata or not.
-	 * 
-	 * @param bool $hideIgnoredFunctions
-	 */
-	public function setHideIgnoredFunctions( $hideIgnoredFunctions )
-	{
-		$this->hideIgnoredFunctions = $hideIgnoredFunctions;
-		
-		// make sure metadata gets reloaded
-		$this->alreadyRegistered = array();
-		$this->metadataArray = array();
 	}
 
 	/**

@@ -238,11 +238,15 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 		$this->instance->deleteLogData();
 		$this->instance->deleteReportData();
 		
+		$LogConversion = Piwik_Db_Factory::getDAO('log_conversion');
+		$LogConversionItem = Piwik_Db_Factory::getDAO('log_conversion_item');
+		$LogLinkVisitAction = Piwik_Db_Factory::getDAO('log_link_visit_action');
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
 		// perform checks
-		$this->assertEqual(0, $this->getTableCount('log_visit'));
-		$this->assertEqual(0, $this->getTableCount('log_conversion'));
-		$this->assertEqual(0, $this->getTableCount('log_link_visit_action'));
-		$this->assertEqual(0, $this->getTableCount('log_conversion_item'));
+		$this->assertEqual(0, $LogVisit->getCount());
+		$this->assertEqual(0, $LogConversion->getCount());
+		$this->assertEqual(0, $LogLinkVisitAction->getCount());
+		$this->assertEqual(0, $LogConversionItem->getCount());
 		
 		$archiveTables = $this->getArchiveTableNames();
 		$this->assertFalse($this->tableExists($archiveTables['numeric'][0])); // January
@@ -445,21 +449,18 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 		
 		$purger = Piwik_PrivacyManager_LogDataPurger::make($this->settings, true);
 		
-		$this->unusedIdAction = Piwik_FetchOne(
-			"SELECT idaction FROM ".Piwik_Common::prefixTable('log_action')." WHERE name = ?",
-			array('whatever.com/_40'));
+		$LogAction = Piwik_Db_Factory::getDAO('log_action');
+		$this->unusedIdAction = $LogAction->getIdactionByName('http://whatever.com/_40');
 		$this->assertTrue($this->unusedIdAction);
 		
 		// purge data
 		$purger->purgeData();
 		
 		// check that actions were purged
-		$this->assertEqual(22, $this->getTableCount('log_action')); // January
+		$this->assertEqual(22, $LogAction->getCount()); // January
 		
 		// check that the unused action still exists
-		$count = Piwik_FetchOne(
-			"SELECT COUNT(*) FROM ".Piwik_Common::prefixTable('log_action')." WHERE idaction = ?",
-			array($this->unusedIdAction));
+		$count = $LogAction->getCountByIdaction($this->unusedIdAction);
 		$this->assertEqual(1, $count);
 		
 		$this->unusedIdAction = null; // so the hook won't get executed twice
@@ -696,12 +697,18 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 	
 	private function checkNoDataChanges()
 	{
+		$LogAction = Piwik_Db_Factory::getDAO('log_count');
+
+		$LogConversion = Piwik_Db_Factory::getDAO('log_conversion');
+		$LogConversionItem = Piwik_Db_Factory::getDAO('log_conversion_item');
+		$LogLinkVisitAction = Piwik_Db_Factory::getDAO('log_link_visit_action');
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
 		// 11 visits total w/ 2 actions per visit & 2 conversions per visit. 1 e-commerce order per visit.
-		$this->assertEqual(11, $this->getTableCount('log_visit'));
-		$this->assertEqual(22, $this->getTableCount('log_conversion'));
-		$this->assertEqual(22, $this->getTableCount('log_link_visit_action'));
-		$this->assertEqual(11, $this->getTableCount('log_conversion_item'));
-		$this->assertEqual(27, $this->getTableCount('log_action'));
+		$this->assertEqual(11, $LogVisit->getCount());
+		$this->assertEqual(22, $LogConversion->getCount());
+		$this->assertEqual(22, $LogLinkVisitAction->getCount());
+		$this->assertEqual(11, $LogConversionItem->getCount());
+		$this->assertEqual(27, $LogAction->getCount());
 		
 		$archiveTables = $this->getArchiveTableNames();
 		
@@ -742,19 +749,25 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 	
 	private function checkLogDataPurged( $actionsPurged = true )
 	{
+		$LogAction = Piwik_Db_Factory::getDAO('log_action');
+		$LogConversion = Piwik_Db_Factory::getDAO('log_conversion');
+		$LogConversionItem = Piwik_Db_Factory::getDAO('log_conversion_item');
+		$LogLinkVisitAction = Piwik_Db_Factory::getDAO('log_link_visit_action');
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
+
 		// 3 days removed by purge, so 3 visits, 6 conversions, 6 visit actions, 3 e-commerce orders
 		// & 6 actions removed
-		$this->assertEqual(8, $this->getTableCount('log_visit'));
-		$this->assertEqual(16, $this->getTableCount('log_conversion'));
-		$this->assertEqual(16, $this->getTableCount('log_link_visit_action'));
-		$this->assertEqual(8, $this->getTableCount('log_conversion_item'));
+		$this->assertEqual(8, $LogVisit->getCount());
+		$this->assertEqual(16, $LogConversion->getCount());
+		$this->assertEqual(16, $LogLinkVisitAction->getCount());
+		$this->assertEqual(8, $LogConversionItem->getCount());
 		if ($actionsPurged)
 		{
-			$this->assertEqual(21, $this->getTableCount('log_action'));
+		  	$this->assertEqual(21, $LogAction->getCount());
 		}
 		else
 		{
-			$this->assertEqual(27, $this->getTableCount('log_action'));
+			$this->assertEqual(27, $LogAction->getCount());
 		}
 	}
 	
@@ -769,21 +782,17 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 	public function addReferenceToUnusedAction( $notification )
 	{
 		$unusedIdAction = $this->unusedIdAction;
-		if (empty($unusedIdAction)) // make sure we only do this for one test case
+		if (is_null($unusedIdAction)) // make sure we only do this for one test case
 		{
 			return;
 		}
 		
 		$tempTableName = Piwik_Common::prefixTable(Piwik_PrivacyManager_LogDataPurger::TEMP_TABLE_NAME);
-		$logLinkVisitActionTable = Piwik_Common::prefixTable("log_link_visit_action");
-		
-		$sql = "INSERT INTO $logLinkVisitActionTable
-							(idsite, idvisitor, server_time, idvisit, idaction_url, idaction_url_ref,
-							idaction_name, idaction_name_ref, time_spent_ref_action)
-					 VALUES (1, 'abc', NOW(), 15, $unusedIdAction, $unusedIdAction,
-							 $unusedIdAction, $unusedIdAction, 1000)";
-		
-		Piwik_Query($sql);
+		$logLinkVisitAction = Piwik_Common::prefixTable('log_link_visit_action');
+		$LogLinkVisitAction->add(1, 'abc', date('Y-m-d H:i:s'), 15,
+			$unusedIdAction, $unusedIdAction, $unusedIdAction,
+			$unusedIdAction, 1000
+		);
 	}
 	
 	private function setTimeToRun()

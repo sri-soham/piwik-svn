@@ -4,12 +4,13 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Sms.php 6902 2012-09-02 13:29:45Z matt $
+ * @version $Id: Sms.php 6478 2012-06-14 16:19:42Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_MobileMessaging_ReportRenderer
  */
 
+const FLOAT_REGEXP = '/[-+]?[0-9]*[\.,]?[0-9]+/';
 
 /**
  *
@@ -17,10 +18,6 @@
  */
 class Piwik_MobileMessaging_ReportRenderer_Sms extends Piwik_ReportRenderer
 {
-	const FLOAT_REGEXP = '/[-+]?[0-9]*[\.,]?[0-9]+/';
-	const SMS_CONTENT_TYPE = 'text/plain';
-	const SMS_FILE_EXTENSION = 'sms';
-
 	private $rendering = "";
 
 	public function setLocale($locale)
@@ -30,22 +27,12 @@ class Piwik_MobileMessaging_ReportRenderer_Sms extends Piwik_ReportRenderer
 
 	public function sendToDisk($filename)
 	{
-		return Piwik_ReportRenderer::writeFile($filename, self::SMS_FILE_EXTENSION, $this->rendering);
+		return Piwik_ReportRenderer::writeFile($filename, 'sms', $this->rendering);
 	}
 
 	public function sendToBrowserDownload($filename)
 	{
-		Piwik_ReportRenderer::sendToBrowser($filename, self::SMS_FILE_EXTENSION, self::SMS_CONTENT_TYPE, $this->rendering);
-	}
-
-	public function sendToBrowserInline($filename)
-	{
-		Piwik_ReportRenderer::inlineToBrowser(self::SMS_CONTENT_TYPE, $this->rendering);
-	}
-
-	public function getRenderedReport()
-	{
-		return $this->rendering;
+		Piwik_ReportRenderer::sendToBrowser($filename, 'sms', 'text/plain', $this->rendering);
 	}
 
 	public function renderFrontPage($websiteName, $prettyDate, $description, $reportMetadata)
@@ -75,7 +62,7 @@ class Piwik_MobileMessaging_ReportRenderer_Sms extends Piwik_ReportRenderer
 					'$value',
 					'
 					return preg_replace_callback (
-						"'.self::FLOAT_REGEXP.'",
+						FLOAT_REGEXP,
 						create_function (
 							\'$matches\',
 							\'return round($matches[0]);\'
@@ -98,7 +85,7 @@ class Piwik_MobileMessaging_ReportRenderer_Sms extends Piwik_ReportRenderer
 				create_function (
 					'$value',
 					'
-					$matched = preg_match("'.self::FLOAT_REGEXP.'", $value, $matches);
+					$matched = preg_match(FLOAT_REGEXP, $value, $matches);
 					return $matched ? sprintf("%+d",$matches[0]) : $value;
 					'
 				)
@@ -122,7 +109,6 @@ class Piwik_MobileMessaging_ReportRenderer_Sms extends Piwik_ReportRenderer
 		$smarty->assign("reportRowsMetadata", $reportRowsMetadata);
 		$smarty->assign("prettyDate", $prettyDate);
 		$smarty->assign("siteHasECommerce", $siteHasECommerce);
-		$smarty->assign("displaySiteName", $processedReport['metadata']['action'] == 'getAll');
 
 		$this->rendering .= $smarty->fetch(PIWIK_USER_PATH . '/plugins/MobileMessaging/templates/SMSReport.tpl');
 	}

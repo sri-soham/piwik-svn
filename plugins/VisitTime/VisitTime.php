@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitTime.php 6679 2012-08-05 22:13:23Z capedfuzz $
+ * @version $Id: VisitTime.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitTime
@@ -68,24 +68,12 @@ class Piwik_VisitTime extends Piwik_Plugin
 			'constantRowsCount' => true,
 			'order' => 15,
 		);
-		
-		$reports[] = array(
-			'category' => Piwik_Translate('VisitsSummary_VisitsSummary'),
-			'name' => Piwik_Translate('VisitTime_VisitsByDayOfWeek'),
-			'module' => 'VisitTime',
-			'action' => 'getByDayOfWeek',
-			'dimension' => Piwik_Translate('VisitTime_DayOfWeek'),
-			'documentation' => Piwik_Translate('VisitTime_WidgetByDayOfWeekDocumentation'),
-			'constantRowsCount' => true,
-			'order' => 25,
-		);
 	}
 	
 	function addWidgets()
 	{
 		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_WidgetLocalTime', 'VisitTime', 'getVisitInformationPerLocalTime');
 		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_WidgetServerTime', 'VisitTime', 'getVisitInformationPerServerTime');
-		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_VisitsByDayOfWeek', 'VisitTime', 'getByDayOfWeek');
 	}
 	
 	function addMenu()
@@ -111,6 +99,8 @@ class Piwik_VisitTime extends Piwik_Plugin
 	 */
 	public function getSegmentsMetadata($notification)
 	{
+		$Generic = Piwik_Db_Factory::getGeneric();
+
 		$segments =& $notification->getNotificationObject();
 		$acceptedValues = "0, 1, 2, 3, ..., 20, 21, 22, 23";
 		$segments[] = array(
@@ -118,7 +108,8 @@ class Piwik_VisitTime extends Piwik_Plugin
 		        'category' => 'Visit',
 		        'name' => Piwik_Translate('VisitTime_ColumnServerTime'),
 		        'segment' => 'visitServerHour',
-		        'sqlSegment' => 'HOUR(log_visit.visit_last_action_time)',
+		        'sqlSegment' => $Generic->hour('log_visit.visit_last_action_time'),
+				'sqlFilter' => array('Piwik_Common', 'nullWhenNotTime'),
 				'acceptedValues' => $acceptedValues
        );
        $segments[] = array(
@@ -126,7 +117,8 @@ class Piwik_VisitTime extends Piwik_Plugin
 		        'category' => 'Visit',
 		        'name' => Piwik_Translate('VisitTime_ColumnLocalTime'),
 		        'segment' => 'visitLocalHour',
-		        'sqlSegment' => 'HOUR(log_visit.visitor_localtime)',
+		        'sqlSegment' => $Generic->hour('log_visit.visitor_localtime'),
+				'sqlFilter' => array('Piwik_Common', 'nullWhenNotTime'),
        			'acceptedValues' => $acceptedValues
        );
 	}
@@ -165,10 +157,11 @@ class Piwik_VisitTime extends Piwik_Plugin
 	
 	protected function archiveDayAggregateVisits($archiveProcessing)
 	{
-		$labelSQL = "HOUR(log_visit.visitor_localtime)";
+		$Generic = Piwik_Db_Factory::getGeneric();
+		$labelSQL = $Generic->hour('log_visit.visitor_localtime');
 		$this->interestByLocalTime = $archiveProcessing->getArrayInterestForLabel($labelSQL);
 		
-		$labelSQL = "HOUR(log_visit.visit_last_action_time)";
+		$labelSQL = $Generic->hour('log_visit.visit_last_action_time');
 		$this->interestByServerTime = $archiveProcessing->getArrayInterestForLabel($labelSQL);
 	}
 	
@@ -188,7 +181,8 @@ class Piwik_VisitTime extends Piwik_Plugin
 	
 	protected function archiveDayAggregateGoals($archiveProcessing)
 	{
-		$query = $archiveProcessing->queryConversionsByDimension("HOUR(log_conversion.server_time)");
+		$Generic = Piwik_Db_Factory::getGeneric();
+		$query = $archiveProcessing->queryConversionsByDimension($Generic->hour("log_conversion.server_time"));
 		
 		if($query === false) return;
 		

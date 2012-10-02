@@ -105,7 +105,7 @@ class Piwik_Db_Adapter
 			'Mysqli',
 
 			// other adapters supported by Zend_Db
-//			'Pdo_Pgsql',
+			'Pdo_Pgsql',
 //			'Pdo_Mssql',
 //			'Sqlsrv',
 //			'Pdo_Ibm',

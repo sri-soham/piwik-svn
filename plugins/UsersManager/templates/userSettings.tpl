@@ -40,10 +40,12 @@
 	<td>
 	<fieldset>
 		<label><input type="radio" value="MultiSites" name="defaultReport"{if $defaultReport=='MultiSites'} checked="checked"{/if} /> {'General_AllWebsitesDashboard'|translate}</label><br />
-		<label style="padding-right:12px;"><input type="radio" value="1" name="defaultReport"{if $defaultReport!='MultiSites'} checked="checked"{/if} /> {'General_DashboardForASpecificWebsite'|translate}</label>
-		{include file="CoreHome/templates/sites_selection.tpl"
-			siteName=$defaultReportSiteName idSite=$defaultReport switchSiteOnSelect=false showAllSitesItem=false
-			showSelectedSite=false}
+		<label><input type="radio" value="1" name="defaultReport"{if $defaultReport!='MultiSites'} checked="checked"{/if} /> {'General_DashboardForASpecificWebsite'|translate}</label> 
+		<select id="defaultReportWebsite">
+		   {if isset($sites)}{foreach from=$sites item=info}
+		   		<option value="{$info.idsite}" {if $defaultReport==$info.idsite} selected="selected"{/if}>{$info.name}</option>
+		   {/foreach}{/if}
+		</select>
 	</fieldset>
 	</td>
 </tr>
@@ -86,47 +88,47 @@
 {if $isSuperUser}
 	<h2>{'UsersManager_MenuAnonymousUserSettings'|translate}</h2>
 	{if count($anonymousSites) == 0}
-		<h3 class='form-description'><b>{'UsersManager_NoteNoAnonymousUserAccessSettingsWontBeUsed2'|translate}</b></h3><br />
-	{else}
-		<br />
-		
-		{ajaxErrorDiv id=ajaxErrorAnonymousUserSettings}
-		{ajaxLoadingDiv id=ajaxLoadingAnonymousUserSettings}
-	
-		<table id='anonymousUserSettingsTable' class="adminTable" style='width:850px;'>
-		<tr>
-			<td style='width:400px'>{'UsersManager_WhenUsersAreNotLoggedInAndVisitPiwikTheyShouldAccess'|translate}</td>
-			<td>
-			<fieldset>
-				<label><input type="radio" value="Login" name="anonymousDefaultReport"{if $anonymousDefaultReport==$loginModule} checked="checked"{/if} /> {'UsersManager_TheLoginScreen'|translate}</label><br />
-				<label><input {if empty($anonymousSites)}disabled="disabled" {/if}type="radio" value="MultiSites" name="anonymousDefaultReport"{if $anonymousDefaultReport=='MultiSites'} checked="checked"{/if} /> {'General_AllWebsitesDashboard'|translate}</label><br />
-				
-					<label><input {if empty($anonymousSites)}disabled="disabled" {/if}type="radio" value="1" name="anonymousDefaultReport"{if $anonymousDefaultReport>0} checked="checked"{/if} /> {'General_DashboardForASpecificWebsite'|translate}</label>
-					{if !empty($anonymousSites)}
-					<select id="anonymousDefaultReportWebsite">
-					   {foreach from=$anonymousSites item=info}
-					   		<option value="{$info.idsite}" {if $anonymousDefaultReport==$info.idsite} selected="selected"{/if}>{$info.name}</option>
-					   {/foreach}
-					</select>
-					{/if}
-			</fieldset>
-			</td>
-		</tr>
-		<tr>
-			<td>{'UsersManager_ForAnonymousUsersReportDateToLoadByDefault'|translate}</td>
-			<td>
-			<fieldset>
-				{foreach from=$availableDefaultDates key=value item=description}
-					<label><input type="radio" {if $anonymousDefaultDate==$value}checked="checked" {/if}value="{$value}" name="anonymousDefaultDate" /> {$description}</label><br />
-				{/foreach}
-			</fieldset>
-			</td>
-		</tr>
-		
-		</table>
-		
-		<input type="submit" value="{'General_Save'|translate}" id="anonymousUserSettingsSubmit" class="submit"/>
+		<br /><span class='form-description'><b>{'UsersManager_NoteNoAnonymousUserAccessSettingsWontBeUsed'|translate}</b></span><br />
 	{/if}
+	<br />
+	
+	{ajaxErrorDiv id=ajaxErrorAnonymousUserSettings}
+	{ajaxLoadingDiv id=ajaxLoadingAnonymousUserSettings}
+
+	<table id='anonymousUserSettingsTable' class="adminTable" style='width:850px'>
+	<tr>
+		<td style='width:400px'>{'UsersManager_WhenUsersAreNotLoggedInAndVisitPiwikTheyShouldAccess'|translate}</td>
+		<td>
+		<fieldset>
+			<label><input type="radio" value="Login" name="anonymousDefaultReport"{if $anonymousDefaultReport==$loginModule} checked="checked"{/if} /> {'UsersManager_TheLoginScreen'|translate}</label><br />
+			<label><input {if empty($anonymousSites)}disabled="disabled" {/if}type="radio" value="MultiSites" name="anonymousDefaultReport"{if $anonymousDefaultReport=='MultiSites'} checked="checked"{/if} /> {'General_AllWebsitesDashboard'|translate}</label><br />
+			
+				<label><input {if empty($anonymousSites)}disabled="disabled" {/if}type="radio" value="1" name="anonymousDefaultReport"{if $anonymousDefaultReport>0} checked="checked"{/if} /> {'General_DashboardForASpecificWebsite'|translate}</label>
+				{if !empty($anonymousSites)}
+				<select id="anonymousDefaultReportWebsite">
+				   {foreach from=$anonymousSites item=info}
+				   		<option value="{$info.idsite}" {if $anonymousDefaultReport==$info.idsite} selected="selected"{/if}>{$info.name}</option>
+				   {/foreach}
+				</select>
+				{/if}
+		</fieldset>
+		</td>
+	</tr>
+	<tr>
+		<td>{'UsersManager_ForAnonymousUsersReportDateToLoadByDefault'|translate}</td>
+		<td>
+		<fieldset>
+			{foreach from=$availableDefaultDates key=value item=description}
+				<label><input type="radio" {if $anonymousDefaultDate==$value}checked="checked" {/if}value="{$value}" name="anonymousDefaultDate" /> {$description}</label><br />
+			{/foreach}
+		</fieldset>
+		</td>
+	</tr>
+	
+	</table>
+	
+<input type="submit" value="{'General_Save'|translate}" id="anonymousUserSettingsSubmit" class="submit" />
+
 {/if}
 
 

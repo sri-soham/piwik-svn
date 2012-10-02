@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6801 2012-08-17 03:19:21Z matt $
+ * @version $Id: Controller.php 6156 2012-04-03 21:15:52Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Dashboard
@@ -91,12 +91,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 	 */
 	protected function saveLayoutForUser( $login, $idDashboard, $layout)
 	{
-		$paramsBind = array($login, $idDashboard, $layout, $layout);
-		Piwik_Query('INSERT INTO '.Piwik_Common::prefixTable('user_dashboard') .
-					' (login, iddashboard, layout)
-						VALUES (?,?,?)
-					ON DUPLICATE KEY UPDATE layout=?',
-					$paramsBind);
+		$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+		$UserDashboard->saveLayout($login, $idDashboard, $layout);
 	}
 
 	/**
@@ -107,10 +103,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 	 * @param string $name
 	 */
 	protected function updateDashboardName( $login, $idDashboard, $name ) {
-		$paramsBind = array($name, $login, $idDashboard);
-		Piwik_Query('UPDATE '.Piwik_Common::prefixTable('user_dashboard') .
-					' SET name = ? WHERE login = ? AND iddashboard = ?',
-					$paramsBind);
+		$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+		$UserDashboard->updateName($name, $login, $idDashboard);
 	}
 	
 	/**
@@ -123,11 +117,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
      */
 	protected function getLayoutForUser( $login, $idDashboard)
 	{
-		$paramsBind = array($login, $idDashboard);
-		$return = Piwik_FetchAll('SELECT layout
-								FROM '.Piwik_Common::prefixTable('user_dashboard') .
-								' WHERE login = ? 
-									AND iddashboard = ?', $paramsBind);
+		$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+		$return = $UserDashboard->getLayoutByLoginDashboard($login, $idDashboard);
 		if(count($return) == 0)
 		{
 			return false;
@@ -150,8 +141,11 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 
 		// first layout can't be removed
 		if($idDashboard != 1) {
-			Piwik_Query('DELETE FROM '.Piwik_Common::prefixTable('user_dashboard') .
-						' WHERE iddashboard = ? AND login = ?', array($idDashboard, Piwik::getCurrentUserLogin()));
+			$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+			$UserDashboard->deleteByLoginDashboard(
+				Piwik::getCurrentUserLogin(),
+				$idDashboard
+			);
 		}
 	}
 
@@ -180,14 +174,9 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 		if (!Piwik::isUserIsAnonymous()) {
 			$login = Piwik::getCurrentUserLogin();
 
-			$nextId = Piwik_FetchOne('SELECT MAX(iddashboard)+1
-										  FROM '.Piwik_Common::prefixTable('user_dashboard') .
-										' WHERE login = ?', array($login));
+			$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+			$nextId = $UserDashboard->getNextIdByLogin($login);
 
-			if(empty($nextId)) {
-				$nextId = 1;
-			}
-			
 			$name = urldecode(Piwik_Common::getRequestVar('name', '', 'string'));
 			$type = urldecode(Piwik_Common::getRequestVar('type', 'default', 'string'));
 			$layout = '{}';
@@ -195,8 +184,7 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 				$layout = $this->getDefaultLayout();
 			}
 
-			Piwik_Query('INSERT INTO '.Piwik_Common::prefixTable('user_dashboard').' (login, iddashboard, name, layout) VALUES (?, ?, ?, ?)',
-						array($login, $nextId, $name, $layout));
+			$UserDashboard->newDashboard($login, $nextId, $name, $layout);
 			echo Piwik_Common::json_encode($nextId);
 		} else {
 			echo '0';
@@ -239,13 +227,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 
 		if(Piwik::isUserIsSuperUser()) {
 			$layout      = Piwik_Common::unsanitizeInputValue(Piwik_Common::getRequestVar('layout'));
-			$paramsBind  = array('', '1', $layout, $layout);
-
-			Piwik_Query('INSERT INTO '.Piwik_Common::prefixTable('user_dashboard') .
-						' (login, iddashboard, layout)
-							VALUES (?,?,?)
-						ON DUPLICATE KEY UPDATE layout=?',
-						$paramsBind);
+			$UserDashboard = Piwik_Db_Factory::getDAO('user_dashboard');
+			$UserDashboard->saveLayout('', '1', $layout);
 		}
 
 	}
@@ -365,8 +348,8 @@ class Piwik_Dashboard_Controller extends Piwik_Controller
 	{
 	    return array(
 	        array(100),
-	        array(50,50), array(67,33), array(33,67),
-	        array(33,33,33), array(40,30,30), array(30,40,30), array(30,30,40),
+	        array(50,50), array(75,25), array(25,75),
+	        array(33,33,33), array(50,25,25), array(25,50,25), array(25,25,50),
 	        array(25,25,25,25)
 	    );
 	}

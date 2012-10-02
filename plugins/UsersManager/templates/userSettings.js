@@ -25,7 +25,7 @@ function getUserSettingsAJAX()
 	var passwordBis = encodeURIComponent( $('#passwordBis').val() );
 	var defaultReport = $('input[name=defaultReport]:checked').val();
 	if(defaultReport == 1) {
-		defaultReport = $('#sitesSelectionSearch .custom_select_main_link').attr('siteid');
+		defaultReport = $('#defaultReportWebsite option:selected').val();
 	}
 	var request = '';
 	request += 'module=UsersManager';

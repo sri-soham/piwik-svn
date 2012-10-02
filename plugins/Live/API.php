@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6792 2012-08-16 13:59:58Z EZdesign $
+ * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -64,9 +64,10 @@ class Piwik_Live_API
 		Piwik::checkUserHasViewAccess($idSite);
 		$lastMinutes = (int)$lastMinutes;
 		
+		$visitsConverted = Zend_Registry::get('db')->quoteIdentifier('visitsConverted');
 		$select = "count(*) as visits,
 				SUM(log_visit.visit_total_actions) as actions,
-				SUM(log_visit.visit_goal_converted) as visitsConverted";
+				SUM(log_visit.visit_goal_converted) as $visitsConverted";
 		
 		$from = "log_visit";
 		
@@ -81,7 +82,8 @@ class Piwik_Live_API
 		$segment = new Piwik_Segment($segment, $idSite);
 		$query = $segment->getSelectQuery($select, $from, $where, $bind);
 		
-		$data = Piwik_FetchAll($query['sql'], $query['bind']);
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
+		$data = $LogVisit->getCounters($query['sql'], $query['bind']);
 		
 		// These could be unset for some reasons, ensure they are set to 0
 		empty($data[0]['actions']) ? $data[0]['actions'] = 0 : '';
@@ -112,8 +114,8 @@ class Piwik_Live_API
 	 * You can define any number of filters: none, one, many or all parameters can be defined
 	 *
 	 * @param int $idSite Site ID
-	 * @param bool|string $period Period to restrict to when looking at the logs
-	 * @param bool|string $date Date to restrict to
+	 * @param bool|string $period (optional) Period to restrict to when looking at the logs
+	 * @param bool|string $date (optional) Date to restrict to
 	 * @param bool|int $segment (optional) Number of visits rows to return
 	 * @param bool|int $filter_limit (optional)
 	 * @param bool|int $maxIdVisit (optional) Maximum idvisit to restrict the query to (useful when paginating)
@@ -121,7 +123,7 @@ class Piwik_Live_API
 	 *
 	 * @return Piwik_DataTable
 	 */
-	public function getLastVisitsDetails( $idSite, $period, $date, $segment = false, $filter_limit = false, $maxIdVisit = false, $minTimestamp = false )
+	public function getLastVisitsDetails( $idSite, $period = false, $date = false, $segment = false, $filter_limit = false, $maxIdVisit = false, $minTimestamp = false )
 	{
 		if(empty($filter_limit)) 
 		{
@@ -136,7 +138,6 @@ class Piwik_Live_API
 	/**
 	 * @deprecated
 	 */
-	
 	public function getLastVisits( $idSite, $filter_limit = 10, $minTimestamp = false )
 	{
 		return $this->getLastVisitsDetails($idSite, $period = false, $date = false, $segment = false, $filter_limit, $maxIdVisit = false, $minTimestamp );
@@ -156,6 +157,11 @@ class Piwik_Live_API
 		$site = new Piwik_Site($idSite);
 		$timezone = $site->getTimezone();
 		$currencies = Piwik_SitesManager_API::getInstance()->getCurrencySymbols();
+
+		$LogConversion = Piwik_Db_Factory::getDAO('log_conversion', Piwik_Tracker::getDatabase());
+		$LogConversionItem = Piwik_Db_Factory::getDAO('log_conversion_item');
+		$LogLinkVisitAction = Piwik_Db_Factory::getDAO('log_link_visit_action');
+
 		foreach($visitorDetails as $visitorDetail)
 		{
 			$this->cleanVisitorDetails($visitorDetail, $idSite);
@@ -180,29 +186,9 @@ class Piwik_Live_API
 			{
 				$sqlCustomVariables .= ', custom_var_k' . $i . ', custom_var_v' . $i;
 			}
-			// The second join is a LEFT join to allow returning records that don't have a matching page title
-			// eg. Downloads, Outlinks. For these, idaction_name is set to 0
-			$sql = "
-				SELECT
-					log_action.type AS type,
-					log_action.name AS url,
-					log_action.url_prefix,
-					log_action_title.name AS pageTitle,
-					log_action.idaction AS pageIdAction,
-					log_link_visit_action.idlink_va AS pageId,
-					log_link_visit_action.server_time as serverTimePretty,
-					log_link_visit_action.time_spent_ref_action as timeSpentRef
-					$sqlCustomVariables
-				FROM " .Piwik_Common::prefixTable('log_link_visit_action')." AS log_link_visit_action
-					INNER JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action
-					ON  log_link_visit_action.idaction_url = log_action.idaction
-					LEFT JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action_title
-					ON  log_link_visit_action.idaction_name = log_action_title.idaction
-				WHERE log_link_visit_action.idvisit = ?
-				 ";
-			$actionDetails = Piwik_FetchAll($sql, array($idvisit));
+			$actionDetails = $LogLinkVisitAction->getActionDetailsOfIdvisit($sqlCustomVariables, $idvisit);
 			
-			foreach($actionDetails as $actionIdx => &$actionDetail)
+			foreach($actionDetails as &$actionDetail)
 			{
 				$customVariablesPage = array();
 				for($i = 1; $i <= Piwik_Tracker::MAX_CUSTOM_VARIABLES; $i++)
@@ -222,54 +208,11 @@ class Piwik_Live_API
 				{
 					$actionDetail['customVariables'] = $customVariablesPage;
 				}
-				// reconstruct url from prefix
-				$actionDetail['url'] = Piwik_Tracker_Action::reconstructNormalizedUrl($actionDetail['url'], $actionDetail['url_prefix']);
-				unset($actionDetail['url_prefix']);
-				// set the time spent for this action (which is the timeSpentRef of the next action)
-				if (isset($actionDetails[$actionIdx + 1]))
-				{
-					$actionDetail['timeSpent'] = $actionDetails[$actionIdx + 1]['timeSpentRef'];
-					$actionDetail['timeSpentPretty'] = Piwik::getPrettyTimeFromSeconds($actionDetail['timeSpent']);
-					
-				}
-				unset($actionDetails[$actionIdx]['timeSpentRef']); // not needed after timeSpent is added
 			}
 			
 			// If the visitor converted a goal, we shall select all Goals
-			$sql = "
-				SELECT 
-						'goal' as type,
-						goal.name as goalName,
-						goal.revenue as revenue,
-						log_conversion.idlink_va as goalPageId,
-						log_conversion.server_time as serverTimePretty,
-						log_conversion.url as url
-				FROM ".Piwik_Common::prefixTable('log_conversion')." AS log_conversion
-				LEFT JOIN ".Piwik_Common::prefixTable('goal')." AS goal 
-					ON (goal.idsite = log_conversion.idsite
-						AND  
-						goal.idgoal = log_conversion.idgoal)
-					AND goal.deleted = 0
-				WHERE log_conversion.idvisit = ?
-					AND log_conversion.idgoal > 0
-			";
-			$goalDetails = Piwik_FetchAll($sql, array($idvisit));
-
-			$sql = "SELECT 
-						case idgoal when ".Piwik_Tracker_GoalManager::IDGOAL_CART." then '".Piwik_Archive::LABEL_ECOMMERCE_CART."' else '".Piwik_Archive::LABEL_ECOMMERCE_ORDER."' end as type,
-						idorder as orderId,
-						".Piwik_ArchiveProcessing_Day::getSqlRevenue('revenue')." as revenue,
-						".Piwik_ArchiveProcessing_Day::getSqlRevenue('revenue_subtotal')." as revenueSubTotal,
-						".Piwik_ArchiveProcessing_Day::getSqlRevenue('revenue_tax')." as revenueTax,
-						".Piwik_ArchiveProcessing_Day::getSqlRevenue('revenue_shipping')." as revenueShipping,
-						".Piwik_ArchiveProcessing_Day::getSqlRevenue('revenue_discount')." as revenueDiscount,
-						items as items,
-						
-						log_conversion.server_time as serverTimePretty
-					FROM ".Piwik_Common::prefixTable('log_conversion')." AS log_conversion
-					WHERE idvisit = ?
-						AND idgoal <= ".Piwik_Tracker_GoalManager::IDGOAL_ORDER;
-			$ecommerceDetails = Piwik_FetchAll($sql, array($idvisit));
+			$goalDetails = $LogConversion->getAllByIdvisit($idvisit);
+			$ecommerceDetails = $LogConversion->getEcommerceDetails($idvisit);
 
 			foreach($ecommerceDetails as &$ecommerceDetail)
 			{
@@ -299,37 +242,15 @@ class Piwik_Live_API
 			usort($ecommerceDetails, array($this, 'sortByServerTime'));
 			foreach($ecommerceDetails as $key => &$ecommerceConversion)
 			{
-				$sql = "SELECT 
-							log_action_sku.name as itemSKU,
-							log_action_name.name as itemName,
-							log_action_category.name as itemCategory,
-							".Piwik_ArchiveProcessing_Day::getSqlRevenue('price')." as price,
-							quantity as quantity
-						FROM ".Piwik_Common::prefixTable('log_conversion_item')."
-							INNER JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action_sku
-							ON  idaction_sku = log_action_sku.idaction
-							LEFT JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action_name
-							ON  idaction_name = log_action_name.idaction
-							LEFT JOIN " .Piwik_Common::prefixTable('log_action')." AS log_action_category
-							ON idaction_category = log_action_category.idaction
-						WHERE idvisit = ? 
-							AND idorder = ?
-							AND deleted = 0
-				";
-				$bind = array($idvisit, isset($ecommerceConversion['orderId']) 
-											? $ecommerceConversion['orderId'] 
-											: Piwik_Tracker_GoalManager::ITEM_IDORDER_ABANDONED_CART
-				);
-				
-				$itemsDetails = Piwik_FetchAll($sql, $bind);
-				foreach($itemsDetails as &$detail)
+				$itemDetails = $LogConversionItem->getEcommerceDetails($idvisit, $ecommerceConversion);
+				foreach($itemDetails as &$detail)
 				{
 					if($detail['price'] == round($detail['price']))
 					{
 						$detail['price'] = round($detail['price']);
 					}
 				}
-				$ecommerceConversion['itemDetails'] = $itemsDetails;
+				$ecommerceConversion['itemDetails'] = $itemDetails;
 			}
 			
 			$actions = array_merge($actionDetails, $goalDetails, $ecommerceDetails);
@@ -480,26 +401,20 @@ class Piwik_Live_API
 
 		$segment = new Piwik_Segment($segment, $idSite);
 		
+		// Group by idvisit so that a visitor converting 2 goals only appears once
+		$LogVisit = Piwik_Db_Factory::getDAO('log_visit');
+
 		// Subquery to use the indexes for ORDER BY
-		$select = "log_visit.*";
+		$select = $LogVisit->loadLastVisitorDetailsSelect();
+
 		$from = "log_visit";
 		$subQuery = $segment->getSelectQuery($select, $from, $where, $whereBind, $orderBy);
 		
 		$sqlLimit = $filter_limit >= 1 ? " LIMIT ".(int)$filter_limit : "";
 		
-		// Group by idvisit so that a visitor converting 2 goals only appears once
-		$sql = "
-			SELECT sub.* 
-			FROM ( 
-				".$subQuery['sql']."
-				$sqlLimit
-			) AS sub
-			GROUP BY sub.idvisit
-			ORDER BY $orderByParent
-		"; 
 		
 		try {
-			$data = Piwik_FetchAll($sql, $subQuery['bind']);
+			$data = $LogVisit->loadLastVisitorDetails($subQuery, $sqlLimit, $orderByParent);
 		} catch(Exception $e) {
 			echo $e->getMessage();exit;
 		}

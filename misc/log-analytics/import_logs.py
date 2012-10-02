@@ -5,7 +5,7 @@
 #
 # @link http://piwik.org
 # @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
-# @version $Id: import_logs.py 7030 2012-09-21 01:41:02Z capedfuzz $
+# @version $Id: import_logs.py 6474 2012-06-13 16:44:49Z Cyril $
 #
 # For more info see: http://piwik.org/log-analytics/
 
@@ -339,10 +339,6 @@ class Configuration(object):
             "You can also experiment with higher values which may increase performance until a certain point",
         )
         option_parser.add_option(
-            '--recorder-max-payload-size', dest='recorder_max_payload_size', default=200, type='int',
-            help="Maximum number of log entries to record in one tracking request (default: %default). "
-        )
-        option_parser.add_option(
             '--output', dest='output',
             help="Redirect output (stdout and stderr) to the specified file"
         )
@@ -350,15 +346,7 @@ class Configuration(object):
             '--encoding', dest='encoding', default='utf8',
             help="Log files encoding (default: %default)"
         )
-        option_parser.add_option(
-            '--disable-bulk-tracking', dest='use_bulk_tracking',
-            default=True, action='store_false',
-            help="Disables use of bulk tracking so recorders record one hit at a time."
-        )
-        option_parser.add_option(
-            '--debug-force-one-hit-every-Ns', dest='force_one_action_interval', default=False, type='float',
-            help="Debug option that will force each recorder to record one hit every N secs."
-        )
+
 
         self.options, self.filenames = option_parser.parse_args(sys.argv[1:])
 
@@ -493,10 +481,6 @@ class Statistics(object):
 
         def increment(self):
             self.value = self.counter.next()
-        
-        def advance(self, n):
-            for i in range(n):
-                self.increment()
 
         def __str__(self):
             return str(int(self.value))
@@ -659,12 +643,10 @@ Performance summary
         latest_total_recorded = 0
         while not self.monitor_stop:
             current_total = stats.count_lines_recorded.value
-            time_elapsed = time.time() - self.time_start
-            print '%d lines parsed, %d lines recorded, %d records/sec (avg), %d records/sec (current)' % (
+            print '%d lines parsed, %d lines recorded, %d records/sec' % (
                 stats.count_lines_parsed.value,
                 current_total,
-                current_total / time_elapsed if time_elapsed != 0 else 0,
-                current_total - latest_total_recorded
+                current_total - latest_total_recorded,
             )
             latest_total_recorded = current_total
             time.sleep(1)
@@ -688,7 +670,7 @@ class Piwik(object):
         pass
 
     @staticmethod
-    def _call(path, args, headers=None, url=None, data=None):
+    def _call(path, args, headers=None, url=None):
         """
         Make a request to the Piwik site. It is up to the caller to format
         arguments, to embed authentication, etc.
@@ -696,14 +678,9 @@ class Piwik(object):
         if url is None:
             url = config.options.piwik_url
         headers = headers or {}
-        
-        if data is None:
-            # If Content-Type isn't defined, PHP do not parse the request's body.
-            headers['Content-type'] = 'application/x-www-form-urlencoded'
-            data = urllib.urlencode(args)
-        elif not isinstance(data, basestring) and headers['Content-type'] == 'application/json':
-            data = json.dumps(data)
-        
+        # If Content-Type isn't defined, PHP do not parse the request's body.
+        headers['Content-type'] = 'application/x-www-form-urlencoded'
+        data = urllib.urlencode(args)
         request = urllib2.Request(url + path, data, headers)
         response = urllib2.urlopen(request)
         result = response.read()
@@ -751,7 +728,7 @@ class Piwik(object):
             raise urllib2.URLError('Piwik returned an invalid response: ' + res[:300])
 
 
-    def _call_wrapper(self, func, expected_response, on_failure, *args, **kwargs):
+    def _call_wrapper(self, func, expected_response, *args, **kwargs):
         """
         Try to make requests to Piwik at most PIWIK_FAILURE_MAX_RETRY times.
         """
@@ -760,14 +737,8 @@ class Piwik(object):
             try:
                 response = func(*args, **kwargs)
                 if expected_response is not None and response != expected_response:
-                    if on_failure is not None:
-                        error_message = on_failure(response, kwargs.get('data'))
-                    else:
-                        truncate_after = 200
-                        truncated_response = (response[:truncate_after] + '..') if len(response) > truncate_after else response
-                        error_message = "didn't receive the expected response. Response was %s " % truncated_response
-                        
-                    raise urllib2.URLError(error_message)
+                    raise urllib2.URLError("didn't receive the expected response. Response was %s "
+                    % ((response[:200] + '..') if len(response) > 200 else response))
                 return response
             except (urllib2.URLError, httplib.HTTPException, ValueError), e:
                 logging.debug('Error when connecting to Piwik: %s', e)
@@ -784,12 +755,13 @@ class Piwik(object):
                 else:
                     time.sleep(PIWIK_DELAY_AFTER_FAILURE)
 
-    def call(self, path, args, expected_content=None, headers=None, data=None, on_failure=None):
-        return self._call_wrapper(self._call, expected_content, on_failure, path, args, headers,
-                                    data=data)
-                                    
+    def call(self, path, args, expected_content=None, headers=None):
+        return self._call_wrapper(self._call, expected_content, path, args, headers)
+
     def call_api(self, method, **kwargs):
-        return self._call_wrapper(self._call_api, None, None, method, **kwargs)
+        return self._call_wrapper(self._call_api, None, method, **kwargs)
+
+
 
 ##
 ## Resolvers.
@@ -833,28 +805,19 @@ class DynamicResolver(object):
     Use Piwik API to determine the site ID.
     """
 
-    _add_site_lock = threading.Lock()
-    
     def __init__(self):
         self._cache = {}
-    
-    def _get_site_id_from_hit_host(self, hit):
+
+    def _resolve(self, hit):
         main_url = 'http://' + hit.host
-        return piwik.call_api(
+        res = piwik.call_api(
             'SitesManager.getSitesIdFromSiteUrl',
             url=main_url,
         )
-    
-    def _add_site(self, hit):
-        main_url = 'http://' + hit.host
-        DynamicResolver._add_site_lock.acquire()
-        
-        try:
-            # After we obtain the lock, make sure the site hasn't already been created.
-            res = self._get_site_id_from_hit_host(hit)
-            if res:
-                return res[0]['idsite']
-            
+        if res:
+            # The site already exists.
+            site_id = res[0]['idsite']
+        else:
             # The site doesn't exist.
             logging.debug('No Piwik site found for the hostname: %s', hit.host)
             if config.options.site_id_fallback is not None:
@@ -874,25 +837,13 @@ class DynamicResolver(object):
                     logging.error("Couldn't create a Piwik site for host %s: %s",
                         hit.host, result.get('message'),
                     )
-                    return None
                 else:
                     site_id = result['value']
                     stats.piwik_sites_created.append((hit.host, site_id))
-                    return site_id
             else:
                 # The site doesn't exist, we don't want to create new sites and
                 # there's no default site ID. We thus have to ignore this hit.
-                return None
-        finally:
-            DynamicResolver._add_site_lock.release()
-    
-    def _resolve(self, hit):
-        res = self._get_site_id_from_hit_host(hit)
-        if res:
-            # The site already exists.
-            site_id = res[0]['idsite']
-        else:
-            site_id = self._add_site(hit)
+                site_id = None
         if site_id is not None:
             stats.piwik_sites.add(site_id)
         return site_id
@@ -933,10 +884,6 @@ class Recorder(object):
 
     def __init__(self):
         self.queue = Queue.Queue(maxsize=10000)
-        
-        # if bulk tracking disabled, make sure we can store hits outside of the Queue
-        if not config.options.use_bulk_tracking:
-            self.unrecorded_hits = []
 
     @staticmethod
     def launch(recorder_count):
@@ -946,27 +893,20 @@ class Recorder(object):
         for i in xrange(recorder_count):
             recorder = Recorder()
             Recorder.recorders.append(recorder)
-            
-            run = recorder._run_bulk if config.options.use_bulk_tracking else recorder._run_single
-            t = threading.Thread(target=run)
-            
+            t = threading.Thread(target=recorder._run)
             t.daemon = True
             t.start()
             logging.debug('Launched recorder')
 
     @staticmethod
-    def add_hits(all_hits):
+    def add_hit(hit):
         """
-        Add a set of hits to the recorders queue.
+        Add a hit in one of the recorders queue.
         """
-        # Organize hits so that one client IP will always use the same queue.
-        # We have to do this so visits from the same IP will be added in the right order.
-        hits_by_client = [[] for r in Recorder.recorders]
-        for hit in all_hits:
-            hits_by_client[abs(hash(hit.ip)) % len(Recorder.recorders)].append(hit)
-        
-        for i, recorder in enumerate(Recorder.recorders):
-            recorder.queue.put(hits_by_client[i])
+        # Get a queue so that one client IP will always use the same queue.
+        recorders = Recorder.recorders
+        queue = recorders[abs(hash(hit.ip)) % len(recorders)].queue
+        queue.put(hit)
 
     @staticmethod
     def wait_empty():
@@ -976,32 +916,16 @@ class Recorder(object):
         for recorder in Recorder.recorders:
             recorder._wait_empty()
 
-    def _run_bulk(self):
+
+    def _run(self):
         while True:
-            hits = self.queue.get()
-            if len(hits) > 0:
-                try:
-                    self._record_hits(hits)
-                except Piwik.Error, e:
-                    fatal_error(e, hits[0].filename, hits[0].lineno) # approximate location of error
+            hit = self.queue.get()
+            try:
+                self._record_hit(hit)
+            except Piwik.Error, e:
+                fatal_error(e, hit.filename, hit.lineno)
             self.queue.task_done()
 
-    def _run_single(self):
-        while True:
-            if config.options.force_one_action_interval != False:
-                time.sleep(config.options.force_one_action_interval)
-            
-            if len(self.unrecorded_hits) > 0:
-                hit = self.unrecorded_hits.pop(0)
-            
-                try:
-                    self._record_hits([hit])
-                except Piwik.Error, e:
-                    fatal_error(e, hit.filename, hit.lineno)
-            else:
-                self.unrecorded_hits = self.queue.get()
-                self.queue.task_done()
-        
     def _wait_empty(self):
         """
         Wait until the queue is empty.
@@ -1018,10 +942,10 @@ class Recorder(object):
     def date_to_piwik(self, date):
         date, time = date.isoformat(sep=' ').split()
         return '%s %s' % (date, time.replace('-', ':'))
-    
-    def _get_hit_args(self, hit):
+
+    def _record_hit(self, hit):
         """
-        Returns the args used in tracking a hit, without the token_auth.
+        Insert the hit into Piwik.
         """
         site_id, main_url = resolver.resolve(hit)
         if site_id is None:
@@ -1045,7 +969,7 @@ class Recorder(object):
             'cdt': self.date_to_piwik(hit.date),
             'idsite': site_id,
             'dp': '0' if config.options.reverse_dns else '1',
-            'ua': hit.user_agent.encode('utf8'),
+            'token_auth': config.options.piwik_token_auth,
         }
         if hit.is_download:
             args['download'] = args['url']
@@ -1061,45 +985,16 @@ class Recorder(object):
                 urllib.quote(args['url'], ''),
                 ("/From = %s" % urllib.quote(args['urlref'], '') if args['urlref'] != ''  else '')
             )
-        return args
-    
-    def _record_hits(self, hits):
-        """
-        Inserts several hits into Piwik.
-        """
-        data = {
-            'token_auth': config.options.piwik_token_auth,
-            'requests': [self._get_hit_args(hit) for hit in hits]
-        }
-        
+
         if not config.options.dry_run:
             piwik.call(
-                '/piwik.php', args={},
+                '/piwik.php', args,
                 expected_content=PIWIK_EXPECTED_IMAGE,
-                headers={'Content-type': 'application/json'},
-                data=data,
-                on_failure=self._on_tracking_failure
+                headers={'User-Agent' : hit.user_agent.encode('utf8')},
             )
-        stats.count_lines_recorded.advance(len(hits))
-    
-    def _on_tracking_failure(self, response, data):
-        """
-        Removes the successfully tracked hits from the request payload so
-        they are not logged twice.
-        """
-        try:
-            response = json.loads(response)
-        except:
-            # the response should be in JSON, but in case it can't be parsed just try another attempt
-            logging.debug("cannot parse tracker response, should be valid JSON")
-            return response
-        
-        # remove the successfully tracked hits from payload
-        succeeded = response['succeeded']
-        data['requests'] = data['requests'][succeeded:]
-        
-        return response['error']
-    
+        stats.count_lines_recorded.increment()
+
+
     @staticmethod
     def invalidate_reports():
         if config.options.dry_run or not stats.dates_recorded:
@@ -1260,7 +1155,6 @@ class Parser(object):
         # Make sure the format is compatible with the resolver.
         resolver.check_format(format)
 
-        hits = []
         for lineno, line in enumerate(file):
             try:
                 line = line.decode(config.options.encoding)
@@ -1345,15 +1239,7 @@ class Parser(object):
             # Check if the hit must be excluded.
             check_methods = inspect.getmembers(self, predicate=inspect.ismethod)
             if all((method(hit) for name, method in check_methods if name.startswith('check_'))):
-                hits.append(hit)
-            
-                if len(hits) >= config.options.recorder_max_payload_size * len(Recorder.recorders):
-                    Recorder.add_hits(hits)
-                    hits = []
-        
-        # add last chunk of hits
-        if len(hits) > 0:
-            Recorder.add_hits(hits)
+                Recorder.add_hit(hit)
 
 
 
@@ -1362,10 +1248,10 @@ def main():
     """
     Start the importing process.
     """
-    stats.set_time_start()
-    
     if config.options.show_progress:
         stats.start_monitor()
+
+    stats.set_time_start()
 
     recorders = Recorder.launch(config.options.recorders)
 

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Day.php 6980 2012-09-13 02:22:04Z capedfuzz $
+ * @version $Id: Day.php 6353 2012-05-28 17:29:23Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -99,7 +99,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 			
 			$bind = $query['bind'];
 			$sql = $query['sql'];
-			
+		
 			$data = $this->db->fetchRow($sql, $bind);
 			
 			// no visits found
@@ -171,6 +171,8 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	public static function buildReduceByRangeSelect(
 		$column, $ranges, $table, $selectColumnPrefix = '', $extraCondition = false)
 	{
+		$db = Zend_Registry::get('db');
+
 		$selects = array();
 
 		foreach($ranges as $gap)
@@ -181,17 +183,18 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 				$upperBound = $gap[1];
 				
 				$selectAs = "$selectColumnPrefix$lowerBound-$upperBound";
+				$selectAs = $db->quoteIdentifier($selectAs);
 
 				$selects[] = "sum(case when $table.$column between $lowerBound and $upperBound $extraCondition".
-									 " then 1 else 0 end) as `$selectAs`";
+									 " then 1 else 0 end) as $selectAs";
 			}
 			else
 			{
 				$lowerBound = $gap[0];
 				
-				$selectAs = $selectColumnPrefix.($lowerBound + 1).urlencode('+');
+				$selectAs = $db->quoteIdentifier($selectColumnPrefix.($lowerBound + 1).urlencode('+'));
 
-				$selects[] = "sum(case when $table.$column > $lowerBound $extraCondition then 1 else 0 end) as `$selectAs`";
+				$selects[] = "sum(case when $table.$column > $lowerBound $extraCondition then 1 else 0 end) as $selectAs";
 			}
 		}
 
@@ -263,7 +266,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 		$bind = array($this->getStartDatetimeUTC(), $this->getEndDatetimeUTC(), $this->idsite);
 		
 		$query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy, $groupBy);
-		
+
 		if ($oneResultRow)
 		{
 			return $this->db->fetchRow($query['sql'], $query['bind']);
@@ -299,34 +302,14 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 
 	/**
 	 * Returns the actions by the given dimension
-	 * 
-	 * - The basic use case is to use $label and optionally $where.
-	 * - If you want to apply a limit and group the others, use $orderBy to sort the way you
-	 *   want the limit to be applied and pass a pre-configured instance of Piwik_RankingQuery.
-	 *   The ranking query instance has to have a limit and at least one label column.
-	 *   See Piwik_RankingQuery::setLimit() and Piwik_RankingQuery::addLabelColumn().
-	 *   If $rankingQuery is set, the return value is the array returned by 
-	 *   Piwik_RankingQuery::execute().
-	 * - By default, the method only queries log_link_visit_action. If you need data from
-	 *   log_action (e.g. to partition the result from the ranking query into the different
-	 *   action types), use $joinLogActionOnColumn and $addSelect to join log_action and select
-	 *   the column you need from log_action.
-	 * 
 	 *
-	 * @param array|string  $label      the dimensions(s) you're interested in
-	 * @param string        $where      where clause
-	 * @param bool|array    $metrics    Set this if you want to limit the columns that are returned.
-	 *                                  The possible values in the array are Piwik_Archive::INDEX_*.
-	 * @param bool|string   $orderBy    order by clause
-	 * @param Piwik_RankingQuery  $rankingQuery     pre-configured ranking query instance
-	 * @param bool|string   $joinLogActionOnColumn  column from log_link_visit_action that
-	 *                                              log_action should be joined on
-	 * @param bool|string   $addSelect  additional select clause
+	 * @param array|string  $label
+	 * @param string        $where
 	 * @return mixed
 	 */
-	public function queryActionsByDimension($label, $where = '', $metrics = false, $orderBy = false,
-			$rankingQuery = null, $joinLogActionOnColumn = false, $addSelect = false)
+	public function queryActionsByDimension($label, $where = '')
 	{
+		$Generic = Piwik_Db_Factory::getGeneric($this->db);
 	    if(is_array($label))
 	    {
 	    	$label2 = $label;
@@ -339,7 +322,9 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        // then we also query the "Product page view" price which was possibly recorded.
 	        if(in_array(reset($label), array('custom_var_k3','custom_var_k4','custom_var_k5')))
 	        {
-	        	$select .= ", ".self::getSqlRevenue("AVG(log_link_visit_action.custom_var_v2)")." as `". Piwik_Archive::INDEX_ECOMMERCE_ITEM_PRICE_VIEWED ."`";
+				$col = $this->C('INDEX_ECOMMERCE_ITEM_PRICE_VIEWED'); 
+				$custom_var_v2 = $Generic->castToNumeric('log_link_visit_action.custom_var_v2');
+	        	$select .= ", ".$Generic->getSqlRevenue("AVG(".$custom_var_v2.")")." as $col";
 	        }
 	    }
 	    else
@@ -348,107 +333,55 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        $groupBy = 'label';
 	    }
 	    
-		if(!empty($where))
+	    if(!empty($where))
 	    {
 	    	$where = sprintf($where, "log_link_visit_action", "log_link_visit_action");
 	        $where = ' AND '.$where;
 	    }
-		
-		$pre = ", \n\t\t\t";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_VISITS, $metrics))
-			$select .= $pre . "count(distinct log_link_visit_action.idvisit) as `". Piwik_Archive::INDEX_NB_VISITS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_UNIQ_VISITORS, $metrics))
-			$select .= $pre . "count(distinct log_link_visit_action.idvisitor) as `". Piwik_Archive::INDEX_NB_UNIQ_VISITORS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_ACTIONS, $metrics))
-			$select .= $pre . "count(*) as `". Piwik_Archive::INDEX_NB_ACTIONS ."`";
+	    
+		/*
+		 * Page URLs and Page names, general stats
+		 */
+		$index_nb_visits = $this->C('INDEX_NB_VISITS');
+		$index_nb_uniq_visitors = $this->C('INDEX_NB_UNIQ_VISITORS'); 
+		$index_nb_actions = $this->C('INDEX_NB_ACTIONS'); 
+		$select = "$select,
+				count(distinct log_link_visit_action.idvisit) as $index_nb_visits,
+				count(distinct log_link_visit_action.idvisitor) as $index_nb_uniq_visitors,
+				count(*) as $index_nb_actions";
 
 		$from = "log_link_visit_action";
-		
-		if ($joinLogActionOnColumn !== false)
-		{
-			$from = array(
-				$from,
-				array(
-					'table' => 'log_action', 
-					'joinOn' => 'log_action.idaction = log_link_visit_action.'.$joinLogActionOnColumn,
-				)
-			);
-		}
-		
-		if ($addSelect !== false)
-		{
-			$select .= ', '.$addSelect;
-		}
 		
 		$where = "log_link_visit_action.server_time >= ?
 				AND log_link_visit_action.server_time <= ?
 				AND log_link_visit_action.idsite = ?
 				$where";
-
+				 		
 		$bind = array($this->getStartDatetimeUTC(), $this->getEndDatetimeUTC(), $this->idsite);
         
-		$query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy, $groupBy);
-		
-		if ($rankingQuery !== null)
-		{
-			$sumColumns = array(
-				Piwik_Archive::INDEX_NB_UNIQ_VISITORS,
-				Piwik_Archive::INDEX_NB_VISITS,
-				Piwik_Archive::INDEX_NB_ACTIONS
-			);
-			if ($metrics)
-			{
-				foreach ($sumColumns as $i => $column)
-				{
-					if (!in_array($column, $metrics))
-					{
-						unset($sumColumns[$i]);
-					}			
-				}
-				$sumColumns = array_values($sumColumns);
-			}
-			$rankingQuery->addColumn($sumColumns, 'sum');
-			return $rankingQuery->execute($query['sql'], $query['bind']);
-		}
-		
+		$query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy=false, $groupBy);
+
 		return $this->db->query($query['sql'], $query['bind']);
 	}
-
+	
 	/**
 	 * Query visits by dimension
 	 *
-	 * @param array|string  $label    Can be a string, eg. "referer_name", will be aliased as 'label' in the returned rows
-	 *                                Can also be an array of strings, when the dimension spans multiple fields, 
-	 *                                eg. array("referer_name", "referer_keyword")
-	 * @param string        $where    Additional condition for WHERE clause
-	 * @param bool|array    $metrics  Set this if you want to limit the columns that are returned.
-	 *                                The possible values in the array are Piwik_Archive::INDEX_*.
-	 * @param bool|string   $orderBy  ORDER BY clause. This is needed in combination with $rankingQuery.
-	 * @param Piwik_RankingQuery $rankingQuery
-	 *                                A pre-configured ranking query instance that is used to limit the result.
-	 *                                If set, the return value is the array returned by Piwik_RankingQuery::execute().
-	 * @param string      $addSelect  Additional SELECT clause
-	 * @param bool        $addSelectGeneratesLabelColumn
-	 *                                Set to true if the $label column is generated in $addSelect.
-	 * @return mixed
+	 * @param array|string  $label  mixed Can be a string, eg. "referer_name", will be aliased as 'label' in the returned rows
+	 * 				                Can also be an array of strings, when the dimension spans multiple fields, eg. array("referer_name", "referer_keyword")
+	 * @param string        $where  Additional condition for WHERE clause
 	 */
-	public function queryVisitsByDimension($label, $where = '', $metrics = false, $orderBy = false,
-			$rankingQuery = null, $addSelect = false, $addSelectGeneratesLabelColumn = false)
+	public function queryVisitsByDimension($label, $where = '')
 	{
 	    if(is_array($label))
 	    {
 	        $groupBy = "log_visit.".implode(", log_visit.", $label);
-			foreach($label as &$field)
+	    	foreach($label as &$field)
 	    	{
 	    		$field = 'log_visit.'.$field.' AS '.$field;
 	    	}
 	        $select = implode(", ", $label);
 	    }
-		else if ($addSelectGeneratesLabelColumn)
-		{
-			$select = $addSelect;
-			$groupBy = $label;
-		}
 	    else
 	    {
 	        $select = $label . " AS label ";
@@ -461,26 +394,22 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        $where = ' AND '.$where;
 	    }
 	    
-		$pre = ", \n\t\t\t";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_UNIQ_VISITORS, $metrics))
-			$select .= $pre . "count(distinct log_visit.idvisitor) as `". Piwik_Archive::INDEX_NB_UNIQ_VISITORS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_VISITS, $metrics))
-			$select .= $pre . "count(*) as `". Piwik_Archive::INDEX_NB_VISITS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_ACTIONS, $metrics))
-			$select .= $pre . "sum(log_visit.visit_total_actions) as `". Piwik_Archive::INDEX_NB_ACTIONS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_MAX_ACTIONS, $metrics))
-			$select .= $pre . "max(log_visit.visit_total_actions) as `". Piwik_Archive::INDEX_MAX_ACTIONS ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_SUM_VISIT_LENGTH, $metrics))
-			$select .= $pre . "sum(log_visit.visit_total_time) as `". Piwik_Archive::INDEX_SUM_VISIT_LENGTH ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_BOUNCE_COUNT, $metrics))
-			$select .= $pre . "sum(case log_visit.visit_total_actions when 1 then 1 when 0 then 1 else 0 end) as `". Piwik_Archive::INDEX_BOUNCE_COUNT ."`";
-		if (!$metrics || in_array(Piwik_Archive::INDEX_NB_VISITS_CONVERTED, $metrics))
-			$select .= $pre . "sum(case log_visit.visit_goal_converted when 1 then 1 else 0 end) as `". Piwik_Archive::INDEX_NB_VISITS_CONVERTED ."`";
-		
-		if ($addSelect && !$addSelectGeneratesLabelColumn) {
-			$select .= ', '.$addSelect;
-		}
-		
+		$index_nb_uniq_visitors = $this->C('INDEX_NB_UNIQ_VISITORS'); 
+		$index_nb_visits = $this->C('INDEX_NB_VISITS'); 
+		$index_nb_actions = $this->C('INDEX_NB_ACTIONS');
+		$index_max_actions = $this->C('INDEX_MAX_ACTIONS'); 
+		$index_sum_visit_length = $this->C('INDEX_SUM_VISIT_LENGTH'); 
+		$index_bounce_count = $this->C('INDEX_BOUNCE_COUNT');
+		$index_nb_visits_converted = $this->C('INDEX_NB_VISITS_CONVERTED');
+	    $select = "$select,
+				count(distinct log_visit.idvisitor) as $index_nb_uniq_visitors,
+				count(*) as $index_nb_visits,
+				sum(log_visit.visit_total_actions) as $index_nb_actions,
+				max(log_visit.visit_total_actions) as $index_max_actions,
+				sum(log_visit.visit_total_time) as $index_sum_visit_length,
+				sum(case log_visit.visit_total_actions when 1 then 1 when 0 then 1 else 0 end) as $index_bounce_count,
+				sum(case log_visit.visit_goal_converted when 1 then 1 else 0 end) as $index_nb_visits_converted ";
+	    
 	    $from = "log_visit";
 	    
 	    $where = "log_visit.visit_last_action_time >= ?
@@ -490,34 +419,8 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 		
 		$bind = array($this->getStartDatetimeUTC(), $this->getEndDatetimeUTC(), $this->idsite);
 		
-		$query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy, $groupBy);
-		
-		if ($rankingQuery !== null)
-		{
-			$sumColumns = array(
-				Piwik_Archive::INDEX_NB_UNIQ_VISITORS, Piwik_Archive::INDEX_NB_VISITS,
-				Piwik_Archive::INDEX_NB_ACTIONS, Piwik_Archive::INDEX_SUM_VISIT_LENGTH,
-				Piwik_Archive::INDEX_BOUNCE_COUNT, Piwik_Archive::INDEX_NB_VISITS_CONVERTED
-			);
-			if ($metrics)
-			{
-				foreach ($sumColumns as $i => $column)
-				{
-					if (!in_array($column, $metrics))
-					{
-						unset($sumColumns[$i]);
-					}			
-				}
-				$sumColumns = array_values($sumColumns);
-			}
-			$rankingQuery->addColumn($sumColumns, 'sum');
-			if (!$metrics || in_array(Piwik_Archive::INDEX_MAX_ACTIONS, $metrics))
-			{
-				$rankingQuery->addColumn(Piwik_Archive::INDEX_MAX_ACTIONS, 'max');
-			}
-			return $rankingQuery->execute($query['sql'], $query['bind']);
-		}
-		
+		$query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy=false, $groupBy);
+
 		return $this->db->query($query['sql'], $query['bind']);
 	}
 
@@ -533,6 +436,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	 */
 	public function queryConversionsByDimension($label, $where = '', $aggregateLabels = array())
 	{
+		$Generic = Piwik_Db_Factory::getGeneric($this->db);
 		if(empty($label))
 		{
 			$select = "";
@@ -562,19 +466,29 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        $where = ' AND '.$where;
 	    }
 	    
-		$select .= 	self::getSqlRevenue('SUM(log_conversion.revenue_subtotal)')." as `". Piwik_Archive::INDEX_GOAL_ECOMMERCE_REVENUE_SUBTOTAL ."`,".
-		    		self::getSqlRevenue('SUM(log_conversion.revenue_tax)')." as `". Piwik_Archive::INDEX_GOAL_ECOMMERCE_REVENUE_TAX ."`,".
-		    		self::getSqlRevenue('SUM(log_conversion.revenue_shipping)')." as `". Piwik_Archive::INDEX_GOAL_ECOMMERCE_REVENUE_SHIPPING ."`,".
-		    		self::getSqlRevenue('SUM(log_conversion.revenue_discount)')." as `". Piwik_Archive::INDEX_GOAL_ECOMMERCE_REVENUE_DISCOUNT ."`,".
-		    		"SUM(log_conversion.items) as `". Piwik_Archive::INDEX_GOAL_ECOMMERCE_ITEMS ."`, ";
+		$revenue_subtotal = $this->C('INDEX_GOAL_ECOMMERCE_REVENUE_SUBTOTAL');
+		$revenue_tax = $this->C('INDEX_GOAL_ECOMMERCE_REVENUE_TAX');
+		$revenue_shipping = $this->C('INDEX_GOAL_ECOMMERCE_REVENUE_SHIPPING');
+		$revenue_discount = $this->C('INDEX_GOAL_ECOMMERCE_REVENUE_DISCOUNT');
+		$goal_ecommerce_items = $this->C('INDEX_GOAL_ECOMMERCE_ITEMS');
+
+		$select .= 	$Generic->getSqlRevenue('SUM(log_conversion.revenue_subtotal)')." as $revenue_subtotal, ".
+		    		$Generic->getSqlRevenue('SUM(log_conversion.revenue_tax)')." as $revenue_tax, ".
+		    		$Generic->getSqlRevenue('SUM(log_conversion.revenue_shipping)')." as $revenue_shipping, ".
+		    		$Generic->getSqlRevenue('SUM(log_conversion.revenue_discount)')." as $revenue_discount, ".
+		    		"SUM(log_conversion.items) as $goal_ecommerce_items, ";
 		    		
 	    $groupBy = !empty($groupBy) ? ", $groupBy" : '';
 	    
+		$nb_conversions = $this->C('INDEX_GOAL_NB_CONVERSIONS');
+		$revenue = $this->C('INDEX_GOAL_REVENUE');
+		$nb_visits_converted = $this->C('INDEX_GOAL_NB_VISITS_CONVERTED');
+
 	    $select = "$select
 				log_conversion.idgoal,
-				count(*) as `". Piwik_Archive::INDEX_GOAL_NB_CONVERSIONS ."`,
-				".self::getSqlRevenue('SUM(log_conversion.revenue)')." as `". Piwik_Archive::INDEX_GOAL_REVENUE ."`,
-				count(distinct log_conversion.idvisit) as `". Piwik_Archive::INDEX_GOAL_NB_VISITS_CONVERTED."`";
+				count(*) as $nb_conversions,
+				".$Generic->getSqlRevenue('SUM(log_conversion.revenue)')." as $revenue,
+				count(distinct log_conversion.idvisit) as $nb_visits_converted";
 	    
 	    $from = "log_conversion";
 	    
@@ -588,7 +502,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 		$bind = array($this->getStartDatetimeUTC(), $this->getEndDatetimeUTC(), $this->idsite);
 		                     
         $query = $this->getSegment()->getSelectQuery($select, $from, $where, $bind, $orderBy=false, $groupBy);
-        
+
         return $this->db->query($query['sql'], $query['bind']);
 	}
 
@@ -600,39 +514,13 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	 */
 	public function queryEcommerceItems($field)
 	{
-		$query = "SELECT
-						name as label,
-						".self::getSqlRevenue('SUM(quantity * price)')." as `". Piwik_Archive::INDEX_ECOMMERCE_ITEM_REVENUE ."`,
-						".self::getSqlRevenue('SUM(quantity)')." as `". Piwik_Archive::INDEX_ECOMMERCE_ITEM_QUANTITY ."`,
-						".self::getSqlRevenue('SUM(price)')." as `". Piwik_Archive::INDEX_ECOMMERCE_ITEM_PRICE ."`,
-						count(distinct idorder) as `". Piwik_Archive::INDEX_ECOMMERCE_ORDERS."`,
-						count(idvisit) as `". Piwik_Archive::INDEX_NB_VISITS."`,
-						case idorder when '0' then ".Piwik_Tracker_GoalManager::IDGOAL_CART." else ".Piwik_Tracker_GoalManager::IDGOAL_ORDER." end as ecommerceType
-			 	FROM ".Piwik_Common::prefixTable('log_conversion_item')."
-			 		LEFT JOIN ".Piwik_Common::prefixTable('log_action')."
-			 		ON $field = idaction
-			 	WHERE server_time >= ?
-						AND server_time <= ?
-			 			AND idsite = ?
-			 			AND deleted = 0
-			 	GROUP BY ecommerceType, $field
-				ORDER BY NULL";
-						
-		$bind = array( $this->getStartDatetimeUTC(),
-                       $this->getEndDatetimeUTC(),
-                       $this->idsite
-        );
-		$query = $this->db->query($query, $bind);
-		return $query;
-	}
-
-	/**
-	 * @param string  $field
-	 * @return string
-	 */
-	static public function getSqlRevenue($field)
-	{
-		return "ROUND(".$field.",".Piwik_Tracker_GoalManager::REVENUE_PRECISION.")";
+		$LogConversionItem = Piwik_Db_Factory::getDAO('log_conversion_item');
+		return $LogConversionItem->getEcommerceItems(
+					$field,
+					$this->getStartDatetimeUTC(),
+					$this->getEndDatetimeUTC(),
+					$this->idsite
+				);
 	}
 
 	/**
@@ -729,15 +617,7 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 				$row = $maybeDatatableRow;
 			}
 			
-			if ($row->getMetadata('issummaryrow') == true)
-			{
-				$row->deleteMetadata('issummaryrow');
-				$dataTableToReturn->addSummaryRow($row);
-			}
-			else
-			{
-				$dataTableToReturn->addRow($row);
-			}
+			$dataTableToReturn->addRow($row);
 		}
 		return $dataTableToReturn;
 	}
@@ -907,7 +787,6 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 		$oldRowToUpdate[Piwik_Archive::INDEX_SUM_VISIT_LENGTH]		+= $newRowToAdd[Piwik_Archive::INDEX_SUM_VISIT_LENGTH];
 		$oldRowToUpdate[Piwik_Archive::INDEX_BOUNCE_COUNT] 			+= $newRowToAdd[Piwik_Archive::INDEX_BOUNCE_COUNT];
 		$oldRowToUpdate[Piwik_Archive::INDEX_NB_VISITS_CONVERTED] 	+= $newRowToAdd[Piwik_Archive::INDEX_NB_VISITS_CONVERTED];
-		
 	}
 	
 	/**

@@ -15,7 +15,7 @@ class Test_Piwik_TrackerAction extends  Test_Database
 		$GLOBALS['PIWIK_TRACKER_MODE'] = true;
 		$userFile = PIWIK_PATH_TEST_TO_ROOT . '/tests/resources/Tracker/Action.config.ini.php';
 		$config = Piwik_Config::getInstance();
-		$config->setTestEnvironment($userFile);
+		$config->appendToLocalConfig($userFile);
 	}
 
 	function tearDown()

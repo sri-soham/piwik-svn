@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Cookie.php 6533 2012-07-22 16:00:17Z capedfuzz $
+ * @version $Id: Cookie.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -158,8 +158,8 @@ class Piwik_Cookie
 					 . (empty($Domain) ? '' : '; domain=' . $Domain)
 					 . (!$Secure ? '' : '; secure')
 					 . (!$HTTPOnly ? '' : '; HttpOnly');
-		
-		Piwik_Common::sendHeader($header, false);
+
+		 header($header, false);
 	}
 
 	/**
@@ -167,7 +167,7 @@ class Piwik_Cookie
 	 */
 	protected function setP3PHeader()
 	{
-		Piwik_Common::sendHeader("P3P: CP='OTI DSP COR NID STP UNI OTPa OUR'");
+		header("P3P: CP='OTI DSP COR NID STP UNI OTPa OUR'");
 	}
 
 	/**

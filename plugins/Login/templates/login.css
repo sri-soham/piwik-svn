@@ -13,9 +13,9 @@ form {
 	margin-left: 8px;
 	padding: 16px 16px 40px 16px;
 	font-weight: bold;
-	border-radius: 5px;
 	-moz-border-radius: 5px;
 	-webkit-border-radius: 5px;
+	border-radius: 5px;
 }
 
 form .forgetmenot {
@@ -24,7 +24,7 @@ form .forgetmenot {
 	margin-bottom: 0;
 }
 
-#login form input.submit {
+#login form .submit input {
 	font-family: "Lucida Grande", "Lucida Sans Unicode", Tahoma, Verdana,
 		sans-serif;
 	padding: 3px 5px;
@@ -67,8 +67,7 @@ form p {
 	padding: 16px;
 }
 
-#login_form_password,#reset_form_password,#reset_form_password_bis,
-#login_form_login,#reset_form_login {
+#form_password,#form_password_bis,#form_login,#user_email,#form_token {
 	font-size: 20px;
 	width: 97%;
 	padding: 3px;
@@ -83,7 +82,7 @@ form p {
 	background-color: #eaf3fa;
 }
 
-#login form input.submit {
+#login form .submit input {
 	background-color: #cee1ef !important;
 }
 
@@ -92,14 +91,17 @@ form p {
 	border-color: #c00;
 }
 
-#login form input.submit {
+#login form .submit input {
 	background-color: #e5e5e5;
 	color: #246;
 	border-color: #80b5d0;
 }
 
-#login form input.submit:hover {
+#login form .submit input:hover {
 	color: #d54e21;
+}
+
+#login form .submit input:hover {
 	border-color: #328ab2;
 }
 
@@ -153,9 +155,4 @@ a {
 	font-size: 18pt;
 	margin-left:50px;
 	margin-bottom:30px;
-}
-
-.loadingPiwik {
-	float: left;
-	margin-left: 16px;
 }

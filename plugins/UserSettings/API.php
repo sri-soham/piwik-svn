@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6628 2012-08-01 21:49:16Z matt $
+ * @version $Id: API.php 6362 2012-05-29 05:17:56Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
@@ -60,14 +60,13 @@ class Piwik_UserSettings_API
 	public function getOS( $idSite, $period, $date, $segment = false, $addShortLabel = true )
 	{
 		$dataTable = $this->getDataTable('UserSettings_os', $idSite, $period, $date, $segment);
-		// these filters are applied directly so other API methods can use GroupBy on the result of this method
-		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getOSLogo'));
+		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getOSLogo'));
 		if ($addShortLabel)
 		{
-			$dataTable->filter(
+			$dataTable->queueFilter(
 				'ColumnCallbackAddMetadata', array( 'label', 'shortLabel', 'Piwik_getOSShortLabel') );
 		}
-		$dataTable->filter('ColumnCallbackReplace', array( 'label', 'Piwik_getOSLabel') );
+		$dataTable->queueFilter('ColumnCallbackReplace', array( 'label', 'Piwik_getOSLabel') );
 		return $dataTable;
 	}
 	
@@ -78,7 +77,7 @@ class Piwik_UserSettings_API
 	public function getOSFamily( $idSite, $period, $date, $segment = false )
 	{
 		$dataTable = $this->getOS($idSite, $period, $date, $segment, $addShortLabel = false);
-		$dataTable->filter('GroupBy', array('label', 'Piwik_UserSettings_getOSFamily'));
+		$dataTable->queueFilter('GroupBy', array('label', 'Piwik_UserSettings_getOSFamily'));
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_Translate'));
 		return $dataTable;
 	}
@@ -89,36 +88,19 @@ class Piwik_UserSettings_API
 	public function getMobileVsDesktop( $idSite, $period, $date, $segment = false )
 	{
 		$dataTable = $this->getOS($idSite, $period, $date, $segment, $addShortLabel = false);
-		$dataTable->filter('GroupBy', array('label', 'Piwik_UserSettings_getDeviceTypeFromOS'));
-		
-		// make sure the datatable has a row for mobile & desktop (if it has rows)
-		$empty = new Piwik_DataTable();
-		$empty->addRowsFromSimpleArray(array(
-			array('label' => 'General_Desktop', Piwik_Archive::INDEX_NB_VISITS => 0),
-			array('label' => 'General_Mobile', Piwik_Archive::INDEX_NB_VISITS => 0)
-		));
-		if($dataTable->getRowsCount() > 0)
-		{
-			$dataTable->addDataTable($empty);
-		}
-		
-		// set the logo metadata
+		$dataTable->queueFilter('GroupBy', array('label', 'Piwik_UserSettings_getDeviceTypeFromOS'));
 		$dataTable->queueFilter('MetadataCallbackReplace',
 			array('logo', 'Piwik_UserSettings_getDeviceTypeImg', null, array('label')));
-		
-		// translate the labels
 		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_Translate'));
-		
 		return $dataTable;
 	}
 	
 	public function getBrowserVersion( $idSite, $period, $date, $segment = false )
 	{
 		$dataTable = $this->getDataTable('UserSettings_browser', $idSite, $period, $date, $segment);
-		// these filters are applied directly so getBrowser can use GroupBy on the result of this method
-		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getBrowsersLogo'));
-		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'shortLabel', 'Piwik_getBrowserShortLabel'));
-		$dataTable->filter('ColumnCallbackReplace', array('label', 'Piwik_getBrowserLabel'));
+		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getBrowsersLogo'));
+		$dataTable->queueFilter('ColumnCallbackAddMetadata', array('label', 'shortLabel', 'Piwik_getBrowserShortLabel'));
+		$dataTable->queueFilter('ColumnCallbackReplace', array('label', 'Piwik_getBrowserLabel'));
 		return $dataTable;
 	}
 	
@@ -131,7 +113,7 @@ class Piwik_UserSettings_API
 		$dataTable = $this->getBrowserVersion($idSite, $period, $date, $segment);
 		
 		$getBrowserFromBrowserVersion = 'Piwik_UserSettings_getBrowserFromBrowserVersion';
-		$dataTable->filter('GroupBy', array('label', $getBrowserFromBrowserVersion));
+		$dataTable->queueFilter('GroupBy', array('label', $getBrowserFromBrowserVersion));
 		
 		return $dataTable;
 	}
@@ -214,5 +196,4 @@ class Piwik_UserSettings_API
 
 		return $dataTable;
 	}
-	
 }

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6939 2012-09-07 17:38:30Z matt $
+ * @version $Id: Controller.php 6077 2012-03-20 22:19:40Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_Goals
@@ -156,7 +156,7 @@ class Piwik_Goals_Controller extends Piwik_Controller
 	public function getEcommerceLog($fetch = false)
 	{
 		$saveGET = $_GET;
-		$_GET['filterEcommerce'] = Piwik_Common::getRequestVar('filterEcommerce', 1, 'int');
+		$_GET['filterEcommerce'] = 1;
 		$_GET['widget'] = 1;
 		$_GET['segment'] = 'visitEcommerceStatus!=none';
 		$output = Piwik_FrontController::getInstance()->dispatch('Live', 'getVisitorLog', array($fetch));

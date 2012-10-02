@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Manager.php 6607 2012-07-31 07:09:30Z matt $
+ * @version $Id: Manager.php 6479 2012-06-14 22:24:02Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -46,7 +46,7 @@ class Piwik_DataTable_Manager
 	 * Id of the next inserted table id in the Manager
 	 * @var int
 	 */
-	protected $nextTableId = 1;
+	protected $nextTableId = 0;
 	
 	/**
 	 * Add a DataTable to the registry
@@ -80,32 +80,16 @@ class Piwik_DataTable_Manager
 	}
 	
 	/**
-	 * Returns the latest used table ID
-	 * 
-	 * @return int
-	 */
-	public function getMostRecentTableId()
-	{
-		return $this->nextTableId - 1;
-	}
-	
-	/**
 	 * Delete all the registered DataTables from the manager
 	 */
-	public function deleteAll( $deleteWhenIdTableGreaterThan = 0)
+	public function deleteAll()
 	{
 		foreach($this->tables as $id => $table) 
 		{
-			if($id > $deleteWhenIdTableGreaterThan)
-			{
-				$this->deleteTable($id);
-			}
+			$this->deleteTable($id);
 		}
-		if($deleteWhenIdTableGreaterThan == 0)
-		{
-			$this->tables = array();
-			$this->nextTableId = 1;
-		}
+		$this->tables = array();
+		$this->nextTableId = 0;
 	}
 	
 	/**
@@ -118,8 +102,8 @@ class Piwik_DataTable_Manager
 	{
 		if(isset($this->tables[$id]))
 		{
-			destroy($this->tables[$id]);
 			$this->setTableDeleted($id);
+			destroy($this->tables[$id]);
 		}
 	}
 	

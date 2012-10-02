@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: StaticGraph.php 6969 2012-09-10 23:14:49Z JulienM $
+ * @version $Id: StaticGraph.php 5582 2011-12-20 17:50:45Z JulienM $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -37,23 +37,23 @@ abstract class Piwik_ImageGraph_StaticGraph
 	);
 
 	const ABSCISSA_SERIE_NAME = 'ABSCISSA';
+	const WIDTH_KEY = 'WIDTH';
+	const HEIGHT_KEY = 'HEIGHT';
 
 	private $aliasedGraph;
 
 	protected $pImage;
 	protected $pData;
-	protected $ordinateLabels;
-	protected $showLegend;
-	protected $abscissaSeries;
-	protected $abscissaLogos;
-	protected $ordinateSeries;
+	protected $metricTitle;
+	protected $showMetricTitle;
+	protected $abscissaSerie;
+	protected $ordinateSerie;
 	protected $ordinateLogos;
 	protected $colors;
 	protected $font;
 	protected $fontSize;
 	protected $width;
 	protected $height;
-	protected $forceSkippedLabels = false;
 
 	abstract protected function getDefaultColors();
 
@@ -140,9 +140,9 @@ abstract class Piwik_ImageGraph_StaticGraph
 		$this->font = $font;
 	}
 
-	public function setOrdinateSeries($ordinateSeries)
+	public function setOrdinateSerie($ordinateSerie)
 	{
-		$this->ordinateSeries = $ordinateSeries;
+		$this->ordinateSerie = $ordinateSerie;
 	}
 
 	public function setOrdinateLogos($ordinateLogos)
@@ -150,29 +150,19 @@ abstract class Piwik_ImageGraph_StaticGraph
 		$this->ordinateLogos = $ordinateLogos;
 	}
 
-	public function setAbscissaLogos($abscissaLogos)
+	public function setAbscissaSerie($abscissaSerie)
 	{
-		$this->abscissaLogos = $abscissaLogos;
+		$this->abscissaSerie = $abscissaSerie;
 	}
 
-	public function setAbscissaSeries($abscissaSeries)
+	public function setShowMetricTitle($showMetricTitle)
 	{
-		$this->abscissaSeries = $abscissaSeries;
+		$this->showMetricTitle = $showMetricTitle;
 	}
 
-	public function setShowLegend($showLegend)
+	public function setMetricTitle($metricTitle)
 	{
-		$this->showLegend = $showLegend;
-	}
-
-	public function setForceSkippedLabels($forceSkippedLabels)
-	{
-		$this->forceSkippedLabels = $forceSkippedLabels;
-	}
-
-	public function setOrdinateLabels($ordinateLabels)
-	{
-		$this->ordinateLabels = $ordinateLabels;
+		$this->metricTitle = $metricTitle;
 	}
 
 	public function setAliasedGraph($aliasedGraph)
@@ -218,18 +208,10 @@ abstract class Piwik_ImageGraph_StaticGraph
 	{
 		$this->pData = new pData();
 
-		foreach($this->ordinateSeries as $column => $data)
-		{
-			$this->pData->addPoints($data, $column);
-			$this->pData->setSerieDescription($column,$this->ordinateLabels[$column]);
-			if(isset($this->ordinateLogos[$column]))
-			{
-				$ordinateLogo = $this->ordinateLogos[$column];
-				$this->pData->setSeriePicture($column, $ordinateLogo);
-			}
-		}
+		$this->pData->addPoints($this->ordinateSerie, $this->metricTitle);
+		$this->pData->setAxisName(0, '', $this->metricTitle);
 
-		$this->pData->addPoints($this->abscissaSeries, self::ABSCISSA_SERIE_NAME);
+		$this->pData->addPoints($this->abscissaSerie, self::ABSCISSA_SERIE_NAME);
 		$this->pData->setAbscissa(self::ABSCISSA_SERIE_NAME);
 	}
 
@@ -246,59 +228,41 @@ abstract class Piwik_ImageGraph_StaticGraph
 		);
 	}
 
-	protected function getTextWidthHeight($text, $fontSize = false)
+	protected function getTextWidthHeight($text)
 	{
-		if(!$fontSize)
-		{
-			$fontSize = $this->fontSize;
-		}
+		$position = imageftbbox($this->fontSize, 0, $this->font, $text);
 
-		if(!$this->pImage)
-		{
-			$this->initpImage();
-		}
-
-		// could not find a way to get pixel perfect width & height info using imageftbbox
-		$textInfo = $this->pImage->drawText(
-			0, 0, $text,
-			array(
-				'Alpha'=>0,
-				'FontSize'=>$fontSize,
-				'FontName' => $this->font
-			)
+		return array(
+			self::WIDTH_KEY => ($position[0]) + abs($position[2]),
+			self::HEIGHT_KEY => ($position[1]) + abs($position[5])
 		);
-
-		return array($textInfo[1]["X"] + 1, $textInfo[0]["Y"]-$textInfo[2]["Y"]);
 	}
 
-	protected function getMaximumTextWidthHeight($values)
+	protected function maxWidthHeight($values)
 	{
-		if(array_values($values) === $values)
-		{
-			$values = array('' => $values);
-		}
-
 		$maxWidth = 0;
 		$maxHeight = 0;
-		foreach($values as $column => $data)
+		foreach($values as $value)
 		{
-			foreach($data as $value)
+			$valueWidthHeight = $this->getTextWidthHeight($value);
+			$valueWidth= $valueWidthHeight[self::WIDTH_KEY];
+			$valueHeight= $valueWidthHeight[self::HEIGHT_KEY];
+
+			if($valueWidth > $maxWidth)
 			{
-				list($valueWidth, $valueHeight) = $this->getTextWidthHeight($value);
+				$maxWidth = $valueWidth;
+			}
 
-				if($valueWidth > $maxWidth)
-				{
-					$maxWidth = $valueWidth;
-				}
-
-				if($valueHeight > $maxHeight)
-				{
-					$maxHeight = $valueHeight;
-				}
+			if($valueHeight > $maxHeight)
+			{
+				$maxHeight = $valueHeight;
 			}
 		}
 
-		return array($maxWidth, $maxHeight);
+		return array(
+			self::WIDTH_KEY => $maxWidth,
+			self::HEIGHT_KEY => $maxHeight
+		);
 	}
 
 	private static function hex2rgb($hexColor)

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Exception.php 6970 2012-09-10 23:31:37Z JulienM $
+ * @version $Id: Exception.php 6112 2012-03-25 10:04:17Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph_StaticGraph
@@ -36,23 +36,24 @@ class Piwik_ImageGraph_StaticGraph_Exception extends Piwik_ImageGraph_StaticGrap
 		$this->pData = new pData();
 
 		$message = $this->exception->getMessage();
-		list($textWidth, $textHeight) = $this->getTextWidthHeight($message);
+		$messageWidthHeight = $this->getTextWidthHeight($message, false);
+		$messageHeight = $messageWidthHeight[self::HEIGHT_KEY];
 
 		if($this->width == null)
 		{
-			$this->width = $textWidth + self::MESSAGE_RIGHT_MARGIN;
+			$this->width = $messageWidthHeight[self::WIDTH_KEY] + self::MESSAGE_RIGHT_MARGIN;
 		}
 
 		if($this->height == null)
 		{
-			$this->height = $textHeight;
+			$this->height = $messageHeight;
 		}
 
 		$this->initpImage();
 
 		$this->pImage->drawText(
 			0,
-			$textHeight,
+			$messageHeight,
 			$message
 		);
 	}

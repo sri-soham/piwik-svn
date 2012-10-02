@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 6791 2012-08-16 13:59:34Z EZdesign $
+ * @version $Id: Config.php 6470 2012-06-07 17:49:18Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -28,13 +28,11 @@
  *    $brandingConfig = array(
  *        'use_custom_logo' => 1,
  *    );
- *    Piwik_Config::getInstance()->branding = $brandingConfig;
+ *    Piwik_Config::getInstance()->setConfigSection('branding', $brandingConfig);
  *
  * Example setting an option within a section in the configuration:
- * 
- *    $brandingConfig = Piwik_Config::getInstance()->branding;
- *    $brandingConfig['use_custom_logo'] = 1;
- *    Piwik_Config::getInstance()->branding = $brandingConfig;
+ *
+ *    Piwik_Config::getInstance()->setConfigOption('branding', 'use_custom_logo', '1');
  *
  * @package Piwik
  * @subpackage Piwik_Config
@@ -123,6 +121,21 @@ class Piwik_Config
 		// for unit tests, we set that no plugin is installed. This will force
 		// the test initialization to create the plugins tables, execute ALTER queries, etc.
 		$this->configCache['PluginsInstalled'] = array('PluginsInstalled' => array());
+	}
+
+	/**
+	 *	appendToLocalConfig
+	 *
+	 *	Reads another config file and appends the contents to the existing
+	 *	local config
+	 *
+	 *	@param string	$pathLocal path to the config file to be appended
+	 *	@return void
+	 */
+	public function appendToLocalConfig($pathLocal)
+	{
+		$temp = _parse_ini_file($pathLocal, true);
+		$this->configLocal = array_merge($this->configLocal, $temp);	
 	}
 
 	/**

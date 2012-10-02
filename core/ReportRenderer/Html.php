@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Html.php 6918 2012-09-04 21:44:26Z JulienM $
+ * @version $Id: Html.php 6478 2012-06-14 16:19:42Z JulienM $
  *
  * @category Piwik
  * @package Piwik_ReportRenderer
@@ -25,11 +25,6 @@ class Piwik_ReportRenderer_Html extends Piwik_ReportRenderer
 	const REPORT_TABLE_ROW_TEXT_SIZE = 11;
 	const REPORT_BACK_TO_TOP_TEXT_SIZE = 9;
 
-	const HTML_CONTENT_TYPE = 'text/html';
-	const HTML_FILE_EXTENSION = 'html';
-
-	protected $renderImageInline = false;
-
 	private $rendering = "";
 
 	public function setLocale($locale)
@@ -37,44 +32,18 @@ class Piwik_ReportRenderer_Html extends Piwik_ReportRenderer
 		//Nothing to do
 	}
 
-	/**
-	 * Currently only used for HTML reports.
-	 * When sent by mail, images are attached to the mail: renderImageInline = false
-	 * When downloaded, images are included base64 encoded in the report body: renderImageInline = true
-	 *
-	 * @param boolean $renderImageInline
-	 */
-	public function setRenderImageInline($renderImageInline)
-	{
-		$this->renderImageInline = $renderImageInline;
-	}
-
 	public function sendToDisk($filename)
 	{
 		$this->epilogue();
 
-		return Piwik_ReportRenderer::writeFile($filename, self::HTML_FILE_EXTENSION, $this->rendering);
+		return Piwik_ReportRenderer::writeFile($filename, 'html', $this->rendering);
 	}
 
 	public function sendToBrowserDownload($filename)
 	{
 		$this->epilogue();
 
-		Piwik_ReportRenderer::sendToBrowser($filename, self::HTML_FILE_EXTENSION, self::HTML_CONTENT_TYPE, $this->rendering);
-	}
-
-	public function sendToBrowserInline($filename)
-	{
-		$this->epilogue();
-
-		Piwik_ReportRenderer::inlineToBrowser(self::HTML_CONTENT_TYPE, $this->rendering);
-	}
-
-	public function getRenderedReport()
-	{
-		$this->epilogue();
-
-		return $this->rendering;
+		Piwik_ReportRenderer::sendToBrowser($filename, 'html', 'text/html', $this->rendering);
 	}
 
 	private function epilogue()
@@ -130,7 +99,6 @@ class Piwik_ReportRenderer_Html extends Piwik_ReportRenderer
 		$smarty->assign("displayTable", $processedReport['displayTable']);
 
 		$displayGraph = $processedReport['displayGraph'];
-		$evolutionGraph = $processedReport['evolutionGraph'];
 		$smarty->assign("displayGraph", $displayGraph);
 
 		if($displayGraph)
@@ -141,7 +109,8 @@ class Piwik_ReportRenderer_Html extends Piwik_ReportRenderer
 
 			if($this->renderImageInline)
 			{
-				$staticGraph = parent::getStaticGraph($reportMetadata, self::IMAGE_GRAPH_WIDTH, self::IMAGE_GRAPH_HEIGHT, $evolutionGraph);
+				$imageGraphUrl = $reportMetadata['imageGraphUrl'];
+				$staticGraph = parent::getStaticGraph($imageGraphUrl, self::IMAGE_GRAPH_WIDTH, self::IMAGE_GRAPH_HEIGHT);
 				$smarty->assign("generatedImageGraph", base64_encode($staticGraph));
 				unset($generatedImageGraph);
 			}

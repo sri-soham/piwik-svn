@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Filter.php 6593 2012-07-30 09:14:18Z matt $
+ * @version $Id: Filter.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -72,10 +72,11 @@ abstract class Piwik_DataTable_Filter
 		{
 			return;
 		}
-		if($row->isSubtableLoaded())
-		{
+		try {
 			$subTable = Piwik_DataTable_Manager::getInstance()->getTable( $row->getIdSubDataTable() );
 			$this->filter($subTable);
+		} catch(Exception $e) {
+			// case idSubTable == null, or if the table is not loaded in memory
 		}
 	}
 }

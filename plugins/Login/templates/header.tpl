@@ -34,7 +34,6 @@
 	</script>
 {/literal}
 	<script type="text/javascript" src="libs/jquery/jquery.js"></script>
-	<script type="text/javascript" src="plugins/Login/templates/login.js"></script>
 {if 'General_LayoutDirection'|translate =='rtl'}
 <link rel="stylesheet" type="text/css" href="themes/default/rtl.css" />
 {/if}

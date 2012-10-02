@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 7006 2012-09-17 03:55:27Z matt $
+ * @version $Id: Controller.php 6267 2012-05-16 22:05:45Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_MultiSites
@@ -33,37 +33,40 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 
 	function index()
 	{
-		$this->getSitesInfo($isWidgetized = false);
+		$view = new Piwik_View("MultiSites/templates/index.tpl");
+		$this->getSitesInfo($view);
 	}
 
 	function standalone()
 	{
-		$this->getSitesInfo($isWidgetized = true);
+		$view = new Piwik_View("MultiSites/templates/standalone.tpl");
+		$this->getSitesInfo($view);
 	}
 
 
-	public function getSitesInfo($isWidgetized)
+	public function getSitesInfo($view)
 	{
 		Piwik::checkUserHasSomeViewAccess();
 		$displayRevenueColumn = Piwik_Common::isGoalPluginEnabled();
-
-		$date = Piwik_Common::getRequestVar('date', 'today');
-		$period = Piwik_Common::getRequestVar('period', 'day');
-		$siteIds = Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
-		list($minDate, $maxDate) = $this->getMinMaxDateAcrossWebsites($siteIds);
-
-		// overwrites the default Date set in the parent controller
-		// Instead of the default current website's local date,
+		
+		// overwrites the default Date set in the parent controller 
+		// Instead of the default current website's local date, 
 		// we set "today" or "yesterday" based on the default Piwik timezone
 		$piwikDefaultTimezone = Piwik_SitesManager_API::getInstance()->getDefaultTimezone();
+		$dateRequest = Piwik_Common::getRequestVar('date', 'today');
+		$period = Piwik_Common::getRequestVar('period', 'day');	
+		$date = $dateRequest;
 		if($period != 'range')
 		{
-			$date = $this->getDateParameterInTimezone($date, $piwikDefaultTimezone);
-			$this->setDate($date);
+			$date = $this->getDateParameterInTimezone($dateRequest, $piwikDefaultTimezone);
 			$date = $date->toString();
 		}
+		$siteIds = Piwik_SitesManager_API::getInstance()->getSitesIdWithAtLeastViewAccess();
 		$dataTable = Piwik_MultiSites_API::getInstance()->getAll($period, $date, $segment = false);
 
+		list($minDate, $maxDate) = $this->getMinMaxDateAcrossWebsites($siteIds);
+		
+		$totalVisits = $totalActions = $totalRevenue = 0;
 
 		// put data into a form the template will understand better
 		$digestableData = array();
@@ -76,13 +79,13 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 				'main_url' => Piwik_Site::getMainUrlFor($idSite),
 				'name' => Piwik_Site::getNameFor($idSite),
 				'visits' => 0,
-				'pageviews' => 0
+				'actions' => 0
 			);
 			
 			if ($period != 'range')
 			{
 				$digestableData[$idSite]['visits_evolution'] = 0;
-				$digestableData[$idSite]['pageviews_evolution'] = 0;
+				$digestableData[$idSite]['actions_evolution'] = 0;
 			}
 			
 			if ($displayRevenueColumn)
@@ -103,20 +106,24 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 			$site = &$digestableData[$idsite];
 			
 			$site['visits'] = (int)$row->getColumn('nb_visits');
-			$site['pageviews'] = (int)$row->getColumn('nb_pageviews');
+			$totalVisits += $site['visits'];
+
+			$site['actions'] = (int)$row->getColumn('nb_actions');
+			$totalActions += $site['actions'];
 
 			if ($displayRevenueColumn)
 			{
 				if ($row->getColumn('revenue') !== false)
 				{
 					$site['revenue'] = $row->getColumn('revenue');
+					$totalRevenue += $site['revenue'];
 				}
 			}
 
 			if ($period != 'range')
 			{
 				$site['visits_evolution'] = $row->getColumn('visits_evolution');
-				$site['pageviews_evolution'] = $row->getColumn('pageviews_evolution');
+				$site['actions_evolution'] = $row->getColumn('actions_evolution');
 				
 				if ($displayRevenueColumn)
 				{
@@ -127,35 +134,21 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 		
 		$this->applyPrettyMoney($digestableData);
 
-		$view = new Piwik_View("MultiSites/templates/index.tpl");
-		$view->isWidgetized = $isWidgetized;
 		$view->sitesData = array_values($digestableData);
 		$view->evolutionBy = $this->evolutionBy;
 		$view->period = $period;
+		$view->dateRequest = $dateRequest;
 		$view->page = $this->page;
 		$view->limit = $this->limit;
 		$view->orderBy = $this->orderBy;
 		$view->order = $this->order;
-		$view->totalVisits = $dataTable->getMetadata('total_nb_visits');
-		$view->totalRevenue = $dataTable->getMetadata('total_revenue');
-
+		$view->totalVisits = $totalVisits;
+		$view->totalRevenue = $totalRevenue;
 		$view->displayRevenueColumn = $displayRevenueColumn;
-		$view->totalPageviews = $dataTable->getMetadata('total_nb_pageviews');
-		$view->pastTotalVisits = $dataTable->getMetadata('last_period_total_nb_visits');
-		$view->totalVisitsEvolution = $dataTable->getMetadata('total_visits_evolution');
-		if ($view->totalVisitsEvolution > 0)
-		{
-			$view->totalVisitsEvolution = '+'.$view->totalVisitsEvolution;
-		}
-		
-		if ($period != 'range')
-		{
-			$lastPeriod = Piwik_Period::factory($period, $dataTable->getMetadata('last_period_date'));
-			$view->pastPeriodPretty = self::getCalendarPrettyDate($lastPeriod);
-		}
+		$view->totalActions = $totalActions;
 	
 		$params = $this->getGraphParamsModified();
-		$view->dateSparkline = $period == 'range' ? $date : $params['date'];
+		$view->dateSparkline = $period == 'range' ? $dateRequest : $params['date'];
 		
 		$view->autoRefreshTodayReport = false;
 		// if the current date is today, or yesterday, 
@@ -229,7 +222,7 @@ class Piwik_MultiSites_Controller extends Piwik_Controller
 		{
 			$columns = Piwik_Common::getRequestVar('columns');
 		}
-		$api = "API.get";
+		$api = "VisitsSummary.get";
 		
 		if($columns == 'revenue')
 		{

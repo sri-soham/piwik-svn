@@ -9,10 +9,11 @@
 <table class="adminTable" style="width: 600px;">
 <tr>
     <td><label for="idSite">{'General_ChooseWebsite'|translate}</label></td>
-    <td>
-		{include file="CoreHome/templates/sites_selection.tpl"
-			showAllSitesItem=false showSelectedSite=true switchSiteOnSelect=false inputName=idSite}
-    </td>
+    <td><select name="idSite">
+    {foreach from=$sitesList item=site}
+        <option value="{$site.idsite}">{$site.name}</option>
+    {/foreach}
+    </select></td>
 </tr>
 <tr>
     <td><label for="daysToCompute">{'VisitorGenerator_DaysToCompute'|translate}</label></td>

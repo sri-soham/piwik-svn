@@ -4,29 +4,24 @@ div.both {
 }
 
 body {
-	background-color: #FFFBF9;
+	background-color: #F9F9F9;
 	text-align: center;
 	font-family:Arial,Georgia,"Times New Roman",Times,serif;
 	font-size:17px;
 }
-p {
-	margin-bottom:5px;
-	margin-top:10px;
-}
+
 #title{
 	font-size:50px;
 	color:#284F92;
-	vertical-align: text-bottom;
 }
 
 #subtitle{
 	font-size:30px;
-	color: #6B320B;    
-	font-size: 27px;
+	color:#C7D8D2;
 }
 
 #logo {
-	padding: 20px 30px 40px;
+	padding:30px;
 }
 
 h2 {
@@ -102,12 +97,11 @@ h3 {
 	font-size: 90%;
 	line-height: 1.4em;
 	width: 860px;
-	border: 1px solid #7A5A3F;
+	border: 1px solid #3B62AF;
 	text-align: $rightouleft;
 	margin: auto;
 	background: #FFFFFF;
 	padding: 0.2em 2em 2em 2em;
-	border-radius: 8px;
 	-moz-border-radius: 8px;
 	-webkit-border-radius: 8px;
 }
@@ -160,7 +154,6 @@ td {
 
 .submit {
 	text-align:center;
-	cursor: pointer;
 }
 .submit input{
 	margin-top:15px;

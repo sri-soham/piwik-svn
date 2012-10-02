@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Range.php 6678 2012-08-05 21:07:18Z matt $
+ * @version $Id: Range.php 6385 2012-05-29 21:36:24Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -43,7 +43,7 @@ class Piwik_Period_Range extends Piwik_Period
 		//"30 Dec 08 - 26 Feb 09"
 		$dateStart = $this->getDateStart();
 		$dateEnd = $this->getDateEnd();
-		$template = Piwik_Translate('CoreHome_ShortDateFormatWithYear');
+		$template = "%day% %shortMonth% %shortYear%";
 		$shortDateStart = $dateStart->getLocalized($template);
 		$shortDateEnd = $dateEnd->getLocalized($template);
 		$out = "$shortDateStart - $shortDateEnd";
@@ -298,7 +298,6 @@ class Piwik_Period_Range extends Piwik_Period
 				// We don't use the month if 
 				// the end day is in this month, is before today, and month not finished
 				&& !($endDate->isEarlier($this->today)
-					&& $this->today->toString('Y') == $endOfMonth->toString('Y')
 					&& $this->today->compareMonth($endOfMonth) == 0)
 			)
 			{

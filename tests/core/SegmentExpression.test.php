@@ -6,6 +6,18 @@ if(!defined('PIWIK_CONFIG_TEST_INCLUDED'))
 
 class Test_Piwik_SegmentExpression extends UnitTestCase
 {
+	public function setUp()
+	{
+		// 2012-09-15
+		// Piwik_Db_DAO_XXX_Generic class is used in the Piwik_Segment and Piwik_SegmentExpression classes
+		// To create Generic class, db connection is needed. That is the
+		// reason for creating the database object; otherwise it is not needed.
+		parent::setUp();
+		Piwik::createConfigObject();
+		Piwik_Config::getInstance()->setTestEnvironment();	
+		Piwik::createDatabaseObject();
+	}
+
     public function test_SegmentSql_simpleNoOperation()
     {
         $expressionToSql = array(

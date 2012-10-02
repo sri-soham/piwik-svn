@@ -4,6 +4,7 @@
 	z-index: 1500;
 	height: 550px;
 	text-align: left;
+	margin-left: 7px;
 }
 
 #Transitions_Canvas_Background {
@@ -29,9 +30,9 @@
 }
 
 #Transitions_CenterBox {
-	margin: 60px 0 0 320px;
+	margin: 60px 0 0 345px;
 	width: 208px;
-	height: 344px;
+	height: 354px;
 	background: #f7f7f7;
 	border: 1px solid #a9a399;
 	border-radius:10px;
@@ -41,10 +42,6 @@
 	-moz-box-shadow: 0px 0px 9px 0px #999;
 	box-shadow: 0px 0px 9px 0px #999;
 	z-index: 1503;
-}
-
-#Transitions_CenterBox.Transitions_Loading {
-	background: url(../../../themes/default/images/loading-blue.gif) no-repeat center center #f7f7f7;
 }
 
 #Transitions_CenterBox h2 {
@@ -89,7 +86,7 @@
 }
 
 #Transitions_Loops {
-	margin: 435px 0 0 320px;
+	margin: 445px 0 0 346px;
 	width: 208px;
 	text-align: center;
 	line-height: 25px;
@@ -104,7 +101,7 @@
 	padding: 0;
 	cursor: default;
 	font-size: 12px;
-	line-height: 16px;
+	line-height: 15px;
 }
 
 .Transitions_CenterBoxMetrics p.Transitions_Margin {
@@ -120,6 +117,10 @@ span.Transitions_Metric {
 	cursor: default;
 }
 
+.Transitions_Value0 {
+	color: #666;
+}
+
 .Transitions_TitleOfOpenGroup {
 	font-size: 12px;
 	color: #255792;
@@ -128,7 +129,7 @@ span.Transitions_Metric {
 
 .Transitions_BoxTextLeft,
 .Transitions_BoxTextRight {
-	width: 130px;
+	width: 165px;
 	height: 42px;
 	overflow: hidden;
 }
@@ -145,7 +146,7 @@ span.Transitions_Metric {
 
 .Transitions_BoxTextLeft.Transitions_HasBackground {
 	background-position: 0 1px;
-	width: 150px;
+	width: 175px;
 }
 .Transitions_BoxTextLeft.Transitions_HasBackground span {
 	display: block;
@@ -164,8 +165,8 @@ span.Transitions_Metric {
 .Transitions_CurveTextRight {
 	color: #255792;
 	font-weight: bold;
-	width: 28px;
-	text-align: right;
+	width: 34px;
+	text-align: center;
 	cursor: default;
 }
 

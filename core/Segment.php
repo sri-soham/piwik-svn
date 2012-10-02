@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Segment.php 6980 2012-09-13 02:22:04Z capedfuzz $
+ * @version $Id: Segment.php 6300 2012-05-23 21:19:25Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -398,7 +398,7 @@ class Piwik_Segment
 	 */
     private function buildWrappedSelectQuery($select, $from, $where, $orderBy, $groupBy)
     { 
-    	preg_match_all("/(log_visit|log_conversion|log_action).[a-z0-9_\*]+/", $select, $matches);
+    	preg_match_all("/(log_visit|log_conversion).[a-z0-9_\*]+/", $select, $matches);
     	$neededFields = array_unique($matches[0]);
     	
     	if (count($neededFields) == 0)
@@ -407,9 +407,9 @@ class Piwik_Segment
     				."Please use a table prefix.");
     	}
     	
-    	$select = preg_replace('/(log_visit|log_conversion|log_action)\./', 'log_inner.', $select);
-    	$orderBy = preg_replace('/(log_visit|log_conversion|log_action)\./', 'log_inner.', $orderBy);
-    	$groupBy = preg_replace('/(log_visit|log_conversion|log_action)\./', 'log_inner.', $groupBy);
+    	$select = preg_replace('/(log_visit|log_conversion)\./', 'log_inner.', $select);
+    	$orderBy = preg_replace('/(log_visit|log_conversion)\./', 'log_inner.', $orderBy);
+    	$groupBy = preg_replace('/(log_visit|log_conversion)\./', 'log_inner.', $groupBy);
     	
     	$from = "(
 			SELECT

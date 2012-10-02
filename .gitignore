@@ -1,5 +1,8 @@
 tmp/
-config/
+config/config.ini.php
+config/global.ini.php
+config/.htaccess
 *.swp
 *.DS_Store
 tests/integration/processed/
+/nbproject/private/

@@ -164,10 +164,10 @@
 					{/foreach}
 				{/if}
 				{/capture}
-				{if !$javascriptVariablesToSet.filterEcommerce
+				{if !$javascriptVariablesToSet.filterEcommerce 	
 					|| $action.type == 'ecommerceOrder' 	
 					|| $action.type == 'ecommerceAbandonedCart'}
-				<li class="{if !empty($action.goalName)}goal{else}action{/if}" title="{$action.serverTimePretty|escape:'html'}{if !empty($action.url) && strlen(trim($action.url))} - {$action.url|escape:'html'}{/if} {if strlen(trim($customVariablesTooltip))} - {$customVariablesTooltip}{/if}{if isset($action.timeSpentPretty)} - {'General_TimeOnPage'|translate}: {$action.timeSpentPretty}{/if}">
+				<li class="{if !empty($action.goalName)}goal{else}action{/if}" title="{$action.serverTimePretty|escape:'html'}{if !empty($action.url) && strlen(trim($action.url))} - {$action.url|escape:'html'}{/if} {if strlen(trim($customVariablesTooltip))} - {$customVariablesTooltip}{/if}">
 				{if $action.type == 'ecommerceOrder' || $action.type == 'ecommerceAbandonedCart'}
  					{* Ecommerce Abandoned Cart / Ecommerce Order *}
  					
@@ -176,10 +176,6 @@
  					{capture assign='visitorHasSomeEcommerceActivity'}1{/capture}
  					<strong>{'Goals_EcommerceOrder'|translate}</strong> <span style='color:#666666'>({$action.orderId})</span>
 					{else}<strong>{'Goals_AbandonedCart'|translate}</strong>
-					
-					{* TODO: would be nice to have the icons Orders / Cart in the ecommerce log footer *}
-					{if $javascriptVariablesToSet.filterEcommerce == 2}{capture assign='visitorHasSomeEcommerceActivity'}1{/capture}{/if}
-					
 					{/if} <br/>
 					<span {if !$isWidget}style='margin-left:20px'{/if}>
 					{if $action.type == 'ecommerceOrder'}
@@ -200,7 +196,7 @@
  					{if !empty($action.itemDetails)}
  					<ul style='list-style:square;margin-left:{if $isWidget}15{else}50{/if}px'>
  					{foreach from=$action.itemDetails item=product}
-						<li>{$product.itemSKU|escape}{if !empty($product.itemName)}: {$product.itemName|escape}{/if}{if !empty($product.itemCategory)} ({$product.itemCategory|escape}){/if}, 
+						<li>{$product.itemSKU}{if !empty($product.itemName)}: {$product.itemName}{/if}{if !empty($product.itemCategory)} ({$product.itemCategory}){/if}, 
 						{'General_Quantity'|translate}: {$product.quantity},
 						{'General_Price'|translate}: {$product.price|money:$javascriptVariablesToSet.idSite}
 						</li> 					
@@ -212,7 +208,7 @@
 				{elseif empty($action.goalName)}
 				{* Page view / Download / Outlink *}
 					{if !empty($action.pageTitle)>0}
-						{$action.pageTitle|unescape|urldecode|escape:'html'|truncate:80:"...":true}
+					 	{$action.pageTitle|urldecode|escape:'html'|truncate:80:"...":true}
 						<br/>
 					{/if}
 					{if $action.type == 'download'
@@ -239,11 +235,10 @@
 	{/capture}
 	
 	{if !$javascriptVariablesToSet.filterEcommerce
-		|| !empty($visitorHasSomeEcommerceActivity)}
+		|| (isset($visitorHasSomeEcommerceActivity) && $visitorHasSomeEcommerceActivity)}
 		{$visitorRow}
 	{/if}
 {/foreach}
-
 	</tbody>
 	</table>
 	{/if}

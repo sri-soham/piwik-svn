@@ -82,7 +82,7 @@ table.admin  tbody td:hover, table.admin  tbody th:hover {
 	font-size:24px;
 }
 
-.admin p,.admin section {
+.admin p {
 	margin-top:10px;
 	line-height:140%;
 	padding-bottom:20px;
@@ -137,9 +137,4 @@ table.admin  tbody td:hover, table.admin  tbody th:hover {
 
 #logoSettings, #smtpSettings {
 	margin-left:50px;
-}
-
-/* to override .admin a */
-.admin .sites_autocomplete a {
-	color: #255792;
 }

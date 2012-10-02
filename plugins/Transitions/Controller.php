@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 7032 2012-09-21 09:19:53Z EZdesign $
+ * @version $Id: Controller.php 7073 2012-09-27 10:58:56Z EZdesign $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Transitions
@@ -51,10 +51,15 @@ class Piwik_Transitions_Controller extends Piwik_Controller
 	 * (object Piwik_Transitions_Translations)
 	 */
 	private static $jsTranslations = array(
-		'XOfY' => 'Transitions_XOfY',
-		'XOfAllPageviews' => 'Transitions_XOfAllPageviews'
+		'XOfY' => 'Transitions_XOutOfYVisits',
+		'XOfAllPageviews' => 'Transitions_XOfAllPageviews',
+		'NoDataForUrl' => 'Transitions_NoDataForUrl',
+		'NoDataForUrlDetails' => 'Transitions_NoDataForUrlDetails',
+		'NoDataForUrlBack' => 'Transitions_ErrorBack',
+		'ShareOfAllPageviews' => 'Transitions_ShareOfAllPageviews',
+		'DateRange' => 'General_DateRange'
 	);
-
+	
 	public static function getTranslation($key)
 	{
 		return Piwik_Translate(self::$metricTranslations[$key]);

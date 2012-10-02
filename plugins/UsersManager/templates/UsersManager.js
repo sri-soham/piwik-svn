@@ -5,6 +5,17 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  */
 
+function changeSite()
+{
+	var action = $('form#accessSites').attr('action');
+	var idsite = getIdSites();
+
+	action = action + '&idsite=' + idsite;
+
+	window.location = action;
+	return false;
+}
+
 function getUpdateUserAJAX( row )
 {
 	var ajaxRequest = piwikHelper.getStandardAjaxConf('ajaxLoadingUsersManagement', 'ajaxErrorUsersManagement');
@@ -62,7 +73,7 @@ function getAddUserAJAX( row )
 
 function getIdSites()
 {
-	return $('#sitesSelectionSearch .custom_select_main_link').attr('siteid');
+	return $('#selectIdsite option:selected').val();
 }
 
 function getUpdateUserAccess(login, access, successCallback)
@@ -138,7 +149,7 @@ function bindUpdateAccess()
 				.attr('src',"plugins/UsersManager/images/ok.png" )
 				.attr('class',"accessGranted" )
 				;
-			$('#accessUpdated').css('display', 'inline-block');
+			$('#accessUpdated').show();
 			hideAccessUpdated();
 		}
 	}
@@ -165,6 +176,7 @@ function bindUpdateAccess()
 }
 
 $(document).ready( function() {
+	$('#accessUpdated').hide();
 	var alreadyEdited = new Array;
 	// when click on edituser, the cells become editable
 	$('.edituser')

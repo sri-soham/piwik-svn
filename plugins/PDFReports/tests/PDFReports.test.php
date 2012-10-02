@@ -40,7 +40,8 @@ class Test_Piwik_PDFReports extends Test_Database
 
 	function tearDown()
 	{
-		Piwik_Query('TRUNCATE '.Piwik_Common::prefixTable('report'));
+		$Report = Piwik_Db_Factory::getDAO('report');
+		$Report->truncateTable();
 		Piwik_PDFReports_API::$cache = array();
 	}
 

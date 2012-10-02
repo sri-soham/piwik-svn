@@ -167,8 +167,8 @@ class Piwik_LanguagesManager_API
 	public function getLanguageForUser( $login )
 	{
 		Piwik::checkUserIsSuperUserOrTheUser($login);
-		return Piwik_FetchOne('SELECT language FROM '.Piwik_Common::prefixTable('user_language') .
-					' WHERE login = ? ', array($login ));
+		$UserLanguage = Piwik_Db_Factory::getDAO('user_language');
+		return $UserLanguage->getByLogin($login);
 	}
 	
 	/**
@@ -185,11 +185,7 @@ class Piwik_LanguagesManager_API
 		{
 			return false;
 		}
-		$paramsBind = array($login, $languageCode, $languageCode);
-		Piwik_Query('INSERT INTO '.Piwik_Common::prefixTable('user_language') .
-					' (login, language)
-						VALUES (?,?)
-					ON DUPLICATE KEY UPDATE language=?',
-					$paramsBind);
+		$UserLanguage = Piwik_Db_Factory::getDAO('user_language');
+		$UserLanguage->setForUser($login, $languageCode);
 	}
 }

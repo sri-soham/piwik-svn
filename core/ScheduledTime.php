@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ScheduledTime.php 6550 2012-07-25 07:24:58Z JulienM $
+ * @version $Id: ScheduledTime.php 6510 2012-07-13 20:05:39Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -62,6 +62,7 @@ abstract class Piwik_ScheduledTime
 	abstract public function setDay($_day);
 
 	/**
+     * @abstract
 	 * @param  int $_hour the hour to set, has to be >= 0 and < 24
 	 * @throws Exception if method not supported by subclass or parameter _hour is invalid
 	 */

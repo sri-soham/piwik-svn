@@ -118,6 +118,17 @@ class Piwik_SegmentExpression
         $this->valuesBind = array();
         $this->joins = array();
         
+		$Generic = Piwik_Db_Factory::getGeneric();
+		$possible_keys = array('log_visit.idvisitor',
+							   'log_visit.config_id',
+							   'log_visit.location_ip',
+							   'log_conversion.idvisitor',
+							   'log_link_visit_action.idvisitor',
+					 		   'idvisitor',
+					 		   'config_id',
+					 		   'location_ip'
+							 );
+
         foreach($this->parsedSubExpressions as $leaf)
         {
             $operator = $leaf[self::INDEX_BOOL_OPERATOR];
@@ -125,9 +136,14 @@ class Piwik_SegmentExpression
             
             $operand = $this->getSqlMatchFromDefinition($operandDefinition, $availableTables);
             
-            if ($operand[1] !== null) {
-                $this->valuesBind[] = $operand[1];
-            }
+			if (in_array($operandDefinition[0], $possible_keys) && !empty($operand[1]))
+			{
+				$this->valuesBind[] = $Generic->bin2db($operand[1]);
+			}
+			else
+			{
+				$this->valuesBind[] = $operand[1];
+			}
             $operand = $operand[0];
             $sqlSubExpressions[] = array(
                 self::INDEX_BOOL_OPERATOR => $operator,
@@ -218,13 +234,16 @@ class Piwik_SegmentExpression
 	 */
     private function checkFieldIsAvailable($field, &$availableTables)
     {
+		$Generic = Piwik_Db_Factory::getGeneric();
+
         $fieldParts = explode('.', $field);
         
         $table = count($fieldParts) == 2 ? $fieldParts[0] : false;
         
         // remove sql functions from field name
         // example: `HOUR(log_visit.visit_last_action_time)` gets `HOUR(log_visit` => remove `HOUR(` 
-        $table = preg_replace('/^[A-Z_]+\(/', '', $table);
+        //$table = preg_replace('/^[A-Z_]+\(/', '', $table);
+		$table = $Generic->removeFunctionFromField($table);
         $tableExists = !$table || in_array($table, $availableTables);
         
         if (!$tableExists)

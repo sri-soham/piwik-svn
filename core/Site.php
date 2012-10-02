@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Site.php 6959 2012-09-10 07:37:01Z matt $
+ * @version $Id: Site.php 6325 2012-05-26 21:08:06Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -118,7 +118,7 @@ class Piwik_Site
 	{
 		if(!isset(self::$infoSites[$this->id][$name]))
 		{
-			throw new Exception('The requested website id = '.(int)$this->id.' (or its property '.$name.') couldn\'t be found');
+			throw new Exception('The requested website id = '.(int)$this->id.' couldn\'t be found');
 		}
 		return self::$infoSites[$this->id][$name];
 	}
@@ -187,15 +187,16 @@ class Piwik_Site
 	/**
 	 * Checks the given string for valid site ids and returns them as an array
 	 *
-	 * @param string $ids comma separated idSite list
+	 * @param string $string comma separated idSite list
 	 * @return array of valid integer
 	 */
-	static public function getIdSitesFromIdSitesString( $ids )
+	static public function getIdSitesFromIdSitesString( $string )
 	{
-		if(!is_array($ids))
+		if(is_array($string))
 		{
-			$ids = explode(',', $ids);
+			return $string;
 		}
+		$ids = explode(',', $string);
 		$validIds = array();
 		foreach($ids as $id)
 		{
@@ -205,9 +206,6 @@ class Piwik_Site
 			    $validIds[] = $id;
 			}
 		}
-		$validIds = array_filter($validIds);
-		$validIds = array_unique($validIds);
-
 		return $validIds;
 	}
 

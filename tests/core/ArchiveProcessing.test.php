@@ -336,7 +336,8 @@ class Test_Piwik_ArchiveProcessing extends Test_Database
 
 	protected function checkTableIsExpectedBlob($table, $data)
 	{
-		$fetched = Piwik_FetchAll('SELECT * FROM '.$table);
+		$Archive = Piwik_Db_Factory::getDAO('archive');
+		$fetched = $Archive->fetchAllBlob($table);
 		foreach($data as $id => $row) {
 			$this->assertEqual($fetched[$id]['idarchive'], $data[$id][0], "record $id idarchive is not '{$data[$id][0]}'");
 			$this->assertEqual($fetched[$id]['name'], $data[$id][1], "record $id name is not '{$data[$id][1]}'");

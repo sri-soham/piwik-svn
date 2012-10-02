@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Http.php 7010 2012-09-18 02:36:36Z matt $
+ * @version $Id: Http.php 6325 2012-05-26 21:08:06Z SteveG $
  *
  * @category Piwik
  * @package Piwik
@@ -103,16 +103,11 @@ class Piwik_Http
 		$xff = 'X-Forwarded-For: '
 			. (isset($_SERVER['HTTP_X_FORWARDED_FOR']) && !empty($_SERVER['HTTP_X_FORWARDED_FOR']) ? $_SERVER['HTTP_X_FORWARDED_FOR'] . ',' : '')
 			. Piwik_IP::getIpFromHeader();
-
-		if(empty($userAgent))
-		{
-			$userAgent = self::getUserAgent();
-		}
-
 		$via = 'Via: '
 			. (isset($_SERVER['HTTP_VIA']) && !empty($_SERVER['HTTP_VIA']) ? $_SERVER['HTTP_VIA'] . ', ' : '')
-			. Piwik_Version::VERSION . ' '
+			. Piwik_Version::VERSION . ' Piwik'
 			. ($userAgent ? " ($userAgent)" : '');
+		$userAgent = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : 'Piwik/'.Piwik_Version::VERSION;
 
 		// proxy configuration
 		$proxyHost = Piwik_Config::getInstance()->proxy['host'];
@@ -394,8 +389,14 @@ class Piwik_Http
 			}
 			
 			@curl_setopt_array($ch, $curl_options);
-			self::configCurlCertificate($ch);
 
+			/*
+			 * use local list of Certificate Authorities, if available
+			 */
+			if(file_exists(PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem'))
+			{
+				@curl_setopt($ch, CURLOPT_CAINFO, PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem');
+			}
 
 			/*
 			 * as of php 5.2.0, CURLOPT_FOLLOWLOCATION can't be set if
@@ -469,25 +470,6 @@ class Piwik_Http
 			throw new Exception('Content length error: expected '.$contentLength.' bytes; received '.$fileLength.' bytes');
 		}
 		return trim($response);
-	}
-
-	/**
-	 * Will configure CURL handle $ch
-	 * to use local list of Certificate Authorities,
-	 */
-	public static function configCurlCertificate( &$ch )
-	{
-		if (file_exists(PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem'))
-		{
-			@curl_setopt($ch, CURLOPT_CAINFO, PIWIK_INCLUDE_PATH . '/core/DataFiles/cacert.pem');
-		}
-	}
-
-	public static function getUserAgent()
-	{
-		return !empty($_SERVER['HTTP_USER_AGENT'])
-			? $_SERVER['HTTP_USER_AGENT']
-			: 'Piwik/' . Piwik_Version::VERSION;
 	}
 
 	/**

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6713 2012-08-11 13:27:10Z matt $
+ * @version $Id: API.php 5454 2011-11-18 16:28:33Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UserCountry
@@ -38,8 +38,8 @@ class Piwik_UserCountry_API
 		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'code', create_function('$label', 'return $label;')));
 		$dataTable->filter('ColumnCallbackAddMetadata', array('label', 'logo', 'Piwik_getFlagFromCode'));
 		$dataTable->filter('ColumnCallbackReplace', array('label', 'Piwik_CountryTranslate'));
-		$dataTable->queueFilter('AddConstantMetadata', array('logoWidth', 16));
-		$dataTable->queueFilter('AddConstantMetadata', array('logoHeight', 11));
+		$dataTable->queueFilter('AddConstantMetadata', array('logoWidth', 18));
+		$dataTable->queueFilter('AddConstantMetadata', array('logoHeight', 12));
 		return $dataTable;
 	}
 	

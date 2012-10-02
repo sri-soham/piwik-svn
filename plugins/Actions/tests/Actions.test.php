@@ -30,31 +30,15 @@ class Test_Piwik_Actions extends UnitTestCase
 
 		$tests = array(
 			array(
-				'params' =>	array( 'name' => 'http://example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => null ),
+				'params' =>	array( 'name' => 'http://example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL),
 				'expected' => array('/index' ),
 			),
 			array(
-				'params' =>	array( 'name' => 'example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 1 ),
-				'expected' => array('/index' ),
-			),
-			array(
-				'params' =>	array( 'name' => 'example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 2 ),
-				'expected' => array('/index' ),
-			),
-			array(
-				'params' =>	array( 'name' => 'example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 3 ),
-				'expected' => array('/index' ),
-			),
-			array(
-				'params' =>	array( 'name' => 'example.org/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 4 ),
-				'expected' => array('/index' ),
-			),
-			array(
-				'params' =>	array( 'name' => 'example.org/path/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 4 ),
+				'params' =>	array( 'name' => 'http://example.org/path/', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL),
 				'expected' => array( 'path', '/index' ),
 			),
 			array(
-				'params' =>	array( 'name' => 'example.org/test/path', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL, 'urlPrefix' => 1 ),
+				'params' =>	array( 'name' => 'http://example.org/test/path', 'type' => Piwik_Tracker_Action::TYPE_ACTION_URL),
 				'expected' => array( 'test', '/path' ),
 			),
 			array(
@@ -106,15 +90,15 @@ class Test_Piwik_Actions extends UnitTestCase
 		foreach($tests as $test) {
 			$params = $test['params'];
 			$expected = $test['expected'];
-			$processed = $action->public_getActionExplodedNames($params['name'],$params['type'],isset($params['urlPrefix'])?$params['urlPrefix']:null);
+			$processed = $action->public_getActionExplodedNames($params['name'],$params['type']);
 			$this->assertEqual($processed, $expected, "Processed: ".var_export($processed, true) . " | Expected: ". var_export($expected, true));
 		}
 	}
 }
 
 class Test_Piwik_Actions_getActionExplodedNames extends Piwik_Actions {
-	public function public_getActionExplodedNames($name, $type, $urlPrefix)
+	public function public_getActionExplodedNames($name, $type)
 	{
-		return self::getActionExplodedNames($name, $type, $urlPrefix);
+		return self::getActionExplodedNames($name, $type);
 	}
 }

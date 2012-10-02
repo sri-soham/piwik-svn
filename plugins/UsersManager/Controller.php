@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6616 2012-07-31 15:25:53Z capedfuzz $
+ * @version $Id: Controller.php 6349 2012-05-28 09:42:59Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -16,7 +16,7 @@
  */
 class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 {
-	static function orderByName($a, $b)
+    	static function orderByName($a, $b)
 	{
 		return strcmp($a['name'], $b['name']);
 	}
@@ -36,18 +36,16 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		if(count($IdSitesAdmin) > 0)
 		{
 			$defaultWebsiteId = $IdSitesAdmin[0];
-			$idSiteSelected = Piwik_Common::getRequestVar('idSite', $defaultWebsiteId);
+			$idSiteSelected = Piwik_Common::getRequestVar('idsite', $defaultWebsiteId);
 		}
 		
 		if($idSiteSelected==='all')
 		{
 			$usersAccessByWebsite = array();
-			$defaultReportSiteName = Piwik_Translate('UsersManager_ApplyToAllWebsites');
 		}
 		else
 		{
 			$usersAccessByWebsite = Piwik_UsersManager_API::getInstance()->getUsersAccessFromSite( $idSiteSelected );
-			$defaultReportSiteName = Piwik_Site::getNameFor($idSiteSelected);
 		}
 		 
 		// we dont want to display the user currently logged so that the user can't change his settings from admin to view...
@@ -87,7 +85,6 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 		}
 		
 		$view->idSiteSelected = $idSiteSelected;
-		$view->defaultReportSiteName = $defaultReportSiteName;
 		$view->users = $users;
 		$view->usersAliasByLogin = $usersAliasByLogin;
 		$view->usersCount = count($users) - 1;
@@ -148,15 +145,6 @@ class Piwik_UsersManager_Controller extends Piwik_Controller_Admin
 			$defaultReport = $this->getDefaultWebsiteId();
 		}
 		$view->defaultReport = $defaultReport;
-		
-		if ($defaultReport == 'MultiSites')
-		{
-			$view->defaultReportSiteName = Piwik_Site::getNameFor($this->getDefaultWebsiteId());
-		}
-		else
-		{
-			$view->defaultReportSiteName = Piwik_Site::getNameFor($defaultReport);
-		}
 
 		$view->defaultDate = $this->getDefaultDateForUser($userLogin);
 		$view->availableDefaultDates = array(

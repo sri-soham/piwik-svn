@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserCountry.php 6848 2012-08-20 23:18:38Z capedfuzz $
+ * @version $Id: UserCountry.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserCountry
@@ -43,13 +43,8 @@ class Piwik_UserCountry extends Piwik_Plugin
 
 	function addWidgets()
 	{
-		$widgetContinentLabel = Piwik_Translate('UserCountry_WidgetLocation')
-							  . ' ('.Piwik_Translate('UserCountry_Continent').')';
-		$widgetCountryLabel = Piwik_Translate('UserCountry_WidgetLocation')
-							. ' ('.Piwik_Translate('UserCountry_Country').')';
-		
-		Piwik_AddWidget( 'General_Visitors', $widgetContinentLabel, 'UserCountry', 'getContinent');
-		Piwik_AddWidget( 'General_Visitors', $widgetCountryLabel, 'UserCountry', 'getCountry');
+		Piwik_AddWidget( 'General_Visitors', 'UserCountry_WidgetContinents', 'UserCountry', 'getContinent');
+		Piwik_AddWidget( 'General_Visitors', 'UserCountry_WidgetCountries', 'UserCountry', 'getCountry');
 	}
 
 	function addMenu()

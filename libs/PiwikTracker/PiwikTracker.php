@@ -11,7 +11,7 @@
  *  - CURL or STREAM extensions (to issue the http request to Piwik)
  *  
  * @license released under BSD License http://www.opensource.org/licenses/bsd-license.php
- * @version $Id: PiwikTracker.php 6966 2012-09-10 15:42:12Z capedfuzz $
+ * @version $Id: PiwikTracker.php 6450 2012-06-03 00:14:03Z matt $
  * @link http://piwik.org/docs/tracking-api/
  *
  * @category Piwik
@@ -89,12 +89,10 @@ class PiwikTracker
     	{
     		self::$URL = $apiUrl;
     	}
-    	$this->setNewVisitorId();
+    	$this->visitorId = substr(md5(uniqid(rand(), true)), 0, self::LENGTH_VISITOR_ID);
     	
 		// Allow debug while blocking the request
     	$this->requestTimeout = 600;
-    	$this->doBulkRequests = false;
-    	$this->storedTrackingActions = array();
     }
     
     /**
@@ -222,13 +220,8 @@ class PiwikTracker
     	return $cookieDecoded[$id];
     }
     
-    /**
-     * Sets the current visitor ID to a random new one.
-     */
-    public function setNewVisitorId()
-    {
-    	$this->visitorId = substr(md5(uniqid(rand(), true)), 0, self::LENGTH_VISITOR_ID);
-    }
+    
+    
     
     /**
      * Sets the Browser language. Used to guess visitor countries when GeoIP is not enabled
@@ -251,20 +244,12 @@ class PiwikTracker
     	$this->userAgent = $userAgent;
     }
     
-	/**
-	 * Enables the bulk request feature. When used, each tracking action is stored until the
-	 * doBulkTrack method is called. This method will send all tracking data at once.
-	 */
-	public function enableBulkTracking()
-	{
-		$this->doBulkRequests = true;
-	}
-	
+
     /**
      * Tracks a page view
      * 
      * @param string $documentTitle Page title as it will appear in the Actions > Page titles report
-     * @return string|true Response or true if using bulk requests.
+     * @return string Response
      */
     public function doTrackPageView( $documentTitle )
     {
@@ -277,7 +262,7 @@ class PiwikTracker
      * 
      * @param int $idGoal Id Goal to record a conversion
      * @param float $revenue Revenue for this conversion
-     * @return string|true Response or true if using bulk request
+     * @return string Response
      */
     public function doTrackGoal($idGoal, $revenue = false)
     {
@@ -290,7 +275,7 @@ class PiwikTracker
      * 
      * @param string $actionUrl URL of the download or outlink
      * @param string $actionType Type of the action: 'download' or 'link'
-     * @return string|true Response or true if using bulk request
+     * @return string Response
      */
     public function doTrackAction($actionUrl, $actionType)
     {
@@ -338,35 +323,6 @@ class PiwikTracker
     }
     
     /**
-     * Sends all stored tracking actions at once. Only has an effect if bulk tracking is enabled.
-     * 
-     * To enable bulk tracking, call enableBulkTracking().
-     * 
-     * @return string Response
-     */
-    public function doBulkTrack()
-    {
-    	if (empty($this->token_auth))
-    	{
-    		throw new Exception("Token auth is required for bulk tracking.");
-    	}
-    	
-    	if (empty($this->storedTrackingActions))
-    	{
-    		return '';
-    	}
-    	
-    	$data = array('requests' => $this->storedTrackingActions, 'token_auth' => $this->token_auth);
-		
-    	$postData = json_encode($data);
-    	$response = $this->sendRequest($this->getBaseUrl(), 'POST', $postData, $force = true);
-    	
-    	$this->storedTrackingActions = array();
-    	
-    	return $response;
-    }
-    
-    /**
 	 * Tracks an Ecommerce order.
 	 * 
 	 * If the Ecommerce order contains items (products), you must call first the addEcommerceItem() for each item in the order.
@@ -381,7 +337,6 @@ class PiwikTracker
 	 * @param float $tax (optional) Tax amount for this order
 	 * @param float $shipping (optional) Shipping amount for this order
 	 * @param float $discount (optional) Discounted amount in this order
-	 * @return string|true Response or true if using bulk request
      */
     public function doTrackEcommerceOrder($orderId, $grandTotal, $subTotal = false, $tax = false, $shipping = false, $discount = false)
     {
@@ -780,19 +735,8 @@ class PiwikTracker
     /**
      * @ignore
      */
-    protected function sendRequest( $url, $method = 'GET', $data = null, $force = false )
+    protected function sendRequest($url)
     {
-    	// if doing a bulk request, store the url
-    	if ($this->doBulkRequests && !$force)
-    	{
-    		$this->storedTrackingActions[]
-    			= $url
-    			. (!empty($this->userAgent) ? ('&ua='.urlencode($this->userAgent)) : '')
-    			. (!empty($this->acceptLanguage) ? ('&lang='.urlencode($this->acceptLanguage)) : '')
-    			;
-    		return true;
-    	}
-    	
 		$response = '';
 
 		if(!$this->cookieSupport)
@@ -801,7 +745,8 @@ class PiwikTracker
 		}
 		if(function_exists('curl_init'))
 		{
-			$options = array(
+			$ch = curl_init();
+			curl_setopt_array($ch, array(
 				CURLOPT_URL => $url,
 				CURLOPT_USERAGENT => $this->userAgent,
 				CURLOPT_HEADER => true,
@@ -810,27 +755,8 @@ class PiwikTracker
 				CURLOPT_HTTPHEADER => array(
 					'Accept-Language: ' . $this->acceptLanguage,
 					'Cookie: '. $this->requestCookie,
-				));
-			
-			switch ($method)
-			{
-				case 'POST':
-					$options[CURLOPT_POST] = TRUE;
-					break;
-				default:
-					break;
-			}
-			
-			// only supports JSON data
-			if (!empty($data))
-			{
-				$options[CURLOPT_HTTPHEADER][] = 'Content-Type: application/json';
-				$options[CURLOPT_HTTPHEADER][] = 'Expect:';
-				$options[CURLOPT_POSTFIELDS] = $data;
-			}
-			
-			$ch = curl_init();
-			curl_setopt_array($ch, $options);
+				),
+			));
 			ob_start();
 			$response = @curl_exec($ch);
 			ob_end_clean();
@@ -844,21 +770,12 @@ class PiwikTracker
 		{
 			$stream_options = array(
 				'http' => array(
-					'method' => $method,
 					'user_agent' => $this->userAgent,
 					'header' => "Accept-Language: " . $this->acceptLanguage . "\r\n" .
 					            "Cookie: ".$this->requestCookie. "\r\n" ,
 					'timeout' => $this->requestTimeout, // PHP 5.2.1
 				)
 			);
-			
-			// only supports JSON data
-			if (!empty($data))
-			{
-				$stream_options['http']['header'] .= "Content-Type: application/json \r\n";
-				$stream_options['http']['content'] = $data;
-			}
-			
 			$ctx = stream_context_create($stream_options);
 			$response = file_get_contents($url, 0, $ctx);
 			$header = implode("\r\n", $http_response_header); 
@@ -899,9 +816,9 @@ class PiwikTracker
     }
     
     /**
-     * Returns the base URL for the piwik server.
+     * @ignore
      */
-    protected function getBaseUrl()
+    protected function getRequest( $idSite )
     {
     	if(empty(self::$URL))
     	{
@@ -912,29 +829,22 @@ class PiwikTracker
     	{
     		self::$URL .= '/piwik.php';
     	}
-    	return self::$URL;
-    }
-    
-    /**
-     * @ignore
-     */
-    protected function getRequest( $idSite )
-    {
-    	$url = $this->getBaseUrl() .
+    	
+    	$url = self::$URL .
 	 		'?idsite=' . $idSite .
 			'&rec=1' .
 			'&apiv=' . self::VERSION . 
 	        '&r=' . substr(strval(mt_rand()), 2, 6) .
     	
     		// XDEBUG_SESSIONS_START and KEY are related to the PHP Debugger, this can be ignored in other languages
-    		(!empty($_GET['XDEBUG_SESSION_START']) ? '&XDEBUG_SESSION_START=' . @urlencode($_GET['XDEBUG_SESSION_START']) : '') . 
-	        (!empty($_GET['KEY']) ? '&KEY=' . @urlencode($_GET['KEY']) : '') .
+    		(!empty($_GET['XDEBUG_SESSION_START']) ? '&XDEBUG_SESSION_START=' . @$_GET['XDEBUG_SESSION_START'] : '') . 
+	        (!empty($_GET['KEY']) ? '&KEY=' . @$_GET['KEY'] : '') .
     	 
     		// Only allowed for Super User, token_auth required,
 			(!empty($this->ip) ? '&cip=' . $this->ip : '') .
     		(!empty($this->forcedVisitorId) ? '&cid=' . $this->forcedVisitorId : '&_id=' . $this->visitorId) . 
 			(!empty($this->forcedDatetime) ? '&cdt=' . urlencode($this->forcedDatetime) : '') .
-			((!empty($this->token_auth) && !$this->doBulkRequests) ? '&token_auth=' . urlencode($this->token_auth) : '') .
+			(!empty($this->token_auth) ? '&token_auth=' . urlencode($this->token_auth) : '') .
 	        
 			// These parameters are set by the JS, but optional when using API
 	        (!empty($this->plugins) ? $this->plugins : '') . 

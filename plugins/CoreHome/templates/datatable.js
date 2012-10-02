@@ -166,13 +166,6 @@ dataTable.prototype =
 			$('#'+self.workingDivId+' .loadingPiwik').last().css('display','block');
 		}
 		
-		// when switching to display graphs, reset limit
-		if (self.param.viewDataTable && self.param.viewDataTable.indexOf('graph') === 0)
-		{
-			delete self.param.filter_offset;
-			delete self.param.filter_limit;
-		}
-		
 		var container = $('#'+self.workingDivId+' .piwik-graph');
 		piwikHelper.queueAjaxRequest($.ajax(self.buildAjaxRequest(function(response) {
 			container.trigger('piwikDestroyPlot');
@@ -946,25 +939,7 @@ dataTable.prototype =
 		truncationLimit += truncationOffset;
 		domElemToTruncate.truncate(truncationLimit);
 		
-		var tooltipElem = $('.truncated', domElemToTruncate),
-			customToolTipText = domElemToTruncate.attr('title');
-		
-		// if there's a title on the dom element, use this as the tooltip instead of
-		// the one set by the truncate plugin
-		if (customToolTipText)
-		{
-			// make sure browser doesn't add its own tooltip for the truncated element
-			if (tooltipElem[0])
-			{
-				tooltipElem.removeAttr('title');
-			}
-			
-			tooltipElem = domElemToTruncate;
-			tooltipElem.attr('title', customToolTipText);
-		}
-		
-		// use tooltip (tooltip text determined by the 'title' attribute)
-		tooltipElem.tooltip();
+		$('.truncated', domElemToTruncate).tooltip();
 	},
 
 	//Apply some miscelleaneous style to the DataTable
@@ -1244,83 +1219,61 @@ dataTable.prototype =
 		trs.each(function()
 		{
 			var tr = $(this);
-			var td = tr.find('td:first');
-			
-			// load available actions for this row
-			var availableActions = DataTable_RowActions_Registry.getAvailableActions(self.param, tr);
-			if (availableActions.length == 0)
+			var actions = tr.find('div.dataTableRowActions');
+			if (actions.size() == 0)
 			{
-				return;
+				return true;
 			}
 			
-			// call initTr on all available actions
-			for (var i = 0; i < availableActions.length; i++)
+			// move before image in actions data table
+			if (actions.prev().size() > 0)
 			{
-				var action = availableActions[i];
-				if (typeof actionInstances[action.name] == "undefined")
-				{
-					actionInstances[action.name] = action.createInstance(self);
-				}
-				var actionInstance = actionInstances[action.name];
-				actionInstance.initTr(tr);
+				actions.prev().before(actions);
 			}
 			
 			// show actions on hover
-			var actionsDom = null;
 			tr.hover(function()
 			{
-				if (actionsDom === null)
-				{
-					// create dom nodes on the fly
-					actionsDom = self.createRowActions(availableActions, tr, actionInstances);
-					td.prepend(actionsDom);
-				}
-				// reposition and show the actions
-				self.repositionRowActions(tr);
-				actionsDom.show();
+				self.repositionRowActions($(this));
+				actions.show();
 			},
 			function()
 			{
-				if (actionsDom !== null)
+				actions.hide();
+			});
+			
+			// handle the individual actions
+			actions.find('> a').each(function()
+			{
+				var a = $(this);
+				var className = a.attr('class');
+				if (className.substring(0, 6) == 'action')
 				{
-					actionsDom.hide();
+					var actionName = className.substring(6, className.length);
+					if (typeof actionInstances[actionName] == "undefined")
+					{
+						actionInstances[actionName] = DataTable_RowActions_Factory(actionName, self);
+					}
+					var action = actionInstances[actionName];
+					action.initTr(tr);
+					
+					a.click(function(e)
+					{
+						$(this).blur();
+						actions.hide();
+						action.trigger(tr, e);
+						return false;
+					});
 				}
 			});
 		});
 	},
 	
-	createRowActions: function(availableActions, tr, actionInstances)
-	{
-		var container = $(document.createElement('div')).addClass('dataTableRowActions');
-		
-		for (var i = 0; i < availableActions.length; i++)
-		{
-			var action = availableActions[i];
-			
-			var actionEl = $(document.createElement('a')).attr({href: '#'}).addClass('action' + action.name);
-			actionEl.append($(document.createElement('img')).attr({src: action.dataTableIcon}));
-			container.append(actionEl);
-			
-			actionEl.click((function(action)
-			{
-				return function(e)
-				{
-					$(this).blur();
-					container.hide();
-					actionInstances[action.name].trigger(tr, e);
-					return false;
-				}
-			})(action));
-		}
-		
-		return container;
-	},
-	
 	repositionRowActions: function(tr) {
 		var td = tr.find('td:first');
 		var actions = tr.find('div.dataTableRowActions');
-		actions.height(tr.innerHeight() - 2);
-		actions.css('marginLeft', (td.width() + 5 - actions.outerWidth()) + 'px');
+		actions.height(tr.innerHeight() - 2)
+			.css('marginLeft', (td.width() + 5 - actions.outerWidth())+'px');
 	},
 	
 	_findReportHeader: function(domElem) {
@@ -1378,7 +1331,6 @@ actionDataTable.prototype =
 	handleColumnDocumentation: dataTable.prototype.handleColumnDocumentation,
 	handleReportDocumentation: dataTable.prototype.handleReportDocumentation,
 	doHandleRowActions: dataTable.prototype.doHandleRowActions,
-	createRowActions: dataTable.prototype.createRowActions,
 	repositionRowActions: dataTable.prototype.repositionRowActions,
 	onClickSort: dataTable.prototype.onClickSort,
 	truncate: dataTable.prototype.truncate,

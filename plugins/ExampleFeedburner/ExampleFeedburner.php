@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ExampleFeedburner.php 6848 2012-08-20 23:18:38Z capedfuzz $
+ * @version $Id: ExampleFeedburner.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ExampleFeedburner
@@ -35,25 +35,18 @@ class Piwik_ExampleFeedburner extends Piwik_Plugin
 
 	function install()
 	{
-		try{
-			Piwik_Exec('ALTER TABLE '.Piwik_Common::prefixTable('site'). " ADD `feedburnerName` VARCHAR( 100 ) DEFAULT NULL");
-		} catch(Exception $e){
-			// mysql code error 1060: column already exists
-			// if there is another error we throw the exception, otherwise it is OK as we are simply reinstalling the plugin
-			if(!Zend_Registry::get('db')->isErrNo($e, '1060'))
-			{
-				throw $e;
-			}
-		}
+		$Site = Piwik_Db_Factory::getDAO('site');
+		$Site->addColFeedburnername();
 	}
 	
 	function uninstall()
 	{
-		Piwik_Query('ALTER TABLE '.Piwik_Common::prefixTable('site'). " DROP `feedburnerName`");
+		$Site = Piwik_Db_Factory::getDAO('site');
+		$Site->removeColFeedburnername();
 	}
 }
 
-Piwik_AddWidget('Example Widgets', 'Feedburner Statistics', 'ExampleFeedburner', 'feedburner');
+Piwik_AddWidget('Example Widgets', 'Feedburner statistics', 'ExampleFeedburner', 'feedburner');
 
 /**
  *
@@ -70,22 +63,15 @@ class Piwik_ExampleFeedburner_Controller extends Piwik_Controller
 	{
 		$view = Piwik_View::factory('feedburner');
 		$idSite = Piwik_Common::getRequestVar('idSite',1,'int');
-		$feedburnerFeedName = Piwik_FetchOne('SELECT feedburnerName 
-											  FROM '.Piwik_Common::prefixTable('site').
-											' WHERE idsite = ?', $idSite );
+		$Site = Piwik_Db_Factory::getDAO('site');
+		$feedburnerFeedName = $Site->getFeedburnernameByIdsite($idSite);
 		if(empty($feedburnerFeedName))
 		{
 			$feedburnerFeedName = 'Piwik';
 		}
 		$view->feedburnerFeedName = $feedburnerFeedName;
 		$view->idSite = $idSite;
-		
-		try {
-			$stats = $this->getFeedData($feedburnerFeedName);
-		} catch(Exception $e) {
-			$stats = $e->getMessage();
-		}
-		$view->fbStats = $stats;
+		$view->fbStats = $this->getFeedData($feedburnerFeedName);
 		echo $view->render();
 	}
 
@@ -158,10 +144,10 @@ class Piwik_ExampleFeedburner_Controller extends Piwik_Controller
 		// we save the value in the DB for an authenticated user
 		if(Piwik::getCurrentUserLogin() != 'anonymous')
 		{
-			Piwik_Query('UPDATE '.Piwik_Common::prefixTable('site').' 
-						 SET feedburnerName = ? WHERE idsite = ?', 
-				array(Piwik_Common::getRequestVar('name','','string'), Piwik_Common::getRequestVar('idSite',1,'int'))
-				);
+			$Site = Piwik_Db_Factory::getDAO('site');
+			$idSite = Piwik_Common::getRequestVar('idSite', 1, 'int');
+			$name   = Piwik_Common::getRequestVar('name', '', 'string');
+			$Site->updateByIdsite(array('feedburner_name' => $name), $idSite);
 		}
 	}
 }

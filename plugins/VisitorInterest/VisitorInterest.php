@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitorInterest.php 6850 2012-08-20 23:42:09Z capedfuzz $
+ * @version $Id: VisitorInterest.php 6243 2012-05-02 22:08:23Z SteveG $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitorInterest
@@ -109,7 +109,7 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		Piwik_AddWidget( 'General_Visitors', 'VisitorInterest_WidgetLengths', 'VisitorInterest', 'getNumberOfVisitsPerVisitDuration');
 		Piwik_AddWidget( 'General_Visitors', 'VisitorInterest_WidgetPages', 'VisitorInterest', 'getNumberOfVisitsPerPage');
 		Piwik_AddWidget( 'General_Visitors', 'VisitorInterest_visitsByVisitCount', 'VisitorInterest', 'getNumberOfVisitsByVisitCount');
-		Piwik_AddWidget( 'General_Visitors', 'VisitorInterest_WidgetVisitsByDaysSinceLast', 'VisitorInterest', 'getNumberOfVisitsByDaysSinceLast');
+		Piwik_AddWidget( 'General_Visitors', 'VisitorInterest_VisitsByDaysSinceLast', 'VisitorInterest', 'getNumberOfVisitsByDaysSinceLast');
 	}
 	
 	function addMenu()
@@ -124,18 +124,16 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		Piwik_AddAction('template_footerVisitsFrequency', array('Piwik_VisitorInterest','footerVisitsFrequency'));
 	}
 	
-	// third element is unit (s for seconds, default is munutes)
 	protected static $timeGap = array(
-			array(0, 10, 's'),
-			array(11, 30, 's'),
-			array(31, 60, 's'),
+			array(0, 0.5),
+			array(0.5, 1),
 			array(1, 2),
 			array(2, 4),
-			array(4, 7),
-			array(7, 10),
-			array(10, 15),
-			array(15, 30),
-			array(30)
+			array(4, 6),
+			array(6, 8),
+			array(8, 11),
+			array(11, 15),
+			array(15)
 		);
 		
 	protected static $pageGap = array(
@@ -231,8 +229,8 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		// when creating the 'days since last visit' report. the SELECT expression below it
 		// is used to count all new visits.
 		$daysSinceLastExtraCondition = 'and log_visit.visitor_returning = 1';
-		$selectAs = $daysSinceLastVisitPrefix.'General_NewVisits';
-		$newVisitCountSelect = "sum(case when log_visit.visitor_returning = 0 then 1 else 0 end) as `$selectAs`";
+		$selectAs = Zend_Registry::get('db')->quoteIdentifier($daysSinceLastVisitPrefix.'General_NewVisits');
+		$newVisitCountSelect = "sum(case when log_visit.visitor_returning = 0 then 1 else 0 end) as $selectAs";
 
 		// create the select expressions to use
 		$timeGapSelects = Piwik_ArchiveProcessing_Day::buildReduceByRangeSelect(
@@ -279,11 +277,7 @@ class Piwik_VisitorInterest extends Piwik_Plugin
 		$secondsGap = array();
 		foreach(self::$timeGap as $gap)
 		{
-			if (count($gap) == 3 && $gap[2] == 's') // if the units are already in seconds, just assign them
-			{
-				$secondsGap[] = array($gap[0], $gap[1]);
-			}
-			else if (count($gap) == 2)
+			if (count($gap) == 2)
 			{
 				$secondsGap[] = array($gap[0] * 60, $gap[1] * 60);
 			}

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6772 2012-08-15 16:53:17Z matt $
+ * @version $Id: Controller.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Proxy
@@ -159,12 +159,6 @@ class Piwik_Proxy_Controller extends Piwik_Controller
 			return false;
 		}
 		if(preg_match('~^http://(qa\.|demo\.|dev\.|forum\.)?piwik.org([#?/]|$)~', $url))
-		{
-			return true;
-		}
-		
-		// Allow clockworksms domain
-		if(strpos($url, 'http://www.clockworksms.com/') === 0)
 		{
 			return true;
 		}

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Myisam.php 6792 2012-08-16 13:59:58Z EZdesign $
+ * @version $Id: Myisam.php 6448 2012-06-02 23:52:13Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -85,7 +85,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
   						  timezone VARCHAR( 50 ) NOT NULL,
   						  currency CHAR( 3 ) NOT NULL,
   						  excluded_ips TEXT NOT NULL,
-  						  excluded_parameters TEXT NOT NULL,
+  						  excluded_parameters VARCHAR ( 255 ) NOT NULL,
   						  `group` VARCHAR(250) NOT NULL, 
 						  PRIMARY KEY(idsite)
 						)  DEFAULT CHARSET=utf8
@@ -164,7 +164,6 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 									  name TEXT,
 									  hash INTEGER(10) UNSIGNED NOT NULL,
   									  type TINYINT UNSIGNED NULL,
-  									  url_prefix TINYINT(2) NULL,
 									  PRIMARY KEY(idaction),
 									  INDEX index_type_hash (type, hash)
 						)  DEFAULT CHARSET=utf8
@@ -211,8 +210,8 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 							  config_cookie TINYINT(1) NOT NULL,
 							  location_ip VARBINARY(16) NOT NULL,
 							  location_browser_lang VARCHAR(20) NOT NULL,
-							  location_country CHAR(3) NOT NULL,
-							  location_continent CHAR(3) NOT NULL,
+							  location_country VARCHAR(3) NOT NULL,
+							  location_continent VARCHAR(3) NOT NULL,
 							  custom_var_k1 VARCHAR(200) DEFAULT NULL,
 							  custom_var_v1 VARCHAR(200) DEFAULT NULL,
 							  custom_var_k2 VARCHAR(200) DEFAULT NULL,
@@ -268,9 +267,9 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
         							  visitor_count_visits SMALLINT(5) UNSIGNED NOT NULL,
         							  visitor_days_since_first SMALLINT(5) UNSIGNED NOT NULL,
 							  		  visitor_days_since_order SMALLINT(5) UNSIGNED NOT NULL,
-									  location_country char(3) NOT NULL,
-									  location_continent char(3) NOT NULL,
-									  url text NOT NULL,
+									  location_country VARCHAR(3) NOT NULL,
+									  location_continent VARCHAR(3) NOT NULL,
+									  url text,
 									  idgoal int(10) NOT NULL,
 									  buster int unsigned NOT NULL,
 									  
@@ -299,7 +298,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 			",
 
 			'log_link_visit_action' => "CREATE TABLE {$prefixTables}log_link_visit_action (
-											  idlink_va INTEGER(11) UNSIGNED NOT NULL AUTO_INCREMENT,
+											  idlink_va INTEGER(11) NOT NULL AUTO_INCREMENT,
 									          idsite int(10) UNSIGNED NOT NULL,
 									  		  idvisitor BINARY(8) NOT NULL,
 									          server_time DATETIME NOT NULL,

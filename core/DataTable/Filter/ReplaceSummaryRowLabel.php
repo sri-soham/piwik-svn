@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ReplaceSummaryRowLabel.php 6966 2012-09-10 15:42:12Z capedfuzz $
+ * @version $Id: ReplaceSummaryRowLabel.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -45,16 +45,6 @@ class Piwik_DataTable_Filter_ReplaceSummaryRowLabel extends Piwik_DataTable_Filt
 			{
 				$row->setColumn('label', $this->newLabel);
 				break;
-			}
-		}
-		
-		// recurse
-		foreach ($rows as $row)
-		{
-			if ($row->isSubtableLoaded())
-			{
-				$subTable = Piwik_DataTable_Manager::getInstance()->getTable($row->getIdSubDataTable());
-				$this->filter($subTable);
 			}
 		}
 	}

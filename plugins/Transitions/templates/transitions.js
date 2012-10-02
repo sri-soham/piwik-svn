@@ -33,12 +33,17 @@ DataTable_RowActions_Transitions.prototype.doOpenPopover = function(link) {
 	this.transitions.showPopover();
 };
 
-
 DataTable_RowActions_Registry.register({
 	
 	name: 'Transitions',
 	
-	dataTableIcon: 'plugins/Transitions/templates/transitions_rowaction.png',
+	dataTableIcon: 'plugins/Transitions/templates/transitions_icon.png',
+	dataTableIconHover: 'plugins/Transitions/templates/transitions_icon_hover.png',
+	
+	dataTableIconTooltip: [
+		_pk_translate('CoreHome_TransitionsRowActionTooltipTitle_js'),
+		_pk_translate('CoreHome_TransitionsRowActionTooltip_js')
+	],
 	
 	createInstance: function(dataTable) {
 		return new DataTable_RowActions_Transitions(dataTable);
@@ -46,7 +51,8 @@ DataTable_RowActions_Registry.register({
 	
 	isAvailable: function(dataTableParams, tr) {
 		return dataTableParams.module == 'Actions'
-			&& dataTableParams.action == 'getPageUrls'
+			&& (dataTableParams.action == 'getPageUrls' || dataTableParams.action == 'getEntryPageUrls'
+					|| dataTableParams.action == 'getExitPageUrls')
 			&& tr.find('> td:first > a').size() > 0;
 	}
 
@@ -85,26 +91,74 @@ Piwik_Transitions.prototype.reset = function(link) {
 /** Open the popover */
 Piwik_Transitions.prototype.showPopover = function() {
 	var self = this;
-
+	
 	this.popover = Piwik_Popover.showLoading('Transitions', self.link, 550);
 	
-	// load the popover HTML
-	this.ajax.callTransitionsController('renderPopover', function(html) {
-		Piwik_Popover.prepareContent(html);
-
-		var canvasDom = self.popover.find('#Transitions_Canvas')[0];
-		var canvasBgDom = self.popover.find('#Transitions_Canvas_Background')[0];
-		self.canvas = new Piwik_Transitions_Canvas(canvasDom, canvasBgDom, 850, 550);
-
-		self.centerBox = self.popover.find('#Transitions_CenterBox');
-
-		var link = Piwik_Transitions_Util.shortenUrl(self.link, true);
-		self.centerBox.find('h2').html(Piwik_Transitions_Util.addBreakpoints(link));
-
-		self.model.loadData(self.link, function() {
-			self.render();
-			Piwik_Popover.showPreparedContent();
+	var bothLoaded = function() {
+		self.preparePopover();
+		self.model.htmlLoaded();
+		
+		if (self.model.searchEnginesNbTransitions > 0 && self.model.websitesNbTransitions > 0
+				+ self.model.campaignsNbTransitions > 0) {
+			self.canvas.narrowMode();
+		}
+		
+		self.render();
+		Piwik_Popover.showPreparedContent();
+	};
+	
+	// load the popover HTML (only done once)
+	var callbackForHtml = false;
+	if (typeof Piwik_Transitions.popoverHtml == 'undefined') {
+		this.ajax.callTransitionsController('renderPopover', function(html) {
+			Piwik_Transitions.popoverHtml = html;
+			if (callbackForHtml !== false) {
+				callbackForHtml();
+			}
 		});
+	}
+	
+	// load the data
+	self.model.loadData(self.link, function() {
+		if (typeof Piwik_Transitions.popoverHtml == 'undefined') {
+			// html not there yet
+			callbackForHtml = bothLoaded;
+		} else {
+			// html already loaded
+			bothLoaded();
+		}
+	});
+};
+
+/** Prepare the popover with the basic DOM to add data later. */
+Piwik_Transitions.prototype.preparePopover = function() {
+	Piwik_Popover.prepareContent(Piwik_Transitions.popoverHtml);
+	
+	var self = this;
+	var canvasDom = self.popover.find('#Transitions_Canvas')[0];
+	var canvasBgDom = self.popover.find('#Transitions_Canvas_Background')[0];
+	self.canvas = new Piwik_Transitions_Canvas(canvasDom, canvasBgDom, 900, 550);
+
+	self.centerBox = self.popover.find('#Transitions_CenterBox');
+
+	var link = Piwik_Transitions_Util.shortenUrl(self.link, true);
+	var title = self.centerBox.find('h2').html(Piwik_Transitions_Util.addBreakpoints(link));
+	
+	title.click(function() {
+		self.openExternalUrl(self.link);
+	}).css('cursor', 'pointer');
+	
+	title.add(self.popover.find('p.Transitions_Pageviews')).hover(function() {
+		var totalNbPageviews = self.model.getTotalNbPageviews();
+		if (totalNbPageviews > 0) {
+			var share = Math.round(self.model.pageviews / totalNbPageviews * 1000) / 10;
+			var text = Piwik_Transitions_Translations.ShareOfAllPageviews;
+			text = text.replace(/%s/, self.model.pageviews).replace(/%s/, share + '%');
+			text += '<br /><i>' + Piwik_Transitions_Translations.DateRange + ' ' + self.model.date + '</i>';
+			Piwik_Tooltip.show(text, 'Transitions_Tooltip_Small');
+		}
+	}, function() {
+		Piwik_Tooltip.hide();
 	});
 };
 
@@ -140,7 +194,8 @@ Piwik_Transitions.prototype.renderGroups = function(groups, openGroup, side, onl
 		var groupName = groups[i];
 		if (groupName == openGroup) {
 			if (i != 0) {
-				this.canvas.addBoxSpacing(13, side);
+				var spacing = this.canvas.isNarrowMode() ? 7 : 13;
+				this.canvas.addBoxSpacing(spacing, side);
 			}
 			this.renderOpenGroup(groupName, side, onlyBg);
 		} else {
@@ -170,36 +225,43 @@ Piwik_Transitions.prototype.reRenderIfNeededToCenter = function(side, onlyBg) {
 /** Render the center box with the main metrics */
 Piwik_Transitions.prototype.renderCenterBox = function() {
 	var box = this.centerBox;
-	box.removeClass('Transitions_Loading');
-
+	
 	Piwik_Transitions_Util.replacePlaceholderInHtml(
 			box.find('.Transitions_Pageviews'), this.model.pageviews);
 
 	var self = this;
-	var showMetric = function(cssClass, modelProperty, highlightCurveOnSide) {
+	var showMetric = function(cssClass, modelProperty, highlightCurveOnSide, groupCanBeExpanded) {
 		var el = box.find('.Transitions_' + cssClass);
 		Piwik_Transitions_Util.replacePlaceholderInHtml(el, self.model[modelProperty]);
-		self.addTooltipShowingPercentageOfAllPageviews(el, modelProperty);
-		if (highlightCurveOnSide && self.model[modelProperty] > 0) {
+		
+		if (self.model[modelProperty] == 0) {
+			el.addClass('Transitions_Value0');
+		} else {
+			self.addTooltipShowingPercentageOfAllPageviews(el, modelProperty);
 			var groupName = cssClass.charAt(0).toLowerCase() + cssClass.substr(1);
 			el.hover(function() {
 				self.highlightGroup(groupName, highlightCurveOnSide);
 			}, function() {
 				self.unHighlightGroup(groupName, highlightCurveOnSide);
 			});
+			if (groupCanBeExpanded) {
+				el.click(function() {
+					self.openGroup(highlightCurveOnSide, groupName);
+				}).css('cursor', 'pointer');
+			}
 		}
 	};
 
-	showMetric('DirectEntries', 'directEntries', 'left');
-	showMetric('PreviousPages', 'previousPagesNbTransitions', 'left');
-	showMetric('SearchEngines', 'searchEnginesNbTransitions', 'left');
-	showMetric('Websites', 'websitesNbTransitions', 'left');
+	showMetric('DirectEntries', 'directEntries', 'left', false);
+	showMetric('PreviousPages', 'previousPagesNbTransitions', 'left', true);
+	showMetric('SearchEngines', 'searchEnginesNbTransitions', 'left', true);
+	showMetric('Websites', 'websitesNbTransitions', 'left', true);
+	showMetric('Campaigns', 'campaignsNbTransitions', 'left', true);
 
-	showMetric('FollowingPages', 'followingPagesNbTransitions', 'right');
-	showMetric('Outlinks', 'outlinksNbTransitions', 'right');
-	showMetric('Downloads', 'downloadsNbTransitions', 'right');
-	showMetric('Exits', 'exits', 'right');
-	showMetric('Bounces', 'bounces', false);
+	showMetric('FollowingPages', 'followingPagesNbTransitions', 'right', true);
+	showMetric('Outlinks', 'outlinksNbTransitions', 'right', true);
+	showMetric('Downloads', 'downloadsNbTransitions', 'right', true);
+	showMetric('Exits', 'exits', 'right', false);
 
 	box.find('.Transitions_CenterBoxMetrics').show();
 };
@@ -235,7 +297,7 @@ Piwik_Transitions.prototype.renderEntries = function(onlyBg) {
 		var self = this;
 		var gradient = this.canvas.createHorizontalGradient('#CFEDCA', '#91DE83', 'left');
 		if (this.highlightedGroup == 'directEntries') {
-			gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', 'left')
+			gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', 'left');
 		}
 		this.canvas.renderBox({
 			side: 'left',
@@ -262,7 +324,7 @@ Piwik_Transitions.prototype.renderExits = function(onlyBg) {
 		var self = this;
 		var gradient = this.canvas.createHorizontalGradient('#CFEDCA', '#91DE83', 'right');
 		if (this.highlightedGroup == 'exits') {
-			gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', 'right')
+			gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', 'right');
 		}
 		this.canvas.renderBox({
 			side: 'right',
@@ -303,7 +365,7 @@ Piwik_Transitions.prototype.renderOpenGroup = function(groupName, side, onlyBg) 
 	var gradientOthers = this.canvas.createHorizontalGradient('#F5F3EB', '#E8E4D5', side);
 	var gradientBackground = this.canvas.createHorizontalGradient('#FFFFFF', '#B0CAE8', side);
 	if (groupName == this.highlightedGroup) {
-		gradientBackground = this.canvas.createHorizontalGradient('#FFFFFF', '#FAD293', side)
+		gradientBackground = this.canvas.createHorizontalGradient('#FFFFFF', '#FAD293', side);
 	}
 	
 	// remember current offsets to reset them later for drawing the background
@@ -345,6 +407,10 @@ Piwik_Transitions.prototype.renderOpenGroup = function(groupName, side, onlyBg) 
 		if (!isOthers && (groupName == 'previousPages' || groupName == 'followingPages')) {
 			onClick = (function(url) {
 				return function() { self.reloadPopover(url); };
+			})(label);
+		} else if (!isOthers && (groupName == 'outlinks' || groupName == 'websites' || groupName == 'downloads')) {
+			onClick = (function(url) {
+				return function() { self.openExternalUrl(url); };
 			})(label);
 		}
 		
@@ -401,7 +467,8 @@ Piwik_Transitions.prototype.renderOpenGroup = function(groupName, side, onlyBg) 
 		bgCanvas: true
 	});
 	
-	this.canvas.addBoxSpacing(15, side);
+	var spacing = this.canvas.isNarrowMode() ? 8 : 15;
+	this.canvas.addBoxSpacing(spacing, side);
 };
 
 /** Render a closed group without detailed data, only one box for the sum */
@@ -409,7 +476,7 @@ Piwik_Transitions.prototype.renderClosedGroup = function(groupName, side, onlyBg
 	var self = this;
 	var gradient = this.canvas.createHorizontalGradient('#DDE4ED', '#9BBADE', side);
 	if (groupName == this.highlightedGroup) {
-		gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', side)
+		gradient = this.canvas.createHorizontalGradient('#FAE2C0', '#FAD293', side);
 	}
 	
 	var nbTransitionsVarName = groupName + 'NbTransitions';
@@ -443,7 +510,6 @@ Piwik_Transitions.prototype.renderClosedGroup = function(groupName, side, onlyBg
 
 /** Reload the entire popover for a different URL */
 Piwik_Transitions.prototype.reloadPopover = function(url) {
-	Piwik_Popover.close();
 	this.rowAction.openPopover(url);
 };
 
@@ -509,6 +575,12 @@ Piwik_Transitions.prototype.unHighlightGroup = function(groupName, side) {
 	this.renderLoops();
 };
 
+/** Open a link in a new tab */
+Piwik_Transitions.prototype.openExternalUrl = function(url) {
+	url = piwik.piwik_url + '?module=Proxy&action=redirect&url=' + encodeURIComponent(url);
+	window.open(url, '_newtab');
+};
+
 
 // --------------------------------------
 // CANVAS
@@ -537,15 +609,15 @@ function Piwik_Transitions_Canvas(canvasDom, canvasBgDom, width, height) {
 	this.leftCurvePositionY = this.originalCurvePositionY = 110;
 	this.rightBoxPositionY = this.originalBoxPositionY;
 	this.rightCurvePositionY = this.originalCurvePositionY;
-
+	
 	/** Width of the rectangular box */
-	this.boxWidth = 140;
+	this.boxWidth = 175;
 	/** Height of the rectangular box */
 	this.boxHeight = 53;
 	/** Height of a smaller rectangular box */
 	this.smallBoxHeight = 30;
 	/** Width of the curve that connects the boxes to the center */
-	this.curveWidth = 180;
+	this.curveWidth = 170;
 	/** Line-height of the text */
 	this.lineHeight = 14;
 	/** Spacing between rectangular boxes */
@@ -566,6 +638,20 @@ function Piwik_Transitions_Canvas(canvasDom, canvasBgDom, width, height) {
 	this.rightBoxBeginX = this.rightCurveEndX = this.rightBoxEndX - this.boxWidth;
 	this.rightCurveBeginX = this.rightCurveEndX - this.curveWidth;
 }
+
+/**
+ * Activate narrow mode: draw groups a bit more compact in order to save space
+ * for more than 3 referrer groups.
+ */
+Piwik_Transitions_Canvas.prototype.narrowMode = function() {
+	this.smallBoxHeight = 30;
+	this.boxSpacing = 5;
+	this.narrowMode = true;
+};
+
+Piwik_Transitions_Canvas.prototype.isNarrowMode = function() {
+	return typeof this.narrowMode != 'undefined';
+};
 
 /**
  * Helper to create horizontal gradients
@@ -742,10 +828,10 @@ Piwik_Transitions_Canvas.prototype.renderBox = function(params) {
 	if (params.curveText && !params.onlyBg) {
 		var curveTextLeft, curveTextTop;
 		if (params.side == 'left') {
-			curveTextLeft = this.leftBoxBeginX + this.boxWidth + 12;
+			curveTextLeft = this.leftBoxBeginX + this.boxWidth + 3;
 			curveTextTop = this.leftBoxPositionY + boxHeight / 2 - this.lineHeight / 2;
 		} else {
-			curveTextLeft = this.rightBoxBeginX - 35;
+			curveTextLeft = this.rightBoxBeginX - 37;
 			curveTextTop = this.rightBoxPositionY + boxHeight / 2 - this.lineHeight / 2;
 		}
 		var textDiv = this.renderText(params.curveText, curveTextLeft, curveTextTop,
@@ -852,7 +938,7 @@ Piwik_Transitions_Canvas.prototype.renderLoops = function(share) {
 	
 	// curve from the upper left connection to the center box to the lower left connection to the text box 
 	var point1 = {x: this.leftCurveEndX, y: this.leftCurvePositionY};
-	var point2 = {x: this.leftCurveEndX, y: 460};
+	var point2 = {x: this.leftCurveEndX, y: 470};
 	
 	var cpLeftX = (this.leftCurveBeginX + this.leftCurveEndX) / 2 + 30;
 	var cp1 = {x: cpLeftX, y: point1.y};
@@ -888,7 +974,7 @@ Piwik_Transitions_Canvas.prototype.renderLoops = function(share) {
 	this.context.lineTo(point7.x, point7.y);
 	
 	// line to lower left connection to the center box
-	var point8 = {x: point1.x, y: point1.y +  + curveHeight};
+	var point8 = {x: point1.x, y: point1.y + curveHeight};
 	cpLeftX += 30;
 	var cp7 = {x: cpLeftX, y: point7.y};
 	var cp8 = {x: cpLeftX, y: point8.y};
@@ -936,14 +1022,32 @@ Piwik_Transitions_Canvas.prototype.clearSide = function(side, onlyBg) {
 
 function Piwik_Transitions_Model(ajax) {
 	this.ajax = ajax;
+	
+	this.groupTitles = {};
 }
+
+Piwik_Transitions_Model.prototype.htmlLoaded = function() {
+	this.groupTitles.previousPages = Piwik_Transitions_Translations.fromPreviousPages;
+	this.groupTitles.followingPages = Piwik_Transitions_Translations.toFollowingPages;
+	this.groupTitles.outlinks = Piwik_Transitions_Translations.outlinks;
+	this.groupTitles.downloads = Piwik_Transitions_Translations.downloads;
+	
+	this.shareInGroupTexts = {
+		previousPages: Piwik_Transitions_Translations.fromPreviousPagesInline,
+		followingPages: Piwik_Transitions_Translations.toFollowingPagesInline,
+		searchEngines: Piwik_Transitions_Translations.fromSearchEnginesInline,
+		websites: Piwik_Transitions_Translations.fromWebsitesInline,
+		campaigns: Piwik_Transitions_Translations.fromCampaignsInline,
+		outlinks: Piwik_Transitions_Translations.outlinksInline,
+		downloads: Piwik_Transitions_Translations.downloadsInline
+	};
+};
 
 Piwik_Transitions_Model.prototype.loadData = function(link, callback) {
 	var self = this;
 	
 	this.pageviews = 0;
 	this.exits = 0;
-	this.bounces = 0;
 	this.loops = 0;
 
 	this.directEntries = 0;
@@ -969,33 +1073,19 @@ Piwik_Transitions_Model.prototype.loadData = function(link, callback) {
 	this.outlinksNbTransitions = 0;
 	this.outlinks = [];
 	
-	this.groupTitles = {
-		previousPages: Piwik_Transitions_Translations.fromPreviousPages,
-		followingPages: Piwik_Transitions_Translations.toFollowingPages,
-		outlinks: Piwik_Transitions_Translations.outlinks,
-		downloads: Piwik_Transitions_Translations.downloads
-	};
-	
-	this.shareInGroupTexts = {
-		previousPages: Piwik_Transitions_Translations.fromPreviousPagesInline,
-		followingPages: Piwik_Transitions_Translations.toFollowingPagesInline,
-		searchEngines: Piwik_Transitions_Translations.fromSearchEnginesInline,
-		websites: Piwik_Transitions_Translations.fromWebsitesInline,
-		campaigns: Piwik_Transitions_Translations.fromCampaignsInline,
-		outlinks: Piwik_Transitions_Translations.outlinksInline,
-		downloads: Piwik_Transitions_Translations.downloadsInline
-	};
+	this.date = '';
 
 	this.ajax.callApi('Transitions.getFullReport', {
 			pageUrl: link,
 			expanded: 1
 		},
 		function(report) {
+			self.date = report.date;
+			
 			// load page metrics
 			self.pageviews = report.pageMetrics.pageviews;
-			self.exits = report.pageMetrics.exits;
-			self.bounces = report.pageMetrics.bounces;
 			self.loops = report.pageMetrics.loops;
+			self.exits = report.pageMetrics.exits;
 			
 			// load referrers: split direct entries and others
 			for (var i = 0; i < report.referrers.length; i++) {
@@ -1021,7 +1111,14 @@ Piwik_Transitions_Model.prototype.loadData = function(link, callback) {
 			self.loadAndSumReport(report, 'followingPages');
 			self.loadAndSumReport(report, 'downloads');
 			self.loadAndSumReport(report, 'outlinks');
-
+			
+			if (typeof Piwik_Transitions_Model.totalNbPageviews == 'undefined') {
+				Piwik_Transitions_Model.totalNbPageviews = false;
+				self.ajax.loadTotalNbPageviews(function(nbPageviews) {
+					Piwik_Transitions_Model.totalNbPageviews = nbPageviews;
+				});
+			}
+			
 			callback();
 		});
 };
@@ -1034,6 +1131,13 @@ Piwik_Transitions_Model.prototype.loadAndSumReport = function(apiData, reportNam
 	for (var i = 0; i < data.length; i++) {
 		this[sumVarName] += data[i].referrals;
 	}
+};
+
+Piwik_Transitions_Model.prototype.getTotalNbPageviews = function() {
+	if (typeof Piwik_Transitions_Model.totalNbPageviews == 'undefined') {
+		return false;
+	}
+	return Piwik_Transitions_Model.totalNbPageviews;
 };
 
 Piwik_Transitions_Model.prototype.getGroupTitle = function(groupName) {
@@ -1093,6 +1197,15 @@ Piwik_Transitions_Model.prototype.roundPercentage = function(value) {
 function Piwik_Transitions_Ajax() {
 }
 
+Piwik_Transitions_Ajax.prototype.loadTotalNbPageviews = function(callback) {
+	this.callApi('Actions.get', {
+		columns: 'nb_pageviews'
+	}, function(response) {
+		var value = typeof response.value != 'undefined' ? response.value : false;
+		callback(value);
+	});
+};
+
 Piwik_Transitions_Ajax.prototype.callTransitionsController = function(action, callback) {
 	piwikHelper.queueAjaxRequest($.post('index.php', {
 		module: 'Transitions',
@@ -1114,10 +1227,35 @@ Piwik_Transitions_Ajax.prototype.callApi = function(method, params, callback) {
 	if (params.period == 'range') {
 		params.date = piwik.startDateString + ',' + params.date;
 	}
+	
+	var segment = broadcast.getValueFromHash('segment', window.location.href);
+	if (segment) {
+		params.segment = segment;
+	}
 
 	piwikHelper.queueAjaxRequest($.post('index.php', params, function(result) {
 		if (typeof result.result != 'undefined' && result.result == 'error') {
-			alert(result.message);
+			var errorName = result.message;
+			var errorTitle = Piwik_Transitions_Translations[errorName];
+			var errorMessage = Piwik_Transitions_Translations[errorName + 'Details'];
+			var errorBack = Piwik_Transitions_Translations[errorName + 'Back'];
+			
+			if (typeof errorTitle == 'undefined') {
+				alert(result.message);
+				return;
+			}
+			
+			if (typeof params.pageUrl != 'undefined') {
+				var url = params.pageUrl;
+				url = Piwik_Transitions_Util.addBreakpoints(url, '|||');
+				url = $(document.createElement('p')).text(url).html();
+				url = url.replace(/\|\|\|/g, '<wbr />');
+				errorTitle = errorTitle.replace(/%s/, '<span>' + url + '</span>');
+			}
+			
+			errorMessage = errorMessage.replace(/%s/g, '<br />');
+			
+			Piwik_Popover.showError(errorTitle, errorMessage, errorBack);
 		} else {
 			callback(result);
 		}
@@ -1153,8 +1291,9 @@ Piwik_Transitions_Util = {
 	},
 
 	/** Add break points to string so that it can be displayed more compactly */
-	addBreakpoints: function(text) {
-		return text.replace(/([\/&=?\.%#:])/g, '$1<wbr>');
+	addBreakpoints: function(text, breakpointMarkup) {
+		return text.replace(/([\/&=?\.%#:])/g, '$1' + 
+			(typeof breakpointMarkup == 'undefined' ? '<wbr>' : breakpointMarkup));
 	},
 
 	/**

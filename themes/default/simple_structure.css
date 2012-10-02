@@ -1,4 +1,4 @@
-body#simple  { 
+#simple body { 
 	background: #eee; 
 }
 #contentsimple {
@@ -20,12 +20,6 @@ body#simple  {
 	margin-left:15px;
 	color: #6B320B;
     font-size: 15pt;
-}
-
-#titleUpdate {
-	font-size: 18px;
- 	color: #7e7363;
-	clear:both;
 }
 #subh1 a {
 	color: #6B320B;
@@ -92,8 +86,4 @@ a { color: #006; }
 	-moz-border-radius:4px; 
 	-webkit-border-radius:4px; 
 	padding:15px;
-}
-.warning.normalFontSize {
-	font-size: 100%;
-	padding: 10px;
 }

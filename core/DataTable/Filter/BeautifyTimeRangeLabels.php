@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: BeautifyTimeRangeLabels.php 6660 2012-08-03 02:24:30Z capedfuzz $
+ * @version $Id: BeautifyTimeRangeLabels.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -119,8 +119,7 @@ class Piwik_DataTable_Filter_BeautifyTimeRangeLabels extends Piwik_DataTable_Fil
 		}
 		else
 		{
-			// since we're using minutes, we use floor so 1801s+ will be 30m+ and not 31m+
-			return sprintf($this->labelPlural, "".floor($lowerBound / 60).urlencode('+'));
+			return sprintf($this->labelPlural, "".ceil($lowerBound / 60).urlencode('+'));
 		}
 	}
 }

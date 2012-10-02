@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6959 2012-09-10 07:37:01Z matt $
+ * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -71,9 +71,6 @@ class Piwik_CoreAdminHome_API
 	{
 		Piwik::checkUserIsSuperUser();
 		$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
-		if(empty($idSites)) {
-			throw new Exception("Specify a value for &idSites=");
-		}
 		// Ensure the specified dates are valid
 		$toInvalidate = $invalidDates = array();
 		$dates = explode(',', $dates);
@@ -98,7 +95,15 @@ class Piwik_CoreAdminHome_API
 
 		// Lookup archive tables
 		$tables = Piwik::getTablesInstalled();
-		$archiveTables = Piwik::getTablesArchivesInstalled();
+		$archiveTables = array();
+		foreach($tables as $table)
+		{
+			if(strpos($table, 'archive_') !== false)
+			{
+				$archiveTables[] = $table;
+			}
+		}
+
 		
 		// If using the feature "Delete logs older than N days"...
 		$logsAreDeletedBeforeThisDate = Piwik_Config::getInstance()->Deletelogs['delete_logs_schedule_lowest_interval'];
@@ -109,6 +114,8 @@ class Piwik_CoreAdminHome_API
 		{
 			$minimumDateWithLogs = Piwik_Date::factory('today')->subDay($logsAreDeletedBeforeThisDate);
 		}
+		
+		$Archive = Piwik_Db_Factory::getDAO('archive');
 			
 		// Given the list of dates, process which tables they should be deleted from
 		$minDate = false;
@@ -163,33 +170,14 @@ class Piwik_CoreAdminHome_API
 			// Dates which are to be deleted from this table
 			$datesToDeleteInTable = $datesByMonth[$suffix];
 			
-			// Build one statement to delete all dates from the given table
-			$sql = $bind = array();
+			// One statement to delete all dates from the given table
 			$datesToDeleteInTable = array_unique($datesToDeleteInTable);
-			foreach($datesToDeleteInTable as $dateToDelete)
-			{
-				$sql[] = '(date1 <= ? AND ? <= date2)';
-				$bind[] = $dateToDelete;
-				$bind[] = $dateToDelete;
-			}
-			$sql = implode(" OR ", $sql);
-			
-			$query = "DELETE FROM $table ".
-					" WHERE ( $sql ) ". 
-					" AND idsite IN (". $sqlIdSites .")";
-			Piwik_Query($query, $bind);
-//			var_dump($query);var_dump($bind);
+			$Archive->deleteByDates($table, $sqlIdSites, $datesToDeleteInTable);
 		}
 
 		// Update piwik_site.ts_created 
-		$query = "UPDATE " . Piwik_Common::prefixTable("site") .
-				" SET ts_created = ?".
-				" WHERE idsite IN ( $sqlIdSites )
-					AND ts_created > ?";
-		$minDateSql = $minDate->subDay(1)->getDatetime();
-		$bind = array($minDateSql,$minDateSql);
-		Piwik_Query($query, $bind);
-//		var_dump($query);var_dump($bind);
+		$Site = Piwik_Db_Factory::getDAO('site');
+		$Site->updateTSCreated($sqlIdSites, $minDate->subDay(1)->getDatetime());
 
 		// Force to re-process data for these websites in the next archive.php cron run
 		$invalidatedIdSites = Piwik_CoreAdminHome_API::getWebsiteIdsToInvalidate();

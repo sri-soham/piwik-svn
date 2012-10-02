@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6790 2012-08-16 13:59:26Z EZdesign $
+ * @version $Id: Controller.php 6404 2012-05-30 11:46:29Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_CoreUpdater
@@ -280,7 +280,6 @@ class Piwik_CoreUpdater_Controller extends Piwik_Controller
 		{
 			$view = Piwik_View::factory('update_welcome');
 			$view->queries = $sqlQueries;
-			$view->isMajor = $updater->hasMajorDbUpdate();
 			$this->doWelcomeUpdates($view, $componentsWithUpdateFile);
 			echo $view->render();
 		}

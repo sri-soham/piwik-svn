@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FormDatabaseSetup.php 6642 2012-08-02 04:27:50Z matt $
+ * @version $Id: FormDatabaseSetup.php 6483 2012-06-18 20:05:18Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Installation
@@ -88,6 +88,11 @@ class Piwik_Installation_FormDatabaseSetup extends Piwik_QuickForm2
 		
 		$adapter = $this->getSubmitValue('adapter');
 		$port = Piwik_Db_Adapter::getDefaultPortForAdapter($adapter);
+		$schemas = Piwik_Db_Schema::getSchemas($adapter);
+
+		# NOTE: Using the first schema by default. This will have to be
+		#       changed if we intend to support different engines of Mysql
+		#       or any other database (if any).
 
 		$dbInfos = array(
 			'host'          => $this->getSubmitValue('host'),
@@ -97,6 +102,7 @@ class Piwik_Installation_FormDatabaseSetup extends Piwik_QuickForm2
 			'tables_prefix' => $this->getSubmitValue('tables_prefix'),
 			'adapter'       => $adapter,
 			'port'          => $port,
+			'schema'        => $schemas[0]
 		);
 		
 		if(($portIndex = strpos($dbInfos['host'], '/')) !== false)
@@ -252,20 +258,19 @@ class Piwik_Installation_FormDatabaseSetup_Rule_checkUserPrivileges extends HTML
 	{
 		return array(
 			'CREATE' => 'CREATE TABLE '.self::TEST_TABLE_NAME.' (
-								   id INT AUTO_INCREMENT,
+								   id INT,
 								   value INT,
-								   PRIMARY KEY (id),
-								   KEY index_value (value)
+								   PRIMARY KEY (id)
 							   )',
 			'ALTER' => 'ALTER TABLE '.self::TEST_TABLE_NAME.' 
 								ADD COLUMN other_value INT DEFAULT 0',
 			'SELECT' => 'SELECT * FROM '.self::TEST_TABLE_NAME,
-			'INSERT' => 'INSERT INTO '.self::TEST_TABLE_NAME.' (value) VALUES (123)',
+			'INSERT' => 'INSERT INTO '.self::TEST_TABLE_NAME.' (id, value) VALUES (1, 123)',
 			'UPDATE' => 'UPDATE '.self::TEST_TABLE_NAME.' SET value = 456 WHERE id = 1',
 			'DELETE' => 'DELETE FROM '.self::TEST_TABLE_NAME.' WHERE id = 1',
 			'DROP' => 'DROP TABLE '.self::TEST_TABLE_NAME,
 			'CREATE TEMPORARY TABLES' => 'CREATE TEMPORARY TABLE '.self::TEST_TEMP_TABLE_NAME.' (
-											id INT AUTO_INCREMENT,
+											id INTEGER,
 											PRIMARY KEY (id)
 										 )',
 		);
@@ -290,7 +295,6 @@ class Piwik_Installation_FormDatabaseSetup_Rule_checkUserPrivileges extends HTML
 	 */
 	private function isAccessDenied( $ex )
 	{
-		//NOte: this code is duplicated in Tracker.php error handler
 		return $ex->getCode() == 1044 || $ex->getCode() == 42000;
 	}
 	

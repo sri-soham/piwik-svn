@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Xml.php 6524 2012-07-20 04:50:33Z capedfuzz $
+ * @version $Id: Xml.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -323,7 +323,7 @@ class Piwik_DataTable_Renderer_Xml extends Piwik_DataTable_Renderer
 			if(count($row) === 1
 				&& key($row) === 0)
 			{
-				$value = self::formatValueXml(current($row));
+				$value = current($row);
 				$out .= $prefixLine . $value;				
 			}
 			else

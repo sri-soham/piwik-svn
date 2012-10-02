@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6596 2012-07-30 20:01:36Z capedfuzz $
+ * @version $Id: Controller.php 6358 2012-05-29 02:08:36Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_DBStats
@@ -58,11 +58,6 @@ class Piwik_DBStats_Controller extends Piwik_Controller_Admin
 		$view = $this->getDataTableView(__FUNCTION__, $viewType = 'graphPie', $orderDir = 'desc',
 										$addPercentColumn = true);
 		$view->disableOffsetInformationAndPaginationControls();
-		
-		if ($view instanceof Piwik_ViewDataTable_GenerateGraphHTML)
-		{
-			$view->showAllTicks();
-		}
 		
 		// translate the labels themselves
 		$translateSummaryLabel = array($this, 'translateSummarylabel');

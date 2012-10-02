@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6974 2012-09-12 04:57:40Z matt $
+ * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -26,6 +26,7 @@
 class Piwik_UsersManager_API 
 {
 	static private $instance = null;
+	static private $dao = null;
 
 	/**
 	 * You can create your own Users Plugin to override this class.
@@ -40,6 +41,7 @@ class Piwik_UsersManager_API
 	static public function getInstance()
 	{
 		try {
+			self::$dao = Piwik_Db_Factory::getDAO('user');
 			$instance = Zend_Registry::get('UsersManager_API');
 			if( !($instance instanceof Piwik_UsersManager_API) ) {
 				// Exception is caught below and corrected
@@ -95,20 +97,7 @@ class Piwik_UsersManager_API
 	public function getUsers( $userLogins = '' )
 	{
 		Piwik::checkUserHasSomeAdminAccess();
-		
-		$where = '';
-		$bind = array();
-		if(!empty($userLogins))
-		{
-			$userLogins = explode(',', $userLogins);
-			$where = 'WHERE login IN ('. Piwik_Common::getSqlStringFieldsArray($userLogins).')';
-			$bind = $userLogins;
-		}
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT * 
-								FROM ".Piwik_Common::prefixTable("user")."
-								$where 
-								ORDER BY login ASC", $bind);
+		$users = self::$dao->getAll($userLogins);
 		// Non Super user can only access login & alias 
 		if(!Piwik::isUserIsSuperUser())
 		{
@@ -128,11 +117,8 @@ class Piwik_UsersManager_API
 	public function getUsersLogin()
 	{
 		Piwik::checkUserHasSomeAdminAccess();
-		
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT login 
-								FROM ".Piwik_Common::prefixTable("user")." 
-								ORDER BY login ASC");
+
+		$users = self::$dao->getAllLogins();
 		$return = array();
 		foreach($users as $login)
 		{
@@ -162,11 +148,9 @@ class Piwik_UsersManager_API
 		
 		$this->checkAccessType($access);
 		
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT login,idsite 
-								FROM ".Piwik_Common::prefixTable("access")
-								." WHERE access = ?
-								ORDER BY login, idsite", $access);
+		$Access = Piwik_Db_Factory::getDAO('access');
+		$users = $Access->getAllByAccess($access);
+
 		$return = array();
 		foreach($users as $user)
 		{
@@ -195,10 +179,9 @@ class Piwik_UsersManager_API
 	{
 		Piwik::checkUserHasAdminAccess( $idSite );
 		
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT login,access 
-								FROM ".Piwik_Common::prefixTable("access")
-								." WHERE idsite = ?", $idSite);
+		$Access = Piwik_Db_Factory::getDAO('access');
+		$users = $Access->getAllByIdsite($idSite);
+
 		$return = array();
 		foreach($users as $user)
 		{
@@ -212,10 +195,8 @@ class Piwik_UsersManager_API
 		Piwik::checkUserHasAdminAccess( $idSite );
 		$this->checkAccessType( $access );
 		
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT login
-								FROM ".Piwik_Common::prefixTable("access")
-								." WHERE idsite = ? AND access = ?", array($idSite, $access));
+		$Access = Piwik_Db_Factory::getDAO('access');
+		$users = $Access->getAllByIdsiteAndAccess($idSite, $access);
 		$logins = array();
 		foreach($users as $user)
 		{
@@ -251,10 +232,8 @@ class Piwik_UsersManager_API
 		$this->checkUserExists($userLogin);
 		$this->checkUserIsNotSuperUser($userLogin);
 		
-		$db = Zend_Registry::get('db');
-		$users = $db->fetchAll("SELECT idsite,access 
-								FROM ".Piwik_Common::prefixTable("access")
-								." WHERE login = ?", $userLogin);
+		$Access = Piwik_Db_Factory::getDAO('access');
+		$users = $Access->getAllByLogin($userLogin);
 		$return = array();
 		foreach($users as $user)
 		{
@@ -279,11 +258,7 @@ class Piwik_UsersManager_API
 		$this->checkUserExists($userLogin);
 		$this->checkUserIsNotSuperUser($userLogin);
 		
-		$db = Zend_Registry::get('db');
-		$user = $db->fetchRow("SELECT * 
-								FROM ".Piwik_Common::prefixTable("user")
-								." WHERE login = ?", $userLogin);
-		return $user;
+		return self::$dao->getUserByLogin($userLogin);
 	}
 	
 	/**
@@ -297,12 +272,8 @@ class Piwik_UsersManager_API
 	{
 		Piwik::checkUserIsSuperUser();
 		$this->checkUserEmailExists($userEmail);
-		
-		$db = Zend_Registry::get('db');
-		$user = $db->fetchRow("SELECT * 
-								FROM ".Piwik_Common::prefixTable("user")
-								." WHERE email = ?", $userEmail);
-		return $user;
+
+		return self::$dao->getUserByEmail($userEmail);
 	}
 	
 	private function checkLogin($userLogin)
@@ -314,6 +285,16 @@ class Piwik_UsersManager_API
 		
 		Piwik::checkValidLoginString($userLogin);
 	}
+	
+	private function checkPassword($password)
+	{
+		if(!$this->isValidPasswordString($password))
+		{
+			throw new Exception(Piwik_TranslateException('UsersManager_ExceptionInvalidPassword', array(self::PASSWORD_MIN_LENGTH, self::PASSWORD_MAX_LENGTH)));
+		}
+	}
+	const PASSWORD_MIN_LENGTH = 6;
+	const PASSWORD_MAX_LENGTH = 26;
 	
 	private function checkEmail($email)
 	{
@@ -337,6 +318,13 @@ class Piwik_UsersManager_API
 		return $alias;
 	}
 	
+	private function getCleanPassword($password)
+	{
+		// if change here, should also edit the installation process 
+		// to change how the root pwd is saved in the config file
+		return md5($password);
+	}
+		
 	/**
 	 * Add a user in the database.
 	 * A user is defined by 
@@ -361,23 +349,20 @@ class Piwik_UsersManager_API
 		$this->checkEmail($email);
 
 		$password = Piwik_Common::unsanitizeInputValue($password);
-		Piwik_UsersManager::checkPassword($password);
+		$this->checkPassword($password);
 
 		$alias = $this->getCleanAlias($alias,$userLogin);
-		$passwordTransformed = Piwik_UsersManager::getPasswordHash($password);
+		$passwordTransformed = $this->getCleanPassword($password);
 		
 		$token_auth = $this->getTokenAuth($userLogin, $passwordTransformed);
 		
-		$db = Zend_Registry::get('db');
-		
-		$db->insert( Piwik_Common::prefixTable("user"), array(
-									'login' => $userLogin,
-									'password' => $passwordTransformed,
-									'alias' => $alias,
-									'email' => $email,
-									'token_auth' => $token_auth,
-									'date_registered' => Piwik_Date::now()->getDatetime()
-							)
+		self::$dao->add(
+			$userLogin,
+			$passwordTransformed,
+			$alias,
+			$email,
+			$token_auth,
+			Piwik_Date::now()
 		);
 		
 		// we reload the access list which doesn't yet take in consideration this new user
@@ -395,8 +380,7 @@ class Piwik_UsersManager_API
 	 * 
 	 * @see addUser() for all the parameters
 	 */
-	public function updateUser( $userLogin, $password = false, $email = false, $alias = false,
-								  $_isPasswordHashed = false )
+	public function updateUser(  $userLogin, $password = false, $email = false, $alias = false )
 	{
 		Piwik::checkUserIsSuperUserOrTheUser($userLogin);
 		$this->checkUserIsNotAnonymous( $userLogin );
@@ -410,11 +394,8 @@ class Piwik_UsersManager_API
 		else
 		{
 			$password = Piwik_Common::unsanitizeInputValue($password);
-			if (!$_isPasswordHashed)
-			{
-				Piwik_UsersManager::checkPassword($password);
-				$password = Piwik_UsersManager::getPasswordHash($password);
-			}
+			$this->checkPassword($password);
+			$password = $this->getCleanPassword($password);
 		}
 
 		if(empty($alias))
@@ -436,16 +417,14 @@ class Piwik_UsersManager_API
 		$token_auth = $this->getTokenAuth($userLogin,$password);
 		
 		$db = Zend_Registry::get('db');
-											
-		$db->update( Piwik_Common::prefixTable("user"), 
-					array(
-						'password' => $password,
-						'alias' => $alias,
-						'email' => $email,
-						'token_auth' => $token_auth,
-						),
-					"login = '$userLogin'"
-			);		
+		self::$dao->update(
+			$password,
+			$alias,
+			$email,
+			$token_auth,
+			$userLogin
+		);
+
 		Piwik_Common::deleteTrackerCache();
 
 		Piwik_PostEvent('UsersManager.updateUser', $userLogin);
@@ -482,25 +461,21 @@ class Piwik_UsersManager_API
 	 */
 	public function userExists( $userLogin )
 	{
-		$count = Piwik_FetchOne("SELECT count(*) 
-													FROM ".Piwik_Common::prefixTable("user"). " 
-													WHERE login = ?", $userLogin);
+		$count = self::$dao->getCountByLogin($userLogin);
 		return $count != 0;
 	}
 	
 	/**
-	 * Returns true if user with given email (userEmail) is known in the database, or the super user
+	 * Returns true if user with given email (userEmail) is known in the database
 	 *
 	 * @return bool true if the user is known
 	 */
 	public function userEmailExists( $userEmail )
 	{
 		Piwik::checkUserIsNotAnonymous();
-		$count = Piwik_FetchOne("SELECT count(*) 
-								FROM ".Piwik_Common::prefixTable("user"). " 
-								WHERE email = ?", $userEmail);
-		return $count != 0
-				||  Piwik_Config::getInstance()->superuser['email'] == $userEmail;
+		$count = self::$dao->getCountByEmail($userEmail);
+
+		return $count != 0;	
 	}
 	
 	/**
@@ -539,36 +514,23 @@ class Piwik_UsersManager_API
 			$idSites = Piwik_SitesManager_API::getInstance()->getSitesIdWithAdminAccess();
 		}
 		// in case the idSites is an integer we build an array		
-		else
+		elseif(!is_array($idSites))
 		{
 			$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
 		}
-
-		if(empty($idSites))
-		{
-			throw new Exception('Specify at least one website ID in &idSites=');
-		}
+		
 		// it is possible to set user access on websites only for the websites admin
 		// basically an admin can give the view or the admin access to any user for the websites he manages
 		Piwik::checkUserHasAdminAccess( $idSites );
 		
 		$this->deleteUserAccess( $userLogin, $idSites);
 		
-		// delete UserAccess
-		$db = Zend_Registry::get('db');
-		
 		// if the access is noaccess then we don't save it as this is the default value
 		// when no access are specified
 		if($access != 'noaccess')
 		{
-			foreach($idSites as $idsite)
-			{
-				$db->insert(	Piwik_Common::prefixTable("access"),
-								array(	"idsite" => $idsite, 
-										"login" => $userLogin,
-										"access" => $access)
-						);
-			}
+			$Access = Piwik_Db_Factory::getDAO('access');
+			$Access->addIdSites($idSites, $userLogin, $access);
 		}
 		
 		// we reload the access list which doesn't yet take in consideration this new user access
@@ -642,8 +604,7 @@ class Piwik_UsersManager_API
 	 */
 	private function deleteUserOnly( $userLogin )
 	{
-		$db = Zend_Registry::get('db');
-		$db->query("DELETE FROM ".Piwik_Common::prefixTable("user")." WHERE login = ?", $userLogin);
+		self::$dao->deleteByLogin($userLogin);
 
 		Piwik_PostEvent('UsersManager.deleteUser', $userLogin);
 	}
@@ -660,23 +621,15 @@ class Piwik_UsersManager_API
 	 */
 	private function deleteUserAccess( $userLogin, $idSites = null )
 	{
-		$db = Zend_Registry::get('db');
+		$Access = Piwik_Db_Factory::getDAO('access');
 		
 		if(is_null($idSites))
 		{
-			$db->query(	"DELETE FROM ".Piwik_Common::prefixTable("access").
-						" WHERE login = ?",
-					array( $userLogin) );
+			$Access->deleteByLogin($userLogin);
 		}
 		else
 		{
-			foreach($idSites as $idsite)
-			{
-				$db->query(	"DELETE FROM ".Piwik_Common::prefixTable("access").
-							" WHERE idsite = ? AND login = ?",
-						array($idsite, $userLogin)
-				);
-			}
+			$Access->deleteByIdsiteAndLogin($idSites, $userLogin);
 		}
 	}
 
@@ -695,5 +648,22 @@ class Piwik_UsersManager_API
 			throw new Exception(Piwik_TranslateException('UsersManager_ExceptionPasswordMD5HashExpected'));
 		}
 		return md5($userLogin . $md5Password );
+	}
+	
+	/**
+	 * Returns true if the password is complex enough (at least 6 characters and max 26 characters)
+	 * 
+	 * @param string email
+	 * @return bool
+	 */
+	private function isValidPasswordString( $input )
+	{
+		if(!Piwik::isChecksEnabled()
+			&& !empty($input))
+		{
+			return true;
+		}
+		$l = strlen($input);
+		return $l >= self::PASSWORD_MIN_LENGTH && $l <= self::PASSWORD_MAX_LENGTH;
 	}
 }

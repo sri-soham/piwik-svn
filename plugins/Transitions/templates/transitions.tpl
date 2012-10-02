@@ -1,6 +1,6 @@
 
 <div id="Transitions_Container">
-	<div id="Transitions_CenterBox" class="Transitions_Text Transitions_Loading">
+	<div id="Transitions_CenterBox" class="Transitions_Text">
 		<h2></h2>
 		<div class="Transitions_CenterBoxMetrics">
 			<p class="Transitions_Pageviews Transitions_Margin">{$translations.pageviewsInline|translate}</p>
@@ -11,6 +11,7 @@
 				<p class="Transitions_PreviousPages">{$translations.fromPreviousPagesInline|translate}</p>
 				<p class="Transitions_SearchEngines">{$translations.fromSearchEnginesInline|translate}</p>
 				<p class="Transitions_Websites">{$translations.fromWebsitesInline|translate}</p>
+				<p class="Transitions_Campaigns">{$translations.fromCampaignsInline|translate}</p>
 			</div>
 			
 			<div class="Transitions_OutgoingTraffic">
@@ -18,11 +19,7 @@
 				<p class="Transitions_FollowingPages">{$translations.toFollowingPagesInline|translate}</p>
 				<p class="Transitions_Downloads">{$translations.downloadsInline|translate}</p>
 				<p class="Transitions_Outlinks">{$translations.outlinksInline|translate}</p>
-				<p>
-					<span class="Transitions_Exits">{$translations.exitsInline|translate}</span>, 
-					{'Transitions_Including'|translate}<br />
-					<span class="Transitions_Bounces">{$translations.bouncesInline|translate}</span>
-				</p>
+				<p class="Transitions_Exits">{$translations.exitsInline|translate}</p>
 			</div>
 		</div>
 	</div>

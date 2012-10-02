@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ImageGraph.php 6918 2012-09-04 21:44:26Z JulienM $
+ * @version $Id: ImageGraph.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
@@ -12,9 +12,6 @@
 
 class Piwik_ImageGraph extends Piwik_Plugin
 {
-	static private $CONSTANT_ROW_COUNT_REPORT_EXCEPTIONS = array(
-		'Referers_getRefererType',
-	);
 
 	public function getInformation()
 	{
@@ -104,16 +101,12 @@ class Piwik_ImageGraph extends Piwik_Plugin
 		$urlPrefix = "index.php?";
 		foreach($reports as &$report)
 		{
-			$reportModule = $report['module'];
-			$reportAction = $report['action'];
-			$reportUniqueId = $reportModule.'_'.$reportAction;
-
 			$parameters = array();
 			$parameters['module'] = 'API';
 			$parameters['method'] = 'ImageGraph.get';
 			$parameters['idSite'] = $idSite;
-			$parameters['apiModule'] = $reportModule;
-			$parameters['apiAction'] = $reportAction;
+			$parameters['apiModule'] = $report['module'];
+			$parameters['apiAction'] = $report['action'];
 			if(!empty($token_auth))
 			{
 				$parameters['token_auth'] = $token_auth;
@@ -135,24 +128,8 @@ class Piwik_ImageGraph extends Piwik_Plugin
 				$parameters['date'] = $dateForSinglePeriodGraph;
 			}
 			
-			// add the idSubtable if it exists
-			$idSubtable = Piwik_Common::getRequestVar('idSubtable', false);
-			if ($idSubtable !== false)
-			{
-				$parameters['idSubtable'] = $idSubtable;
-			}
-			
 			$report['imageGraphUrl'] = $urlPrefix . Piwik_Url::getQueryStringFromParameters($parameters);
-
-			// thanks to API.getRowEvolution, reports with dimensions can now be plotted using an evolution graph
-			// however, most reports with a fixed set of dimension values are excluded
-			// this is done so Piwik Mobile and Scheduled Reports do not display them
-			if(empty($report['constantRowsCount']) || in_array($reportUniqueId,self::$CONSTANT_ROW_COUNT_REPORT_EXCEPTIONS))
-			{
-				$parameters['period'] = $periodForMultiplePeriodGraph;
-				$parameters['date'] = $dateForMultiplePeriodGraph;
-				$report['imageGraphEvolutionUrl'] = $urlPrefix . Piwik_Url::getQueryStringFromParameters($parameters);
-			}
 		}
+			
 	}
 }

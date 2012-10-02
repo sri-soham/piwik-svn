@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6984 2012-09-14 05:08:27Z matt $
+ * @version $Id: Controller.php 6371 2012-05-29 09:13:39Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_Installation
@@ -450,19 +450,18 @@ class Piwik_Installation_Controller extends Piwik_Controller
 			$this->session->firstWebsiteSetupSuccessMessage = true;
 		}
 		$siteName = $this->session->site_name;
-		$siteName = Piwik_Common::sanitizeInputValue( urldecode($siteName) );
 		$idSite = $this->session->site_idSite;
 
 		// Load the Tracking code and help text from the SitesManager 
 		$viewTrackingHelp = new Piwik_View('SitesManager/templates/DisplayJavascriptCode.tpl');
-		$viewTrackingHelp->displaySiteName = $siteName;
+		$viewTrackingHelp->displaySiteName = urldecode($siteName);
 		$viewTrackingHelp->jsTag = Piwik::getJavascriptCode($idSite, Piwik_Url::getCurrentUrlWithoutFileName());
 		$viewTrackingHelp->idSite = $idSite;		
 		$viewTrackingHelp->piwikUrl = Piwik_Url::getCurrentUrlWithoutFileName();		
 
 		// Assign the html output to a smarty variable
 		$view->trackingHelp = $viewTrackingHelp->render();
-		$view->displaySiteName = $siteName;
+		$view->displaySiteName = urldecode($siteName);
 		
 		$view->showNextStep = true;
 
@@ -849,7 +848,7 @@ class Piwik_Installation_Controller extends Piwik_Controller
 		$infos['protocol'] = Piwik_ProxyHeaders::getProtocolInformation();
 		if(!Piwik::isHttps() && $infos['protocol'] !== null)
 		{
-			$infos['general_infos']['assume_secure_protocol'] = '1';
+			$infos['general_infos']['secure_protocol'] = '1';
 		}
 		if(count($headers = Piwik_ProxyHeaders::getProxyClientHeaders()) > 0)
 		{

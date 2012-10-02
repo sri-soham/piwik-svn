@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Console.php 6594 2012-07-30 09:27:24Z matt $
+ * @version $Id: Console.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * @category Piwik
  * @package Piwik
@@ -147,23 +147,20 @@ class Piwik_DataTable_Renderer_Console extends Piwik_DataTable_Renderer
 						. "- $i [".$columns."] [".$metadata."] [idsubtable = " 
 						. $row->getIdSubDataTable()."]<br />\n";
 			
-			if(!is_null($row->getIdSubDataTable()))
+			if($row->getIdSubDataTable() !== null)
 			{
-				if($row->isSubtableLoaded())
-				{
-					$depth++;
+				$depth++;
+				try{
 					$output.= $this->renderTable( 
 									Piwik_DataTable_Manager::getInstance()->getTable(
 												$row->getIdSubDataTable()
 											),
 											$prefix . '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'
 										);
-					$depth--;
-				} 
-				else
-				{
+				} catch(Exception $e) {
 					$output.= "-- Sub DataTable not loaded<br />\n";
 				}
+				$depth--;
 			}
 			$i++;
 		}

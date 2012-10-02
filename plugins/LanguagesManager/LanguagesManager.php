@@ -95,7 +95,8 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 	function deleteUserLanguage($notification)
 	{
 		$userLogin = $notification->getNotificationObject();
-		Piwik_Query('DELETE FROM ' . Piwik_Common::prefixTable('user_language') . ' WHERE login = ?', $userLogin);
+		$UserLanguage = Piwik_Db_Factory::getDAO('user_language');
+		$UserLanguage->deleteByLogin($userLogin);
 	}
 
 	/**
@@ -103,22 +104,8 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 	 */
 	public function install()
 	{
-		// we catch the exception
-		try{
-			$sql = "CREATE TABLE ". Piwik_Common::prefixTable('user_language')." (
-					login VARCHAR( 100 ) NOT NULL ,
-					language VARCHAR( 10 ) NOT NULL ,
-					PRIMARY KEY ( login )
-					)  DEFAULT CHARSET=utf8 " ;
-			Piwik_Exec($sql);
-		} catch(Exception $e){
-			// mysql code error 1050:table already exists
-			// see bug #153 http://dev.piwik.org/trac/ticket/153
-			if(!Zend_Registry::get('db')->isErrNo($e, '1050'))
-			{
-				throw $e;
-			}
-		}
+		$UserLanguage = Piwik_Db_Factory::getDAO('user_language');
+		$UserLanguage->install();
 	}
 	
 	/**
@@ -126,7 +113,8 @@ class Piwik_LanguagesManager extends Piwik_Plugin
 	 */
 	public function uninstall()
 	{
-		Piwik_DropTables(Piwik_Common::prefixTable('user_language'));
+		$UserLanguage = Piwik_Db_Factory::getDAO('user_language');
+		$UserLanguage->uninstall();
 	}
 
 	/**

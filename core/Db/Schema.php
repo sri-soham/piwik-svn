@@ -79,7 +79,7 @@ class Piwik_Db_Schema
 //			'MSSQL' => array( 'Mssql' ),
 
 			// PostgreSQL
-//			'PDO_PGSQL' => array( 'Pgsql' ),
+			'PGSQL' => array( 'Pgsql' ),
 
 			// IBM DB2
 //			'IBM' => array( 'Ibm' ),
@@ -94,6 +94,10 @@ class Piwik_Db_Schema
 			case 'PDO_MYSQL':
 			case 'MYSQLI':
 				$adapterName = 'MYSQL';
+				break;
+			
+			case 'PDO_PGSQL':
+				$adapterName = 'PGSQL';
 				break;
 
 			case 'PDO_MSSQL':
@@ -138,6 +142,7 @@ class Piwik_Db_Schema
 		{
 			$config = Piwik_Config::getInstance();
 			$dbInfos = $config->database;
+
 			if(isset($dbInfos['schema']))
 			{
 				$schemaName = $dbInfos['schema'];
@@ -185,6 +190,16 @@ class Piwik_Db_Schema
 	public function getTablesCreateSql()
 	{
 		return $this->getSchema()->getTablesCreateSql();
+	}
+
+	/**
+	 * Get the SQL to create the indexes
+	 *
+	 * @return array array of string containing SQL
+	 */
+	public function getIndexesCreateSql()
+	{
+		return $this->getSchema()->getIndexesCreateSql();
 	}
 
 	/**

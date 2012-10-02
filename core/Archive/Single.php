@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Single.php 6604 2012-07-31 06:14:12Z matt $
+ * @version $Id: Single.php 6353 2012-05-28 17:29:23Z SteveG $
  * 
  * 
  * @category Piwik
@@ -295,12 +295,9 @@ class Piwik_Archive_Single extends Piwik_Archive
 			break;
 		}
 
-		$db = Zend_Registry::get('db');
-		$row = $db->fetchRow("SELECT value, ts_archived
-								FROM $table
-								WHERE idarchive = ? AND name = ?",
-								array( $this->idArchive , $name) 
-							);
+		$Generic = Piwik_Db_Factory::getGeneric();
+		$Archive = Piwik_Db_Factory::getDAO('archive');
+		$row = $Archive->getByIdarchiveName($table, $this->idArchive, $name);
 
 		$value = $tsArchived = false;
 		if (is_array($row))
@@ -325,7 +322,7 @@ class Piwik_Archive_Single extends Piwik_Archive
 		}
 		
 		// uncompress when selecting from the BLOB table
-		if($typeValue == 'blob' && $db->hasBlobDataType())
+		if($typeValue == 'blob' && $Generic->hasBlobDataType())
 		{
 			$value = $this->uncompress($value);
 		}
@@ -362,10 +359,8 @@ class Piwik_Archive_Single extends Piwik_Archive
 			{
 				$subDataTableLoaded = $this->getDataTable($name, $subTableID);
 				
-				$row->setSubtable( $subDataTableLoaded );
-				
 				$this->loadSubDataTables($name, $subDataTableLoaded, $addMetadataSubtableId);
-			
+
 				// we edit the subtable ID so that it matches the newly table created in memory
 				// NB: we dont overwrite the datatableid in the case we are displaying the table expanded.
 				if($addMetadataSubtableId)
@@ -373,6 +368,7 @@ class Piwik_Archive_Single extends Piwik_Archive
 					// this will be written back to the column 'idsubdatatable' just before rendering, see Renderer/Php.php
 					$row->addMetadata('idsubdatatable_in_db', $row->getIdSubDataTable());
 				}
+				$row->setSubtable( $subDataTableLoaded );
 			}
 		}
 	}
@@ -384,8 +380,8 @@ class Piwik_Archive_Single extends Piwik_Archive
 	 */
 	public function freeBlob( $name )
 	{
-		unset($this->blobCached[$name]);
 		$this->blobCached[$name] = null; 
+		unset($this->blobCached[$name]);
 	}
 	
 	protected function uncompress($data)
@@ -407,16 +403,14 @@ class Piwik_Archive_Single extends Piwik_Archive
 
 		$tableBlob = $this->archiveProcessing->getTableArchiveBlobName();
 
-		$db = Zend_Registry::get('db');
-		$hasBlobs = $db->hasBlobDataType();
-		$query = $db->query("SELECT value, name
-								FROM $tableBlob
-								WHERE idarchive = ?
-									AND name LIKE '$name%'",	
-								array( $this->idArchive ) 
-							);
+		$Generic = Piwik_Db_Factory::getGeneric();
+		$hasBlobs = $Generic->hasBlobDataType();
+		$Archive = Piwik_Db_Factory::getDAO('archive');
+		$rows = $Archive->getAllByIdarchiveNameLike(
+					$tableBlob, $this->idArchive, $name
+				);
 
-		while($row = $query->fetch())
+		foreach ($rows as $row)
 		{
 			$value = $row['value'];
 			$name = $row['name'];
@@ -526,7 +520,7 @@ class Piwik_Archive_Single extends Piwik_Archive
 		{
 			// This is not expected, but somehow happens in some unknown cases and very rarely.
 			// Do not throw error in this case
-			//throw new Exception("not expected");
+			// throw new Exception("not expected");
 			return new Piwik_DataTable();
 		}
 	

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UsersManager.php 6900 2012-09-02 11:14:40Z capedfuzz $
+ * @version $Id: UsersManager.php 6243 2012-05-02 22:08:23Z SteveG $
  * 
  * @category Piwik_Plugins
  * @package Piwik_UsersManager
@@ -17,9 +17,6 @@
  */
 class Piwik_UsersManager extends Piwik_Plugin
 {
-	const PASSWORD_MIN_LENGTH = 6;
-	const PASSWORD_MAX_LENGTH = 26;
-	
 	/**
 	 * Plugin information
 	 *
@@ -120,37 +117,5 @@ class Piwik_UsersManager extends Piwik_Plugin
 							array('module' => 'UsersManager', 'action' => 'userSettings'),
 							Piwik::isUserHasSomeViewAccess(),
 							$order = 1);
-	}
-
-	/**
-	 * Returns true if the password is complex enough (at least 6 characters and max 26 characters)
-	 * 
-	 * @param string email
-	 * @return bool
-	 */
-	public static function isValidPasswordString( $input )
-	{
-		if(!Piwik::isChecksEnabled()
-			&& !empty($input))
-		{
-			return true;
-		}
-		$l = strlen($input);
-		return $l >= self::PASSWORD_MIN_LENGTH && $l <= self::PASSWORD_MAX_LENGTH;
-	}
-	
-	public static function checkPassword($password)
-	{
-		if(!self::isValidPasswordString($password))
-		{
-			throw new Exception(Piwik_TranslateException('UsersManager_ExceptionInvalidPassword', array(self::PASSWORD_MIN_LENGTH, self::PASSWORD_MAX_LENGTH)));
-		}
-	}
-	
-	public static function getPasswordHash($password)
-	{
-		// if change here, should also edit the installation process 
-		// to change how the root pwd is saved in the config file
-		return md5($password);
 	}
 }
