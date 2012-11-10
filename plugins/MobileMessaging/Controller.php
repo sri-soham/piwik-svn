@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: Controller.php 6738 2012-08-14 00:27:01Z matt $
  *
  * @category Piwik_Plugins
  * @package Piwik_MobileMessaging
@@ -37,11 +37,10 @@ class Piwik_MobileMessaging_Controller extends Piwik_Controller_Admin
 		$view->delegatedManagement = $mobileMessagingAPI->getDelegatedManagement();
 		$view->credentialSupplied = $mobileMessagingAPI->areSMSAPICredentialProvided();
 		$view->accountManagedByCurrentUser = $view->isSuperUser || $view->delegatedManagement;
-
+		$view->strHelpAddPhone = Piwik_Translate('MobileMessaging_Settings_PhoneNumbers_HelpAdd', array( Piwik_Translate('UserSettings_SubmenuSettings'), Piwik_Translate('MobileMessaging_SettingsMenu') ) );
 		if($view->credentialSupplied && $view->accountManagedByCurrentUser)
 		{
 			$view->provider = $mobileMessagingAPI->getSMSProvider();
-			$view->APIUsername = $mobileMessagingAPI->getAPIUsername();
 			$view->creditLeft = $mobileMessagingAPI->getCreditLeft();
 		}
 

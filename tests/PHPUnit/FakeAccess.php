@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FakeAccess.php 6499 2012-06-24 14:50:58Z SteveG $
+ * @version $Id: FakeAccess.php 6974 2012-09-12 04:57:40Z matt $
  */
 /**
  * FakeAccess for UnitTests
@@ -15,7 +15,15 @@ class FakeAccess
     public static $idSitesAdmin = array();
     public static $idSitesView = array();
     public static $identity = 'superUserLogin';
-    
+
+    public function __construct()
+    {
+        self::$superUser    = false;
+        self::$idSitesAdmin = array();
+        self::$idSitesView  = array();
+        self::$identity     = 'superUserLogin';
+    }
+
     public static function setIdSitesAdmin($ids)
     {
         self::$superUser = false;
@@ -54,10 +62,7 @@ class FakeAccess
             $websitesAccess=Piwik_SitesManager_API::getInstance()->getAllSitesId();
         }
         
-        if(!is_array($idSites))
-        {
-            $idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
-        }
+        $idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
         foreach($idSites as $idsite)
         {
             if(!in_array($idsite, $websitesAccess))
@@ -81,8 +86,21 @@ class FakeAccess
         
         if(!is_array($idSites))
         {
-            $idSites=array($idSites);
+			if($idSites == 'all')
+			{
+				$idSites = Piwik_SitesManager_API::getInstance()->getAllSitesId();
+			}
+			else
+			{
+				$idSites = explode(',', $idSites);
+			}
         }
+        
+        if (empty($websitesAccess))
+        {
+        	throw new Exception("checkUserHasViewAccess Fake exception // string not to be tested");
+        }
+        
         foreach($idSites as $idsite)
         {
             if(!in_array($idsite, $websitesAccess))

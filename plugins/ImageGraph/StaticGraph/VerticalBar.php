@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VerticalBar.php 6112 2012-03-25 10:04:17Z JulienM $
+ * @version $Id: VerticalBar.php 7026 2012-09-20 06:36:09Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph_StaticGraph
@@ -22,10 +22,11 @@ class Piwik_ImageGraph_StaticGraph_VerticalBar extends Piwik_ImageGraph_StaticGr
 	public function renderGraph()
 	{
 		$this->initGridChart(
-			$displayVerticalGridLines = false, 
-			$drawCircles = false,
+			$displayVerticalGridLines = false,
+			$bulletType = LEGEND_FAMILY_BOX,
 			$horizontalGraph = false,
-			$showTicks = true
+			$showTicks = true,
+			$verticalLegend = false
 		);
 
 		$this->pImage->drawBarChart(

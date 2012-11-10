@@ -46,7 +46,6 @@ $translations = array(
 	'General_Name' => 'Nazwa',
 	'General_Value' => 'Parametr',
 	'General_Total' => 'Ogólnie',
-	'General_TotalVisitsActionsRevenue' => '(Ilość użytkowników: %s, Ilość odsłon: %s,  Przychód: %s)',
 	'General_AverageOrderValue' => 'Średnia wartość zamówienia',
 	'General_PurchasedProducts' => 'Zakupione produkty',
 	'General_EcommerceOrders' => 'Zamówienia e-commerce',
@@ -751,30 +750,9 @@ $translations = array(
 	'Login_LogIn' => 'Zaloguj się',
 	'Login_Logout' => 'Wyloguj się',
 	'Login_LostYourPassword' => 'Nie pamiętam hasła',
-	'Login_RemindPassword' => 'Wyślij sekwencję kasowania hasła',
-	'Login_PasswordResetToken' => 'Token kasowania hasła',
-	'Login_PasswordReminder' => 'Proszę, wprowadź nazwę użytkownika lub adres e-mail. Otrzymasz e-mail z informacją pomocną do zmiany twojego hasła.',
 	'Login_PasswordsDoNotMatch' => 'Hasła nie pasują.',
-	'Login_PasswordSuccessfullyChanged' => 'Hasło zmieniono pomyślnie!',
 	'Login_InvalidUsernameEmail' => 'Błędna nazwa użytkownika i/lub adres e-mail',
 	'Login_InvalidOrExpiredToken' => 'Token jest błędny lub już wygasł.',
-	'Login_MailTopicPasswordRecovery' => 'Odzyskiwanie hasła',
-	'Login_MailPasswordRecoveryBody' => 'Cześć %1$s,
-
-Żądanie zmiany hasła zostało otrzymane z %2$s.
-
-Aby zmienić hasło:
-
-1) Przejdź do formularza zmiany haseł w:
-	%3$s
-
-2) Wprowadź następujące token:
-	%4$s
-
-3) Wypełnij formularz (wpisując nowe hasło dwa razy) i zatwierdź zmianę.
-
-Uwaga: token ten utraci swoją ważność w ciągu 24 godzin.',
-	'Login_PasswordSent' => 'Informacje potrzebne do zmiany hasła zostały wysłane. Sprawdź zawartość skrzynki e-mail.',
 	'Login_ContactAdmin' => 'Prawdopodobny powód: twój host mógł wyłączyć działanie funkcji mail(). <br />Skontaktuj się w tej sprawie ze swoim administratorem statystyk Piwik.',
 	'Login_ExceptionPasswordMD5HashExpected' => 'Oczekiwanym parametrem hasła jest hash z MD5 uzyskany z hasła.',
 	'Login_ExceptionInvalidSuperUserAuthenticationMethod' => 'Osoba o uprawnieniach Super Użytkownika nie może być uwierzytelniona stosując mechanizm \'%s\'.',
@@ -914,8 +892,6 @@ Uwaga: token ten utraci swoją ważność w ciągu 24 godzin.',
 	'UserCountry_DistinctCountries' => '%s wyróżniających się krajów',
 	'UserCountry_Location' => 'Położenie',
 	'UserCountry_SubmenuLocations' => 'Położenia',
-	'UserCountry_WidgetContinents' => 'Kontynenty odwiedzających',
-	'UserCountry_WidgetCountries' => 'Kraje pochodzenia odwiedzających',
 	'UserCountry_country_ac' => 'Wyspy Wniebowstąpienia',
 	'UserCountry_country_ad' => 'Andora',
 	'UserCountry_country_ae' => 'Emiraty Arabskie',
@@ -1252,7 +1228,6 @@ Uwaga: token ten utraci swoją ważność w ciągu 24 godzin.',
 	'UsersManager_MenuUsers' => 'Użytkownicy',
 	'UsersManager_MenuUserSettings' => 'Konfiguracja użytkownika',
 	'UsersManager_MenuAnonymousUserSettings' => 'Konfiguracja użytkownika anonimowego',
-	'UsersManager_NoteNoAnonymousUserAccessSettingsWontBeUsed' => 'Uwaga: nie posiadasz żadnej strony do której użytkownik anonimowy miałby dostęp, więc następujące ustawienia nie zostaną wykorzytane.',
 	'UsersManager_WhenUsersAreNotLoggedInAndVisitPiwikTheyShouldAccess' => 'Kiedy użytkownicy nie są zalogowani i odwiedzają Piwik, powinny wyświetlić się',
 	'UsersManager_ChangePassword' => 'Zmiana hasła',
 	'UsersManager_IfYouWouldLikeToChangeThePasswordTypeANewOne' => 'Jeśli chcesz zmienić hasło, wpisz nowe. W innym przypadku pozostaw puste pole.',
@@ -1323,7 +1298,6 @@ Uwaga: token ten utraci swoją ważność w ciągu 24 godzin.',
 	'VisitsSummary_MaxNbActions' => '%s działań maksymalnie przypadających na jedną wizytę',
 	'VisitsSummary_NbActionsPerVisit' => '%s działań na wizytę',
 	'VisitsSummary_NbVisitsBounced' => '%s odwiedzin powróciło (opuszczając serwis po jednej stronie)',
-	'VisitsSummary_EvolutionOverLastPeriods' => 'Zmiany w ciągu ostatnich %s',
 	'VisitsSummary_GenerateTime' => '%s sekund do wygenerowania strony',
 	'VisitsSummary_GenerateQueries' => '%s wykonanych zapytań',
 	'VisitsSummary_WidgetLastVisits' => 'Wykres z ostatnich odwiedzin',

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: API.php 6959 2012-09-10 07:37:01Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -71,6 +71,9 @@ class Piwik_CoreAdminHome_API
 	{
 		Piwik::checkUserIsSuperUser();
 		$idSites = Piwik_Site::getIdSitesFromIdSitesString($idSites);
+		if(empty($idSites)) {
+			throw new Exception("Specify a value for &idSites=");
+		}
 		// Ensure the specified dates are valid
 		$toInvalidate = $invalidDates = array();
 		$dates = explode(',', $dates);
@@ -95,15 +98,7 @@ class Piwik_CoreAdminHome_API
 
 		// Lookup archive tables
 		$tables = Piwik::getTablesInstalled();
-		$archiveTables = array();
-		foreach($tables as $table)
-		{
-			if(strpos($table, 'archive_') !== false)
-			{
-				$archiveTables[] = $table;
-			}
-		}
-
+		$archiveTables = Piwik::getTablesArchivesInstalled();
 		
 		// If using the feature "Delete logs older than N days"...
 		$logsAreDeletedBeforeThisDate = Piwik_Config::getInstance()->Deletelogs['delete_logs_schedule_lowest_interval'];

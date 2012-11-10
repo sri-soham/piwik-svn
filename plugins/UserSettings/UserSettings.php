@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserSettings.php 6362 2012-05-29 05:17:56Z capedfuzz $
+ * @version $Id: UserSettings.php 6848 2012-08-20 23:18:38Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_UserSettings
@@ -67,7 +67,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 		
 		// browser version
 		array( 	'UserSettings_VisitorSettings',
-				'UserSettings_ColumnBrowserVersion',
+				'UserSettings_WidgetBrowserVersion',
 				'UserSettings',
 				'getBrowserVersion',
 				'UserSettings_ColumnBrowserVersion',
@@ -128,7 +128,7 @@ class Piwik_UserSettings extends Piwik_Plugin
 		
 		// operating system family
 		array(	'UserSettings_VisitorSettings',
-				'UserSettings_OperatingSystemFamily',
+				'UserSettings_WidgetOperatingSystemFamily',
 				'UserSettings',
 				'getOSFamily',
 				'UserSettings_OperatingSystemFamily',

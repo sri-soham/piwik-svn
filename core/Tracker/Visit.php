@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Visit.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: Visit.php 6974 2012-09-12 04:57:40Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -91,7 +91,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 		Piwik_PostEvent('Tracker.setRequest.idSite', $idsite, $requestArray);
 		if($idsite <= 0)
 		{
-			Piwik_Tracker_ExitWithException(new Exception('Invalid idSite'));
+			throw new Exception('Invalid idSite');
 		}
 		$this->idsite = $idsite;
 
@@ -280,7 +280,8 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 										$refererTimestamp,
 										$refererUrl,
 										$refererCampaignName,
-										$refererCampaignKeyword
+										$refererCampaignKeyword,
+										$this->getBrowserLanguage()
 			);
 		}
 		unset($this->goalManager);
@@ -640,7 +641,18 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 	 */
 	protected function getUserAgent()
 	{
-		return @$_SERVER['HTTP_USER_AGENT'];
+		$default = @$_SERVER['HTTP_USER_AGENT'];
+		return Piwik_Common::getRequestVar('ua', is_null($default) ? false : $default, 'string', $this->request);
+	}
+	
+	/**
+	 * Returns the language the visitor is viewing.
+	 * 
+	 * @return string browser language code, eg. "en-gb,en;q=0.5"
+	 */
+	protected function getBrowserLanguage()
+	{
+	    return Piwik_Common::getRequestVar('lang', Piwik_Common::getBrowserLanguage(), 'string', $this->request);
 	}
 
 	/**
@@ -721,7 +733,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 			$toRecord = Piwik_Common::getRequestVar($parameterForceRecord, false, 'int', $this->request);
 			if(!$toRecord)
 			{
-				printDebug($_SERVER['REQUEST_METHOD'].' parameter '.$parameterForceRecord.' not found in URL, request excluded');
+				printDebug(@$_SERVER['REQUEST_METHOD'].' parameter '.$parameterForceRecord.' not found in URL, request excluded');
 				$excluded = true;
 				printDebug("'$parameterForceRecord' parameter not found.");
 			}
@@ -753,6 +765,18 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 			{
 				printDebug("IP excluded.");
 			}
+		}
+		
+		if(!$excluded)
+		{
+			if( (isset($_SERVER["HTTP_X_PURPOSE"]) 
+					&& in_array($_SERVER["HTTP_X_PURPOSE"], array("preview", "instant")))
+			 || (isset($_SERVER['HTTP_X_MOZ'])
+			 		&& $_SERVER['HTTP_X_MOZ'] == "prefetch"))
+	 		{
+	 			$excluded = true;
+	 			printDebug("Prefetch request detected, not a real visit so we Ignore this visit/pageview");
+	 		}
 		}
 
 		if($excluded)
@@ -1077,7 +1101,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 		$plugin_Silverlight		= Piwik_Common::getRequestVar( 'ag', 0, 'int', $this->request);
 		$plugin_Cookie 			= Piwik_Common::getRequestVar( 'cookie', 0, 'int', $this->request);
 
-		$userAgent		= Piwik_Common::sanitizeInputValues($this->getUserAgent());
+		$userAgent		= $this->getUserAgent();
 		$aBrowserInfo	= UserAgentParser::getBrowser($userAgent);
 
 		$browserName	= ($aBrowserInfo !== false && $aBrowserInfo['id'] !== false) ? $aBrowserInfo['id'] : 'UNK';
@@ -1088,7 +1112,7 @@ class Piwik_Tracker_Visit implements Piwik_Tracker_Visit_Interface
 
 		$resolution		= Piwik_Common::getRequestVar('res', 'unknown', 'string', $this->request);
 
-		$browserLang	= Piwik_Common::getBrowserLanguage();
+		$browserLang	= $this->getBrowserLanguage();
 
 		$configurationHash = $this->getConfigHash(
 												$os,
@@ -1333,9 +1357,11 @@ class Piwik_Tracker_Visit_Referer
 			$refererUrl = '';
 		}
 		
+		$currentUrl = Piwik_Tracker_Action::cleanupUrl($currentUrl);
+		
 		$this->refererUrl = $refererUrl;
 		$this->refererUrlParse = @parse_url($this->refererUrl);
-		$this->currentUrlParse = @parse_url(Piwik_Common::unsanitizeInputValue($currentUrl));
+		$this->currentUrlParse = @parse_url($currentUrl);
 		$this->typeRefererAnalyzed = Piwik_Common::REFERER_TYPE_DIRECT_ENTRY;
 		$this->nameRefererAnalyzed = '';
 		$this->keywordRefererAnalyzed = '';

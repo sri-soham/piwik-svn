@@ -6,7 +6,7 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
  * @version $Id: SegmentExpressionTest.php 6508 2012-07-04 20:21:03Z SteveG $
  */
-class SegmentExpressionTest extends PHPUnit_Framework_TestCase
+class SegmentExpressionTest extends DatabaseTestCase
 {
     /**
      * Dataprovider for testSegmentSqlSimpleNoOperation

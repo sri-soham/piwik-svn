@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Top.php 6385 2012-05-29 21:36:24Z SteveG $
+ * @version $Id: Top.php 6828 2012-08-18 22:48:37Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik_Menu
@@ -36,8 +36,9 @@ class Piwik_Menu_Top extends Piwik_Menu_Abstract
 	 * @param string   $data
 	 * @param boolean  $displayedForCurrentUser
 	 * @param int      $order
+	 * @param string   $tooltip Tooltip to display.
 	 */
-	public function addHtml($menuName, $data, $displayedForCurrentUser, $order)
+	public function addHtml($menuName, $data, $displayedForCurrentUser, $order, $tooltip)
 	{
 		if($displayedForCurrentUser)
 		{
@@ -46,6 +47,7 @@ class Piwik_Menu_Top extends Piwik_Menu_Abstract
 				$this->menu[$menuName]['_html'] = $data;
 				$this->menu[$menuName]['_order'] = $order;
 				$this->menu[$menuName]['_hasSubmenu'] = false;
+				$this->menu[$menuName]['_tooltip'] = $tooltip;
 			}
 		}
 	}
@@ -83,16 +85,18 @@ function Piwik_GetTopMenu()
  * @param boolean  $displayedForCurrentUser
  * @param int      $order
  * @param bool     $isHTML
+ * @param string   $tooltip Tooltip to display.
  */
-function Piwik_AddTopMenu( $topMenuName, $data, $displayedForCurrentUser = true, $order = 10, $isHTML = false)
+function Piwik_AddTopMenu( $topMenuName, $data, $displayedForCurrentUser = true, $order = 10, $isHTML = false,
+							$tooltip = false)
 {
 	if($isHTML)
 	{
-		Piwik_Menu_Top::getInstance()->addHtml($topMenuName, $data, $displayedForCurrentUser, $order);
+		Piwik_Menu_Top::getInstance()->addHtml($topMenuName, $data, $displayedForCurrentUser, $order, $tooltip);
 	}
 	else
 	{
-		Piwik_Menu_Top::getInstance()->add($topMenuName, null, $data, $displayedForCurrentUser, $order);
+		Piwik_Menu_Top::getInstance()->add($topMenuName, null, $data, $displayedForCurrentUser, $order, $tooltip);
 	}
 }
 

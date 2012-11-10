@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Action.php 6486 2012-06-20 21:01:20Z SteveG $
+ * @version $Id: Action.php 6792 2012-08-16 13:59:58Z EZdesign $
  * 
  * @category Piwik
  * @package Piwik
@@ -59,6 +59,57 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 	private $actionUrl;
 	
 	static private $queryParametersToExclude = array('phpsessid', 'jsessionid', 'sessionid', 'aspsessionid', 'fb_xd_fragment', 'fb_comment_id');
+
+	/**
+	 * Map URL prefixes to integers.
+	 * @see self::normalizeUrl(), self::reconstructNormalizedUrl()
+	 */
+	static private $urlPrefixMap = array(
+		'http://www.' => 1,
+		'http://' => 0,
+		'https://www.' => 3,
+		'https://' => 2
+	);
+
+	/**
+	 * Extract the prefix from a URL.
+	 * Return the prefix ID and the rest.
+	 * 
+	 * @param string $url
+	 * @return array
+	 */
+	static public function normalizeUrl($url)
+	{
+		foreach (self::$urlPrefixMap as $prefix => $id)
+		{
+			if (strtolower(substr($url, 0, strlen($prefix))) == $prefix)
+			{
+				return array(
+					'url' => substr($url, strlen($prefix)),
+					'prefixId' => $id
+				);
+			}
+		}
+		return array('url' => $url, 'prefixId' => null);
+	}
+
+	/**
+	 * Build the full URL from the prefix ID and the rest.
+	 * 
+	 * @param string $url
+	 * @param integer $prefixId
+	 * @return string
+	 */
+	static public function reconstructNormalizedUrl($url, $prefixId)
+	{
+		$map = array_flip(self::$urlPrefixMap);
+		if ($prefixId !== null && isset($map[$prefixId]))
+		{
+			return $map[$prefixId].$url;
+		}
+		return $url;
+	}
+	
 
 	/**
 	 * Set request parameters
@@ -138,11 +189,47 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 		$this->actionUrl = $url;
 	}
 	
+	/**
+	 * Converts Matrix URL format 
+	 * from http://example.org/thing;paramA=1;paramB=6542
+	 * to   http://example.org/thing?paramA=1&paramB=6542
+	 * 
+	 * @param string $url
+	 */
+	static public function convertMatrixUrl($originalUrl)
+	{
+		$posFirstSemiColon = strpos($originalUrl,";");
+		if($posFirstSemiColon === false)
+		{
+			return $originalUrl;
+		}
+		$posQuestionMark = strpos($originalUrl,"?");
+	    $replace = ($posQuestionMark === false);
+	    if ($posQuestionMark > $posFirstSemiColon) 
+	    {
+	    	$originalUrl = substr_replace($originalUrl,";",$posQuestionMark,1);
+	    	$replace = true;
+	    }
+	    if($replace) 
+	    { 
+	    	$originalUrl = substr_replace($originalUrl,"?",strpos($originalUrl,";"),1);
+	    	$originalUrl = str_replace(";","&",$originalUrl);
+	    }
+	    return $originalUrl;
+	}
+	
+	static public function cleanupUrl($url)
+	{
+		$url = Piwik_Common::unsanitizeInputValue($url);
+		$url = self::cleanupString($url);
+		$url = self::convertMatrixUrl($url);
+		return $url;
+	}
+
 	static public function excludeQueryParametersFromUrl($originalUrl, $idSite)
 	{
 		$website = Piwik_Common::getCacheWebsiteAttributes( $idSite );
-		$originalUrl = Piwik_Common::unsanitizeInputValue($originalUrl);
-		$originalUrl = self::cleanupString($originalUrl);
+		$originalUrl = self::cleanupUrl($originalUrl);
 		$parsedUrl = @parse_url($originalUrl);
 		if(empty($parsedUrl['query']))
 		{
@@ -170,6 +257,9 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 		$separator = '&';
 		foreach($queryParameters as $name => $value)
 		{
+			// decode encoded square brackets
+            $name = str_replace(array('%5B','%5D'),array('[',']'),$name);
+
 			if(!in_array(strtolower($name), $parametersToExclude))
 			{
 				if (is_array($value))
@@ -344,6 +434,7 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 			'idRefererActionName' => $idRefererActionName, 
 			'timeSpentRefererAction' => $timeSpentRefererAction, 
 		); 
+		printDebug($insertWithoutNulls);
 
 		/* 
 		* send the Action object ($this)  and the list of ids ($info) as arguments to the event 

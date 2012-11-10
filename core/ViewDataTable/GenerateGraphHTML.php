@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: GenerateGraphHTML.php 6358 2012-05-29 02:08:36Z capedfuzz $
+ * @version $Id: GenerateGraphHTML.php 6596 2012-07-30 20:01:36Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -23,6 +23,14 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	protected $width = '100%';
 	protected $height = 250;
 	protected $graphType = 'unknown';
+	
+	/**
+	 * Parameters to send to GenerateGraphData instance. Parameters are passed
+	 * via the $_GET array.
+	 * 
+	 * @var array
+	 */
+	protected $generateGraphDataParams = array();
 
 	/**
 	 * @see Piwik_ViewDataTable::init()
@@ -75,6 +83,14 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	public function setParametersToModify($array)
 	{
 		$this->parametersToModify = array_merge($this->parametersToModify, $array);
+	}
+	
+	/**
+	 * Show every x-axis tick instead of just every other one.
+	 */
+	public function showAllTicks()
+	{
+		$this->generateGraphDataParams['show_all_ticks'] = 1;
 	}
 	
 	/**
@@ -151,8 +167,9 @@ abstract class Piwik_ViewDataTable_GenerateGraphHTML extends Piwik_ViewDataTable
 	protected function getGraphData()
 	{
 		$saveGet = $_GET;
-
-		foreach($this->parametersToModify as $key => $val)
+		
+		$params = array_merge($this->generateGraphDataParams, $this->parametersToModify);
+		foreach($params as $key => $val)
 		{
 			// We do not forward filter data to the graph controller.
 			// This would cause the graph to have filter_limit=5 set by default,

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Range.php 6385 2012-05-29 21:36:24Z SteveG $
+ * @version $Id: Range.php 7068 2012-09-27 04:45:55Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -43,7 +43,7 @@ class Piwik_Period_Range extends Piwik_Period
 		//"30 Dec 08 - 26 Feb 09"
 		$dateStart = $this->getDateStart();
 		$dateEnd = $this->getDateEnd();
-		$template = "%day% %shortMonth% %shortYear%";
+		$template = Piwik_Translate('CoreHome_ShortDateFormatWithYear');
 		$shortDateStart = $dateStart->getLocalized($template);
 		$shortDateEnd = $dateEnd->getLocalized($template);
 		$out = "$shortDateStart - $shortDateEnd";
@@ -130,11 +130,11 @@ class Piwik_Period_Range extends Piwik_Period
 			break;
 			
 			case 'week':
-				$lastN = min( $lastN, 5*52 );
+				$lastN = min( $lastN, 10*52 );
 			break;
 			
 			case 'month':
-				$lastN = min( $lastN, 5*12 );
+				$lastN = min( $lastN, 10*12 );
 			break;
 			
 			case 'year':
@@ -195,11 +195,11 @@ class Piwik_Period_Range extends Piwik_Period
 				$endDate = self::removePeriod($period, $defaultEndDate, 1);
 			}		
 			
+			$lastN = $this->getMaxN($lastN);
+			
 			// last1 means only one result ; last2 means 2 results so we remove only 1 to the days/weeks/etc
 			$lastN--;
 			$lastN = abs($lastN);
-			
-			$lastN = $this->getMaxN($lastN);
 			
 			$startDate = self::removePeriod($period, $endDate, $lastN);
 		}
@@ -298,6 +298,7 @@ class Piwik_Period_Range extends Piwik_Period
 				// We don't use the month if 
 				// the end day is in this month, is before today, and month not finished
 				&& !($endDate->isEarlier($this->today)
+					&& $this->today->toString('Y') == $endOfMonth->toString('Y')
 					&& $this->today->compareMonth($endOfMonth) == 0)
 			)
 			{
@@ -356,6 +357,9 @@ class Piwik_Period_Range extends Piwik_Period
 		$arrayPeriods= array();
 		$endSubperiod = Piwik_Period::factory($period, $endDate);
 		$arrayPeriods[] = $endSubperiod;
+		
+		// set end date to start of end period since we're comparing against start date.
+		$endDate = $endSubperiod->getDateStart();
 		while($endDate->isLater($startDate) )
 		{
 			$endDate = self::removePeriod($period, $endDate, 1);

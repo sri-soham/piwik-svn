@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: MultiSites.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: MultiSites.php 6828 2012-08-18 22:48:37Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_MultiSites
@@ -79,7 +79,9 @@ class Piwik_MultiSites extends Piwik_Plugin
 
 	public function addTopMenu()
 	{
-		Piwik_AddTopMenu('General_MultiSitesSummary', array('module' => 'MultiSites', 'action' => 'index'), true, 3);
+		$urlParams = array('module' => 'MultiSites', 'action' => 'index');
+		$tooltip = Piwik_Translate('MultiSites_TopLinkTooltip');
+		Piwik_AddTopMenu('General_MultiSitesSummary', $urlParams, true, 3, $isHTML = false, $tooltip);
 	}
 
 	/**

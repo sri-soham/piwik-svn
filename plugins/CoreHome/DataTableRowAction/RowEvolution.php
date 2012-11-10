@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: RowEvolution.php 6421 2012-05-31 10:54:39Z matt $
+ * @version $Id: RowEvolution.php 7075 2012-09-28 03:07:18Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -70,7 +70,7 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 	 * @param Piwik_Date $date ($this->date from controller)
 	 * @throws Exception
 	 */
-	public function __construct($idSite, $date)
+	public function __construct($idSite, $date, $graphType = null)
 	{
 		$this->apiMethod = Piwik_Common::getRequestVar('apiMethod', '', 'string');
 		if (empty($this->apiMethod)) throw new Exception("Parameter apiMethod not set.");
@@ -83,16 +83,14 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 		if (empty($this->period)) throw new Exception("Parameter period not set.");
 		
 		$this->idSite = $idSite;
+		$this->graphType = $graphType;
 		
 		if ($this->period != 'range')
 		{
 			// handle day, week, month and year: display last X periods
 			$end = $date->toString();
-			if ($this->period == 'year') $start = $date->subYear(10)->toString();
-			else if ($this->period == 'month') $start = $date->subMonth(30)->toString();
-			else if ($this->period == 'week') $start = $date->subWeek(30)->toString();
-			else $start = $date->subDay(30)->toString();
-			$this->date = $start.','.$end;
+			list($this->date, $lastN) =
+				Piwik_ViewDataTable_GenerateGraphHTML_ChartEvolution::getDateRangeAndLastN($this->period, $end);
 		}
 		$this->segment = Piwik_Common::getRequestVar('segment', '', 'string');
 		
@@ -180,18 +178,15 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 	 */
 	public function getRowEvolutionGraph()
 	{
-		// Not ideal to overwrite _GET FIXME
-		// Useful for "Export" buttons under graphs to export the data displayed in graph
-		if(!empty($this->date))
-		{
-			$_GET['date'] = $this->date;
-		}
-		
 		// set up the view data table
 		$view = Piwik_ViewDataTable::factory($this->graphType);
 		$view->setDataTable($this->dataTable);
 		$view->init('CoreHome', 'getRowEvolutionGraph', $this->apiMethod);
-		$view->setColumnsToDisplay(array_keys($this->graphMetrics));
+
+		if(!empty($this->graphMetrics)) // In row Evolution popover, this is empty
+		{
+			$view->setColumnsToDisplay(array_keys($this->graphMetrics));
+		}
 		$view->hideAllViewsIcons();
 		
 		foreach ($this->availableMetrics as $metric => $metadata)
@@ -224,46 +219,39 @@ class Piwik_CoreHome_DataTableRowAction_RowEvolution
 			$max = isset($metricData['max']) ? $metricData['max'] : 0;
 			$min = isset($metricData['min']) ? $metricData['min'] : 0;
 			$change = isset($metricData['change']) ? $metricData['change'] : false;
-			
-			if ($min == $max)
+
+			$unit = Piwik_API_API::getUnit($metric, $this->idSite);
+			$min .= $unit;
+			$max .= $unit;
+
+			$details = Piwik_Translate('RowEvolution_MetricBetweenText', array($min, $max));
+
+			if ($change !== false)
 			{
-				$details = false;
-			}
-			else
-			{
-				$unit = Piwik_API_API::getUnit($metric, $this->idSite);
-				$min .= $unit;
-				$max .= $unit;
-				
-				$details = Piwik_Translate('RowEvolution_MetricBetweenText', array($min, $max));
-				
-				if ($change !== false)
+				$lowerIsBetter = Piwik_API_API::isLowerValueBetter($metric);
+				if (substr($change, 0, 1) == '+')
 				{
-					$lowerIsBetter = Piwik_API_API::isLowerValueBetter($metric);
-					if (substr($change, 0, 1) == '+')
-					{
-						$changeClass = $lowerIsBetter ? 'bad' : 'good';
-						$changeImage = $lowerIsBetter ? 'arrow_up_red' : 'arrow_up';
-					}
-					else if (substr($change, 0, 1) == '-')
-					{
-						$changeClass = $lowerIsBetter ? 'good' : 'bad';
-						$changeImage = $lowerIsBetter ? 'arrow_down_green' : 'arrow_down';
-					}
-					else
-					{
-						$changeClass = 'neutral';
-						$changeImage = false;
-					}
-					
-					$change = '<span class="'.$changeClass.'">'
-						.($changeImage ? '<img src="plugins/MultiSites/images/'.$changeImage.'.png" /> ' : '')
-						.$change.'</span>';
-					
-					$details .= ', '.Piwik_Translate('RowEvolution_MetricChangeText', $change);
+					$changeClass = $lowerIsBetter ? 'bad' : 'good';
+					$changeImage = $lowerIsBetter ? 'arrow_up_red' : 'arrow_up';
 				}
+				else if (substr($change, 0, 1) == '-')
+				{
+					$changeClass = $lowerIsBetter ? 'good' : 'bad';
+					$changeImage = $lowerIsBetter ? 'arrow_down_green' : 'arrow_down';
+				}
+				else
+				{
+					$changeClass = 'neutral';
+					$changeImage = false;
+				}
+
+				$change = '<span class="'.$changeClass.'">'
+					.($changeImage ? '<img src="plugins/MultiSites/images/'.$changeImage.'.png" /> ' : '')
+					.$change.'</span>';
+
+				$details .= ', '.Piwik_Translate('RowEvolution_MetricChangeText', $change);
 			}
-			
+
 			$color = $colors[ $i % count($colors) ];
 			$newMetric = array(
 				'label' => $metricData['name'],

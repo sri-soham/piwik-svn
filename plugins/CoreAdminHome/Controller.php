@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6028 2012-03-10 03:47:35Z vipsoft $
+ * @version $Id: Controller.php 6562 2012-07-26 03:32:02Z vipsoft $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreAdminHome
@@ -87,7 +87,9 @@ class Piwik_CoreAdminHome_Controller extends Piwik_Controller_Admin
 			Piwik_Config::getInstance()->mail = $mail;
 			
 			// update branding settings
-			Piwik_Config::getInstance()->branding['use_custom_logo'] = Piwik_Common::getRequestVar('useCustomLogo', '0');
+			$branding = Piwik_Config::getInstance()->branding;
+			$branding['use_custom_logo'] = Piwik_Common::getRequestVar('useCustomLogo', '0');
+			Piwik_Config::getInstance()->branding = $branding;
 
 			Piwik_Config::getInstance()->forceSave();
 			

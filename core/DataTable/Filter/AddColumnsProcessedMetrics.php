@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AddColumnsProcessedMetrics.php 6400 2012-05-30 09:50:00Z matt $
+ * @version $Id: AddColumnsProcessedMetrics.php 6925 2012-09-06 13:51:06Z JulienM $
  * 
  * @category Piwik
  * @package Piwik

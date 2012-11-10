@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserCountryTest.php 6499 2012-06-24 14:50:58Z SteveG $
+ * @version $Id: UserCountryTest.php 6870 2012-08-24 05:06:47Z capedfuzz $
  */
 require_once 'UserCountry/functions.php';
 
@@ -39,7 +39,7 @@ class Test_Piwik_UserCountry extends PHPUnit_Framework_Testcase
      */
     public function testFlagsAndContinents()
     {
-        require_once PIWIK_PATH_TEST_TO_ROOT . '/core/DataFiles/Countries.php';
+        require PIWIK_PATH_TEST_TO_ROOT . '/core/DataFiles/Countries.php';
 
         $continents = $GLOBALS['Piwik_ContinentList'];
         $countries = array_merge($GLOBALS['Piwik_CountryList'], $GLOBALS['Piwik_CountryList_Extras']);

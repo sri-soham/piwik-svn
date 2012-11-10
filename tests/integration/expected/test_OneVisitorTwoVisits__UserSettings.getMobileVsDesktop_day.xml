@@ -11,4 +11,9 @@
 		<nb_visits_converted>2</nb_visits_converted>
 		<logo>plugins/UserSettings/images/screens/normal.gif</logo>
 	</row>
+	<row>
+		<label>Mobile</label>
+		<nb_visits>0</nb_visits>
+		<logo>plugins/UserSettings/images/screens/mobile.gif</logo>
+	</row>
 </result>

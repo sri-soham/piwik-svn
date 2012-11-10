@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 5780 2012-02-08 03:07:02Z matt $
+ * @version $Id: Controller.php 6616 2012-07-31 15:25:53Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitorGenerator
@@ -89,6 +89,7 @@ class Piwik_VisitorGenerator_Controller extends Piwik_Controller_Admin
 		$view->assign('days', $daysToCompute);
 		$view->assign('nbActionsTotal', $nbActionsTotal);
 		$view->assign('nbRequestsPerSec', round($nbActionsTotal / $timer->getTime(),0));
+		$view->assign('siteName', Piwik_Site::getNameFor($idSite));
 		echo $view->render();
 	}
 	

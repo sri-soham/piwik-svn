@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: ActionTest.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: ActionTest.php 6953 2012-09-09 20:54:44Z capedfuzz $
  */
 class Tracker_ActionTest extends DatabaseTestCase
 {
@@ -15,6 +15,8 @@ class Tracker_ActionTest extends DatabaseTestCase
         $config = Piwik_Config::getInstance();
         $config->clear();
         $config->setTestEnvironment($userFile, false);
+        
+        Piwik_PluginsManager::getInstance()->loadPlugins(array('SitesManager'));
     }
 
     protected function setUpRootAccess()
@@ -56,8 +58,8 @@ class Tracker_ActionTest extends DatabaseTestCase
                       'http://a.com/index?p1=v1&p3=v3')),
         
             // testing with array []
-            array('http://a.com/index?p1=v1&p2[]=v2a&p2[]=v2b&p2[]=v2c&p3=v3&p4=v4',
-                array('http://a.com/index?p1=v1&p2[]=v2a&p2[]=v2b&p2[]=v2c&p3=v3&p4=v4',
+            array('http://a.com/index?p1=v1&p2[]=v;2a&p2[]=v2b&p2[]=v2c&p3=v3&p4=v4',
+                array('http://a.com/index?p1=v1&p2[]=v;2a&p2[]=v2b&p2[]=v2c&p3=v3&p4=v4',
                       'http://a.com/index?p1=v1&p3=v3')),
 
             // testing with missing value
@@ -69,9 +71,25 @@ class Tracker_ActionTest extends DatabaseTestCase
                       'http://a.com/index?p1&p3=v3')),
 
             // testing with extra &&
-            array('http://a.com/index?p1=v1&&p2=v2&p3=v3&p4=v4&&',
-                array('http://a.com/index?p1=v1&p2=v2&p3=v3&p4=v4',
+            array('http://a.com/index?p1=v1&&p2=v;2&p3=v%3b3&p4=v4&&',
+                array('http://a.com/index?p1=v1&p2=v;2&p3=v%3b3&p4=v4',
+                    'http://a.com/index?p1=v1&p3=v%3b3')),
+
+            // encode entities
+            array('http://a.com/index?p1=v1&p2%5B%5D=v2&p3=v3&p4=v4',
+                array('http://a.com/index?p1=v1&p2[]=v2&p3=v3&p4=v4',
                       'http://a.com/index?p1=v1&p3=v3')),
+            array('http://a.com/index?var%5Bvalue%5D%5Bdate%5D=01.01.2012',
+                array('http://a.com/index?var[value][date]=01.01.2012',
+                      'http://a.com/index')),
+
+            // matrix parameters
+            array('http://a.com/index;jsessionid=value;p1=v1;p2=v2',
+                array('http://a.com/index?p1=v1&p2=v2',
+                      'http://a.com/index?p1=v1')),
+            array('http://a.com/index;jsessionid=value?p1=v1&p2=v2',
+                array('http://a.com/index?p1=v1&p2=v2',
+                      'http://a.com/index?p1=v1')),
         );
         
         return $urls;
@@ -101,7 +119,7 @@ class Tracker_ActionTest extends DatabaseTestCase
      */
     public function testExcludeQueryParametersSiteExcluded($url, $filteredUrl)
     {
-        $excludedQueryParameters = 'p4, p2';
+        $excludedQueryParameters = 'p4, p2, var[value][date]';
         $this->setUpRootAccess();
         $idSite = Piwik_SitesManager_API::getInstance()->addSite("site1",array('http://example.org'),$ecommerce=0, $excludedIps = '', $excludedQueryParameters);
         $this->assertEquals($filteredUrl[1], Piwik_Tracker_Action::excludeQueryParametersFromUrl($url, $idSite));
@@ -117,7 +135,7 @@ class Tracker_ActionTest extends DatabaseTestCase
     public function testExcludeQueryParametersSiteAndGlobalExcluded($url, $filteredUrl)
     {
         // testing also that query parameters are case insensitive 
-        $excludedQueryParameters = 'P2';
+        $excludedQueryParameters = 'P2,var[value][date]';
         $excludedGlobalParameters = 'blabla, P4';
         $this->setUpRootAccess();
         $idSite = Piwik_SitesManager_API::getInstance()->addSite("site1",array('http://example.org'),$ecommerce=0, $excludedIps = '', $excludedQueryParameters);

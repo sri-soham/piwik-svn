@@ -4,9 +4,9 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PiwikTest.php 6508 2012-07-04 20:21:03Z SteveG $
+ * @version $Id: PiwikTest.php 6727 2012-08-13 20:26:46Z JulienM $
  */
-class PiwikTest extends PHPUnit_Framework_TestCase
+class PiwikTest extends DatabaseTestCase
 {
     /**
      * Dataprovider for testIsNumericValid
@@ -173,5 +173,35 @@ class PiwikTest extends PHPUnit_Framework_TestCase
     public function testCheckValidLoginString($toTest)
     {
         $this->assertNull(Piwik::checkValidLoginString($toTest));
+    }
+
+	/**
+	 * Dataprovider for testGetPrettyValue
+	 */
+	public function getGetPrettyValueTestCases()
+	{
+		return array(
+			array('revenue', 12, '$ 12'),
+			array('revenue_evolution', '100 %', '100 %'),
+		);
+	}
+
+    /**
+     * @group Core
+     * @group Piwik
+     * @dataProvider getGetPrettyValueTestCases
+     */
+    public function testGetPrettyValue($columnName, $value, $expected)
+    {
+		$access = new Piwik_Access();
+		Zend_Registry::set('access', $access);
+		$access->setSuperUser(true);
+
+		$idsite = Piwik_SitesManager_API::getInstance()->addSite("test","http://test");
+
+		$this->assertEquals(
+			$expected,
+			Piwik::getPrettyValue($idsite, $columnName, $value, false, false)
+		);
     }
 }

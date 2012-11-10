@@ -39,7 +39,6 @@ class Piwik_SitesManager_API
 		{
 			self::$instance = new self;
 		}
-
 		return self::$instance;
 	}
 	
@@ -132,7 +131,7 @@ class Piwik_SitesManager_API
 		$urls = array();
 		foreach($result as $url)
 		{
-			$urls [] = $url['url'];
+			$urls[] = $url['url'];
 		}
 		return $urls;
 	}
@@ -354,7 +353,6 @@ class Piwik_SitesManager_API
 		$dao = Piwik_Db_Factory::getDAO('site');
 		$url = $this->removeTrailingSlash($url);
 		list($url, $urlBis) = $this->getNormalizedUrls($url);
-
 		if(Piwik::isUserIsSuperUser())
 		{
 			$ids = $dao->getIdsitesByUrlForSuperUser($url, $urlBis);
@@ -436,7 +434,7 @@ class Piwik_SitesManager_API
 		$ts_created = !is_null($startDate)
 					  ? Piwik_Date::factory($startDate)->getDatetime()
 					  : Piwik_Date::now()->getDatetime();
-		$group = (!empty($group) && Piwik::isUserIsSuperUser)
+		$group = (!empty($group) && Piwik::isUserIsSuperUser())
 				 ? trim($group) : '';
 		$dao = Piwik_Db_Factory::getDAO('site');
 		$idSite = $dao->addRecord(
@@ -955,7 +953,7 @@ class Piwik_SitesManager_API
 		if(count($urls) != 0)
 		{
 			$SiteUrl = Piwik_Db_Factory::getDAO('site_url');
-			$SiteUrl->addSiteUrls($urls);
+			$SiteUrl->addSiteUrls($urls, $idSite);
 		}
 	}
 	

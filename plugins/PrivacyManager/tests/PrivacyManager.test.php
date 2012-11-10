@@ -782,7 +782,7 @@ class Test_Piwik_PrivacyManager extends Test_Integration
 	public function addReferenceToUnusedAction( $notification )
 	{
 		$unusedIdAction = $this->unusedIdAction;
-		if (is_null($unusedIdAction)) // make sure we only do this for one test case
+		if (empty($unusedIdAction)) // make sure we only do this for one test case
 		{
 			return;
 		}

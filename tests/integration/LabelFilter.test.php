@@ -42,7 +42,7 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
                 'idSite' => $this->idSite,
                 'date' => $this->dateTime,
                 'otherRequestParameters' => array(
-                    'label' => urlencode($label),
+                    'label' => $label,
                     'expanded' => 0
                 )
             ));
@@ -55,7 +55,7 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
             'date' => $this->dateTime,
             'otherRequestParameters' => array(
                 'date' => '2010-03-06,2010-03-08',
-                'label' => urlencode($label),
+                'label' => $label,
                 'expanded' => 0
             )
         ));
@@ -67,7 +67,7 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
             'otherRequestParameters' => array(
 				// encode once for test framework and once for the label filter.
 				// note: title has no blank prefixed here. in the report it has.
-                'label' => urlencode(urlencode('incredible title! <>,;')),
+                'label' => urlencode('incredible title! <>,;'),
                 'expanded' => 0
             )
         ));
@@ -79,9 +79,9 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
             'otherRequestParameters' => array(
                 'label' => 
 					'   '. // test trimming
-					urlencode(urlencode('incredible parent title! <>,;').
+					urlencode('incredible parent title! <>,;').
 					'>'.
-					urlencode('subtitle <>,;')),
+					urlencode('subtitle <>,;'),
                 'expanded' => 0
             )
         ));
@@ -92,13 +92,13 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
             'idSite' => $this->idSite,
             'date' => $this->dateTime,
             'otherRequestParameters' => array(
-               	'label' => urlencode('Google>'.urlencode($keyword)),
+               	'label' => 'Google>'.urlencode($keyword),
                 'expanded' => 0
             )
         );
 		$return[] = array('Referers.getSearchEngines', $searchEngineTest);
 	
-		$searchEngineTest['otherRequestParameters']['label'] = urlencode('Google>'.urlencode(html_entity_decode($keyword)));
+		$searchEngineTest['otherRequestParameters']['label'] = 'Google>'.urlencode(html_entity_decode($keyword));
 		$return[] = array('Referers.getSearchEngines', $searchEngineTest);
 	
 		return $return;
@@ -124,7 +124,7 @@ class Test_Piwik_Integration_LabelFilter extends Test_Integration_Facade
 	{
 		$dateTime = $this->dateTime;
     	$idSite = $this->idSite;
-        $t = $this->getTracker($idSite, $dateTime, $defaultInit = true, $useThirdPartyCookie = 1);
+        $t = $this->getTracker($idSite, $dateTime, $defaultInit = true);
         
 		$t->setUrlReferrer('http://www.google.com.vn/url?sa=t&rct=j&q=%3C%3E%26%5C%22the%20pdo%20extension%20is%20required%20for%20this%20adapter%20but%20the%20extension%20is%20not%20loaded&source=web&cd=4&ved=0FjAD&url=http%3A%2F%2Fforum.piwik.org%2Fread.php%3F2%2C1011&ei=y-HHAQ&usg=AFQjCN2-nt5_GgDeg&cad=rja');
         $t->setUrl('http://example.org/%C3%A9%C3%A9%C3%A9%22%27...%20%3Cthis%20is%20cool%3E!');

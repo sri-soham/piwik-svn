@@ -16,6 +16,7 @@
 class Piwik_Db_Factory
 {
 	private static $daos  = array();
+	private static $is_test = false;
 
 	private $table;
 	private $adapter;
@@ -39,6 +40,14 @@ class Piwik_Db_Factory
 		return $factory->generic($db);
 	}
 
+	public static function setTest($test)
+	{
+		if (is_bool($test))
+		{
+			self::$is_test = $test;
+		}
+	}
+
 	public function __construct()
 	{
 		$this->adapter = $this->getAdapter();
@@ -56,7 +65,7 @@ class Piwik_Db_Factory
 	 */
 	public function dao($table, $db=null)
 	{
-		if (isset(self::$daos[$table]))
+		if (isset(self::$daos[$table]) && !self::$is_test)
 		{
 			return self::$daos[$table];
 		}

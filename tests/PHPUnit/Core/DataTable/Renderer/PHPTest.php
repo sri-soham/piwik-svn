@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: PHPTest.php 6498 2012-06-24 10:18:12Z SteveG $
+ * @version $Id: PHPTest.php 6669 2012-08-04 15:18:28Z JulienM $
  */
 class DataTable_Renderer_PHPTest extends PHPUnit_Framework_TestCase
 {
@@ -131,7 +131,7 @@ class DataTable_Renderer_PHPTest extends PHPUnit_Framework_TestCase
                         'bounce_count' => 90,
                         'url' => 'http://www.yahoo.com',
                         'logo' => './plugins/Referers/images/searchEngines/www.yahoo.com.png',
-                          'idsubdatatable' => 1,
+                          'idsubdatatable' => 2,
                         'subtable' =>
                             array (
                               0 =>

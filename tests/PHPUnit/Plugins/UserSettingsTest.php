@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UserSettingsTest.php 6499 2012-06-24 14:50:58Z SteveG $
+ * @version $Id: UserSettingsTest.php 6911 2012-09-03 13:00:11Z vipsoft $
  */
 require_once 'UserSettings/UserSettings.php';
 require_once 'UserSettings/functions.php';
@@ -793,6 +793,11 @@ class UserSettingsTest extends PHPUnit_Framework_TestCase
             array('Mozilla/4.0 (PSP (PlayStation Portable); 2.00)', array(
                 false,
                 array('PSP', 'PlayStation Portable', 'PSP'))),
+
+            // Rekonq 1.0+
+            array('Mozilla/5.0 (X11; Linux i686) AppleWebKit/534.34 (KHTML, like Gecko) rekonq/1.0 Safari/534.34', array(
+                array('RK', 'Rekonq', 'Rekonq', '1.0', '1', '0', 'webkit'),
+                array('LIN', 'Linux', 'Linux'))),
 
             // Safari
             array('Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US) AppleWebKit/525.19 (KHTML, like Gecko) Version/3.1.2 Safari/525.21', array(

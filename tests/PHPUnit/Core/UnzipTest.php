@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UnzipTest.php 6494 2012-06-23 19:33:03Z SteveG $
+ * @version $Id: UnzipTest.php 6512 2012-07-15 12:47:13Z SteveG $
  */
 class UnzipTest extends PHPUnit_Framework_TestCase
 {
@@ -114,4 +114,69 @@ class UnzipTest extends PHPUnit_Framework_TestCase
         $this->assertFileNotExists($extractDir . $test . '.txt');
         $this->assertFileNotExists(dirname(__FILE__) . '/' . $test . '.txt');
     }
+
+    /**
+     * @group Core
+     * @group Unzip
+     */
+    public function testUnzipErrorInfo()
+    {
+        clearstatcache();
+        $filename = dirname(__FILE__) . '/Unzip/zaabs.zip';
+        $extractDir = PIWIK_USER_PATH . '/tmp/latest/';
+
+        $unzip = new Piwik_Unzip_ZipArchive($filename);
+        $this->assertContains('No error', $unzip->errorInfo());
+    }
+
+    /**
+     * @group Core
+     * @group Unzip
+     */
+    public function testUnzipEmptyFile()
+    {
+        clearstatcache();
+        $filename = dirname(__FILE__) . '/Unzip/empty.zip';
+        $extractDir = PIWIK_USER_PATH . '/tmp/latest/';
+
+        $unzip = new Piwik_Unzip_ZipArchive($filename);
+        $res = $unzip->extract($extractDir);
+        $this->assertEquals(0, $res);
+    }
+
+    /**
+     * @group Core
+     * @group Unzip
+     */
+    public function testUnzipNotExistingFile()
+    {
+        clearstatcache();
+        $filename = dirname(__FILE__) . '/Unzip/NotExisting.zip';
+
+        try {
+            $unzip = new Piwik_Unzip_ZipArchive($filename);
+        } catch (Exception $e) {
+            return;
+        }
+        $this->fail('Exception not raised');
+    }
+
+    /**
+     * @group Core
+     * @group Unzip
+     */
+    public function testUnzipInvalidFile2()
+    {
+        clearstatcache();
+        $extractDir = PIWIK_USER_PATH . '/tmp/latest/';
+        $filename = dirname(__FILE__) . '/Unzip/NotExisting.zip';
+
+        $unzip = new Piwik_Unzip_PclZip($filename);
+        $res = $unzip->extract($extractDir);
+        $this->assertEquals(0, $res);
+
+        $this->assertContains('PCLZIP_ERR_MISSING_FILE', $unzip->errorInfo());
+    }
+
+
 }

@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Chart.php 5454 2011-11-18 16:28:33Z vipsoft $
+ * @version $Id: Chart.php 6618 2012-07-31 17:04:35Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -33,6 +33,11 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 	protected $yUnit = '';
 	protected $displayPercentageInTooltip = true;
 	protected $xSteps = 2;
+	
+	/**
+	 * Whether to show every x-axis tick or only every other one.
+	 */
+	protected $showAllTicks = false;
 	
 	public function setAxisXLabels(&$xLabels)
 	{
@@ -146,6 +151,14 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 	{
 		$this->seriesPicker['selectableColumns'] = $selectableColumns;
 	}
+	
+	/**
+	 * Show every x-axis tick instead of just every other one.
+	 */
+	public function showAllTicks()
+	{
+		$this->showAllTicks = true;
+	}
 
 	public function render()
 	{
@@ -173,7 +186,7 @@ abstract class Piwik_Visualization_Chart implements Piwik_View_Interface
 			foreach ($this->axes['xaxis']['ticks'] as $i => &$xLabel)
 			{
 				$this->axes['xaxis']['labels'][$i] = $xLabel;
-				if (($i % $this->xSteps) != 0)
+				if (!$this->showAllTicks && ($i % $this->xSteps) != 0)
 				{
 					$xLabel = ' ';
 				}

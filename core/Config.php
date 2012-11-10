@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Config.php 6470 2012-06-07 17:49:18Z capedfuzz $
+ * @version $Id: Config.php 6791 2012-08-16 13:59:34Z EZdesign $
  *
  * @category Piwik
  * @package Piwik
@@ -28,11 +28,13 @@
  *    $brandingConfig = array(
  *        'use_custom_logo' => 1,
  *    );
- *    Piwik_Config::getInstance()->setConfigSection('branding', $brandingConfig);
+ *    Piwik_Config::getInstance()->branding = $brandingConfig;
  *
  * Example setting an option within a section in the configuration:
- *
- *    Piwik_Config::getInstance()->setConfigOption('branding', 'use_custom_logo', '1');
+ * 
+ *    $brandingConfig = Piwik_Config::getInstance()->branding;
+ *    $brandingConfig['use_custom_logo'] = 1;
+ *    Piwik_Config::getInstance()->branding = $brandingConfig;
  *
  * @package Piwik
  * @subpackage Piwik_Config
@@ -87,6 +89,7 @@ class Piwik_Config
 	public function setTestEnvironment($pathLocal = null, $pathGlobal = null)
 	{
 		$this->isTest = true;
+		Piwik_Db_Factory::setTest(true);
 
 		$this->clear();
 

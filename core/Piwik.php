@@ -3,7 +3,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Piwik.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: Piwik.php 6856 2012-08-21 22:28:13Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -563,7 +563,7 @@ class Piwik
 		);
 		foreach($directoriesToProtect as $directoryToProtect)
 		{
-			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect);
+			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $overwrite = true);
 		}
 
 		// Allow/Deny lives in different modules depending on the Apache version
@@ -583,7 +583,7 @@ class Piwik
 		);
 		foreach($directoriesToProtect as $directoryToProtect => $content)
 		{
-			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $content);
+			Piwik_Common::createHtAccess(PIWIK_INCLUDE_PATH . $directoryToProtect, $overwrite = true, $content);
 		}
 	}
 
@@ -1427,7 +1427,7 @@ class Piwik
 			return Piwik::getPrettyTimeFromSeconds($value, $timeAsSentence);
 		}
 		// Add revenue symbol to revenues
-		if(strpos($columnName, 'revenue') !== false)
+		if(strpos($columnName, 'revenue') !== false && strpos($columnName, 'evolution') === false)
 		{
 			return Piwik::getPrettyMoney($value, $idSite, $htmlAllowed);
 		}
@@ -2354,6 +2354,25 @@ class Piwik
 	static public function getTablesInstalled($forceReload = true)
 	{
 		return Piwik_Db_Schema::getInstance()->getTablesInstalled($forceReload);
+	}
+	
+	/**
+	 * Returns all table names archive_*
+	 * 
+	 * @return array 
+	 */
+	static public function getTablesArchivesInstalled()
+	{
+		$archiveTables = array();
+		$tables = Piwik::getTablesInstalled();
+		foreach($tables as $table)
+		{
+			if(strpos($table, 'archive_') !== false)
+			{
+				$archiveTables[] = $table;
+			}
+		}
+		return $archiveTables;
 	}
 
 	/**

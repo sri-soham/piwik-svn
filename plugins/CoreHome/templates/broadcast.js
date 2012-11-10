@@ -27,6 +27,21 @@ var broadcast = {
      */
     _isInit: false,
 
+	/**
+	 * Last known hash parts
+	 */
+	currentHashParts: [null],
+
+	/**
+	 * Callbacks for second hash change
+	 */
+	secondHashHandlers: [],
+
+	/**
+	 * Force reload once
+	 */
+	foceReload: false,
+
     /**
      * Initializes broadcast object
      * @return {void}
@@ -60,19 +75,58 @@ var broadcast = {
 
         // Unbind any previously attached resize handlers
         $(window).off('resize');
-
-        // hash doesn't contain the first # character.
-        if( hash ) {
-            // restore ajax loaded state
-            broadcast.loadAjaxContent(hash);
-
-            // Hack: make sure the "Widgets & Dashboard" is deleted on reload
-            $('#dashboardSettings').remove();
-            $('#dashboardWidgetsArea').dashboard('destroy');
-        } else {
-            // start page
-            $('#content').empty();
-        }
+			
+		// hash doesn't contain the first # character.
+		if( hash ) {
+			var hashParts = hash.split('#');
+			
+			var firstHashUpdated = (hashParts.length == 1 ||
+					(broadcast.currentHashParts[0] !== null && broadcast.currentHashParts[0] != hashParts[0]));
+			var secondHashUpdated = (hashParts.length > 1 && hashParts[0] == broadcast.currentHashParts[0]);
+			if (broadcast.currentHashParts[0] === null) {
+				// new page load
+				firstHashUpdated = true;
+				secondHashUpdated = (hashParts.length > 1);
+			}
+			
+			if (firstHashUpdated || broadcast.forceReload) {
+				Piwik_Popover.close();
+				
+				if (hashParts[0] != broadcast.currentHashParts[0] || broadcast.forceReload) {
+					// restore ajax loaded state
+					broadcast.loadAjaxContent(hashParts[0]);
+		
+					// make sure the "Widgets & Dashboard" is deleted on reload
+					$('#dashboardSettings').remove();
+					$('#dashboardWidgetsArea').dashboard('destroy');
+				}
+			}
+			
+			broadcast.forceReload = false;
+			broadcast.currentHashParts = hashParts;
+			
+			if (secondHashUpdated && hashParts[1] == '') {
+				Piwik_Popover.close();
+			} else if (secondHashUpdated) {
+				var secondHash = hashParts[1];
+				for (var i = 2; i < hashParts.length; i++) {
+					secondHash += '#' + hashParts[i];
+				}
+				var secondHashParts = secondHash.split(':');
+				var handlerName = secondHashParts[0];
+				secondHashParts.shift();
+				var param = secondHashParts.join(':');
+				if (typeof broadcast.secondHashHandlers[handlerName] != 'undefined') {
+					broadcast.secondHashHandlers[handlerName](param);
+				}
+			}
+			
+			
+			
+		} else {
+			// start page
+			$('#content').empty();
+		}
     },
 
     /**
@@ -99,7 +153,7 @@ var broadcast = {
         var currentHashStr = broadcast.getHash();
 
         ajaxUrl = ajaxUrl.replace(/^\?|&#/,'');
-
+		
         var params_vals = ajaxUrl.split("&");
         for( var i=0; i<params_vals.length; i++ )
         {
@@ -120,6 +174,7 @@ var broadcast = {
             currentHashStr = broadcast.updateParamValue('idDashboard=', currentHashStr);
         }
         // Let history know about this new Hash and load it.
+		broadcast.forceReload = true;
         $.history.load(currentHashStr);
     },
 
@@ -174,6 +229,7 @@ var broadcast = {
         if(oldUrl == newUrl) {
             window.location.reload();
         } else {
+			this.forceReload = true;
             window.location.href = newUrl;
         }
         return false;
@@ -225,6 +281,24 @@ var broadcast = {
 
         return urlStr;
     },
+
+	/**
+	 * Update the part after the second hash
+	 */
+	propagateNewSecondHash: function(handlerName, value)
+	{
+		var url = window.location.href;
+		var urlParts = url.split('#');
+		urlParts[2] = handlerName === false ? '' : handlerName + ':' + value;
+		window.location.href = urlParts.join('#');
+	},
+
+	/**
+	 * Add a handler for the secon hash
+	 */
+	addSecondHashHandler: function(handlerName, callback) {
+		this.secondHashHandlers[handlerName] = callback;
+	},
 
     /**
      * Loads the given url with ajax and replaces the content
@@ -384,7 +458,11 @@ var broadcast = {
     getValueFromHash: function(param, url)
     {
         var hashStr = broadcast.getHashFromUrl(url);
-        return broadcast.getParamValue(param,hashStr);
+		if (hashStr.substr(0, 1) == '#') {
+			hashStr = hashStr.substr(1);
+		}
+		hashStr = hashStr.split('#')[0];
+		return broadcast.getParamValue(param,hashStr);
     },
 
 
@@ -423,7 +501,7 @@ var broadcast = {
      */
     getHash: function ()
     {
-        return broadcast.getHashFromUrl().replace(/^#/, '');
+        return broadcast.getHashFromUrl().replace(/^#/, '').split('#')[0];
     },
 	
 	/**

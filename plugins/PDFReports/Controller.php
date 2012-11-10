@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: Controller.php 6727 2012-08-13 20:26:46Z JulienM $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -67,7 +67,7 @@ class Piwik_PDFReports_Controller extends Piwik_Controller
 		$view->reports = $reports;
 		$view->reportsJSON = Piwik_Common::json_encode($reportsById);
 
-		$view->downloadOutputType = Piwik_PDFReports_API::OUTPUT_DOWNLOAD;
+		$view->downloadOutputType = Piwik_PDFReports_API::OUTPUT_INLINE;
 
 		$periods = array_merge(
 			array('never' => Piwik_Translate('General_Never')),

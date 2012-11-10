@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Common.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: Common.php 6954 2012-09-09 21:00:44Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -51,6 +51,8 @@ class Piwik_Common
 		return base_convert($stringHash, 16, 10);
 	}
 	
+	static public $cachedTablePrefix = null;
+
 	/**
 	 * Returns the table name prefixed by the table prefix.
 	 * Works in both Tracker and UI mode.
@@ -60,12 +62,11 @@ class Piwik_Common
 	 */
 	static public function prefixTable($table)
 	{
-		static $prefixTable = null;
-		if(is_null($prefixTable))
+		if(is_null(self::$cachedTablePrefix))
 		{
-			$prefixTable = Piwik_Config::getInstance()->database['tables_prefix'];
+			self::$cachedTablePrefix = Piwik_Config::getInstance()->database['tables_prefix'];
 		}
-		return $prefixTable . $table;
+		return self::$cachedTablePrefix . $table;
 	}
 	
 	/**
@@ -109,13 +110,13 @@ class Piwik_Common
  * Tracker
  */
 
+	static public $initTrackerMode = false;
 	static protected function initCorePiwikInTrackerMode()
 	{
-		static $init = false;
 		if(!empty($GLOBALS['PIWIK_TRACKER_MODE'])
-			&& $init === false)
+			&& self::$initTrackerMode === false)
 		{
-			$init = true;
+			self::$initTrackerMode = true;
 			require_once PIWIK_INCLUDE_PATH . '/core/Loader.php';
 			require_once PIWIK_INCLUDE_PATH . '/core/Translate.php';
 			require_once PIWIK_INCLUDE_PATH . '/core/Option.php';
@@ -548,7 +549,7 @@ class Piwik_Common
 
 		if($denyAccess)
 		{
-			self::createHtAccess($path);
+			self::createHtAccess($path, $overwrite = false);
 		}
 	}
 
@@ -558,13 +559,18 @@ class Piwik_Common
 	 * Apache-specific; for IIS @see web.config
 	 *
 	 * @param string  $path     without trailing slash
+	 * @param bool    $overwrite whether to overwrite an existing file or not
 	 * @param string  $content
 	 */
-	static public function createHtAccess( $path, $content = "<Files \"*\">\n<IfModule mod_access.c>\nDeny from all\n</IfModule>\n<IfModule !mod_access_compat>\n<IfModule mod_authz_host.c>\nDeny from all\n</IfModule>\n</IfModule>\n<IfModule mod_access_compat>\nDeny from all\n</IfModule>\n</Files>\n" )
+	static public function createHtAccess( $path, $overwrite = true, $content = "<Files \"*\">\n<IfModule mod_access.c>\nDeny from all\n</IfModule>\n<IfModule !mod_access_compat>\n<IfModule mod_authz_host.c>\nDeny from all\n</IfModule>\n</IfModule>\n<IfModule mod_access_compat>\nDeny from all\n</IfModule>\n</Files>\n" )
 	{
 		if(self::isApache())
 		{
-			@file_put_contents($path . '/.htaccess', $content);
+			$file = $path . '/.htaccess';
+			if ($overwrite || !file_exists($file))
+			{
+				@file_put_contents($file, $content);
+			}
 		}
 	}
 
@@ -1198,7 +1204,7 @@ class Piwik_Common
 			return _json_encode($value);
 		}
 
-		return json_encode($value);
+		return @json_encode($value);
 	}
 
 	/**
@@ -1618,6 +1624,12 @@ class Piwik_Common
 		}
 		$query = $refererParsed['query'];
 
+		// Google Referrers URLs sometimes have the fragment which contains the keyword
+		if(!empty($refererParsed['fragment']))
+		{
+			$query .= '&' . $refererParsed['fragment'];
+		}
+
 		$searchEngines = self::getSearchEngineUrls();
 
 		$hostPattern = self::getLossyUrl($refererHost);
@@ -1942,6 +1954,24 @@ class Piwik_Common
 			return "''";
 		}
 		return '?'.str_repeat(',?', $count-1);
+	}
+
+	/**
+	 * Sets outgoing header.
+	 *
+	 * @param string $header  The header.
+	 * @param bool   $replace Whether to replace existing or not.
+	 */
+	public static function sendHeader( $header, $replace = true )
+	{
+		if (isset($GLOBALS['PIWIK_TRACKER_LOCAL_TRACKING']) && $GLOBALS['PIWIK_TRACKER_LOCAL_TRACKING'])
+		{
+			@header($header, $replace);
+		}
+		else
+		{
+			header($header, $replace);
+		}
 	}
 }
 

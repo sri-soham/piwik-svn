@@ -53,12 +53,15 @@ class Piwik_Db_DAO_Archive extends Piwik_Db_DAO_Base
 		$this->db->query($sql, $bind);
 	}
 
-	public function getIdarchiveByValueTS($table, $value, $ts)
+	public function getIdarchiveByValueTS($table, $value1, $value2, $ts)
 	{
 		$sql = 'SELECT idarchive FROM ' . $table . ' '
 			 . "WHERE name LIKE 'done%' "
-			 . '  AND value = ' . $value . ' '
-			 . '  AND ts_archived < ?';
+			 . '  AND ( '
+			 . '	(value = ' . $value1 . ' AND ts_archived < ?) '
+			 . '	OR '
+			 . '	(value = ' . $value2 . ') '
+			 . '  ) ';
 		$this->db->query($sql, array($ts));
 	}
 
@@ -127,7 +130,7 @@ class Piwik_Db_DAO_Archive extends Piwik_Db_DAO_Base
 		$inNames = Piwik_Common::getSqlStringFieldsArray($names);
 		$sql = 'SELECT value, name, date1 AS start_date '
 			 . 'FROM ' . $table . ' '
-			 . 'WHERE idarchive IN ( ' . implode(', ', $ids) . ' ) '
+			 . 'WHERE idarchive IN ( ' . $ids . ' ) '
 			 . '  AND name IN ( ' . $inNames . ' ) '
 			 . 'ORDER BY date1, name';
 		return $this->db->fetchAll($sql, $names);

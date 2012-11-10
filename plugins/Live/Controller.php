@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6314 2012-05-25 11:20:24Z matt $
+ * @version $Id: Controller.php 7036 2012-09-21 20:37:53Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -76,6 +76,12 @@ class Piwik_Live_Controller extends Piwik_Controller
 		$view->disableShowAllColumns();
 		// disable the RSS feed
 		$view->disableShowExportAsRssFeed();
+		
+		// disable all row actions
+		if ($view instanceof Piwik_ViewDataTable_HtmlTable)
+		{
+			$view->disableRowActions();
+		}
 		
 		$view->setReportDocumentation(Piwik_Translate('Live_VisitorLogDocumentation', array('<br />', '<br />')));
 		$view->setCustomParameter('dataTablePreviousIsFirst', 1);

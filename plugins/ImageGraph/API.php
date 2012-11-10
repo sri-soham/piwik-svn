@@ -4,8 +4,8 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6447 2012-06-02 23:49:29Z matt $
- * 
+ * @version $Id: API.php 7088 2012-10-01 20:07:20Z JulienM $
+ *
  * @category Piwik_Plugins
  * @package Piwik_ImageGraph
  */
@@ -13,24 +13,24 @@
 /**
  * The ImageGraph.get API call lets you generate beautiful static PNG Graphs for any existing Piwik report.
  * Supported graph types are: line plot, 2D/3D pie chart and vertical bar chart.
- * 
+ *
  * A few notes about some of the parameters available:<br/>
  * - $graphType defines the type of graph plotted, accepted values are: 'evolution', 'verticalBar', 'pie' and '3dPie'<br/>
  * - $colors accepts a comma delimited list of colors that will overwrite the default Piwik colors <br/>
  * - you can also customize the width, height, font size, metric being plotted (in case the data contains multiple columns/metrics).
- * 
+ *
  * See also <a href='http://piwik.org/docs/analytics-api/metadata/#toc-static-image-graphs'>How to embed static Image Graphs?</a> for more information.
- * 
+ *
  * @package Piwik_ImageGraph
- */ 
+ */
 class Piwik_ImageGraph_API
 {
 	const FILENAME_KEY = 'filename';
 	const TRUNCATE_KEY = 'truncate';
 	const WIDTH_KEY = 'width';
 	const HEIGHT_KEY = 'height';
-	const MAX_WIDTH = 1024;
-	const MAX_HEIGHT = 1024; 
+	const MAX_WIDTH = 1900;
+	const MAX_HEIGHT = 1024;
 
 	static private $DEFAULT_PARAMETERS = array(
 		Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE => array(
@@ -66,7 +66,14 @@ class Piwik_ImageGraph_API
 	);
 
 	static private $DEFAULT_GRAPH_TYPE_OVERRIDE = array(
-		'UserSettings_getPlugin' => Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_HORIZONTAL_BAR,
+		'UserSettings_getPlugin' => array(
+			false // override if !$isMultiplePeriod
+				=> Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_HORIZONTAL_BAR,
+		),
+		'Referers_getRefererType' => array(
+			false // override if !$isMultiplePeriod
+				=> Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_HORIZONTAL_BAR,
+		),
 	);
 
 	const GRAPH_OUTPUT_INLINE = 0;
@@ -78,6 +85,11 @@ class Piwik_ImageGraph_API
 	const DEFAULT_FONT = 'tahoma.ttf';
 	const UNICODE_FONT = 'unifont.ttf';
 	const DEFAULT_FONT_SIZE = 9;
+	const DEFAULT_LEGEND_FONT_SIZE_OFFSET = 2;
+
+	// number of row evolutions to plot when no labels are specified, can be overridden using &filter_limit
+	const DEFAULT_NB_ROW_EVOLUTIONS = 5;
+	const MAX_NB_ROW_LABELS = 10;
 
 	static private $instance = null;
 
@@ -93,11 +105,11 @@ class Piwik_ImageGraph_API
 		}
 		return self::$instance;
 	}
-	
+
 	public function get($idSite, $period, $date, $apiModule, $apiAction, $graphType = false,
-						$outputType = Piwik_ImageGraph_API::GRAPH_OUTPUT_INLINE, $column = false, $showMetricTitle = true,
-						$width = false, $height = false, $fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE, $aliasedGraph = true,
-						$idGoal = false, $colors = false)
+						$outputType = Piwik_ImageGraph_API::GRAPH_OUTPUT_INLINE, $columns = false, $labels = false, $showLegend = true,
+						$width = false, $height = false, $fontSize = Piwik_ImageGraph_API::DEFAULT_FONT_SIZE, $legendFontSize = false,
+						$aliasedGraph = true, $idGoal = false, $colors = false, $idSubtable = false, $legendAppendMetric = true)
 	{
 		Piwik::checkUserHasViewAccess($idSite);
 
@@ -108,7 +120,7 @@ class Piwik_ImageGraph_API
 		}
 
 		$useUnicodeFont = array(
-			'am', 'ar', 'el', 'fa' , 'fi', 'he', 'ja', 'ka', 'ko', 'te', 'th', 'zh-cn', 'zh-tw', 
+			'am', 'ar', 'el', 'fa' , 'fi', 'he', 'ja', 'ka', 'ko', 'te', 'th', 'zh-cn', 'zh-tw',
 		);
 		$languageLoaded = Piwik_Translate::getInstance()->getLanguageLoaded();
 		$font = self::getFontPath(self::DEFAULT_FONT);
@@ -117,7 +129,7 @@ class Piwik_ImageGraph_API
 			$unicodeFontPath = self::getFontPath(self::UNICODE_FONT);
 			$font = file_exists($unicodeFontPath) ? $unicodeFontPath : $font;
 		}
-		
+
 		// save original GET to reset after processing. Important for API-in-API-call
 		$savedGET = $_GET;
 
@@ -128,7 +140,9 @@ class Piwik_ImageGraph_API
 				$apiParameters = array( 'idGoal' => $idGoal);
 			}
 			// Fetch the metadata for given api-action
-			$metadata = Piwik_API_API::getInstance()->getMetadata($idSite, $apiModule, $apiAction, $apiParameters, $languageLoaded, $period, $date);
+			$metadata = Piwik_API_API::getInstance()->getMetadata(
+				$idSite, $apiModule, $apiAction, $apiParameters, $languageLoaded, $period, $date,
+				$hideMetricsDoc = false, $showSubtableReports = true);
 			if(!$metadata)
 			{
 				throw new Exception('Invalid API Module and/or API Action');
@@ -139,14 +153,23 @@ class Piwik_ImageGraph_API
 			$constantRowsCount = !empty($metadata['constantRowsCount']);
 
 			$isMultiplePeriod = Piwik_Archive::isMultiplePeriod($date, $period);
-			if(($reportHasDimension && $isMultiplePeriod) || (!$reportHasDimension && !$isMultiplePeriod))
+			if(!$reportHasDimension && !$isMultiplePeriod)
 			{
 				throw new Exception('The graph cannot be drawn for this combination of \'date\' and \'period\' parameters.');
 			}
 
+			if(empty($legendFontSize))
+			{
+				$legendFontSize = $fontSize + self::DEFAULT_LEGEND_FONT_SIZE_OFFSET;
+			}
+
 			if(empty($graphType))
 			{
-				if($reportHasDimension)
+				if($isMultiplePeriod)
+				{
+					$graphType = Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE;
+				}
+				else
 				{
 					if($constantRowsCount)
 					{
@@ -157,15 +180,11 @@ class Piwik_ImageGraph_API
 						$graphType = Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_HORIZONTAL_BAR;
 					}
 				}
-				else
-				{
-					$graphType = Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE;
-				}
 
 				$reportUniqueId = $metadata['uniqueId'];
-				if(isset(self::$DEFAULT_GRAPH_TYPE_OVERRIDE[$reportUniqueId]))
+				if(isset(self::$DEFAULT_GRAPH_TYPE_OVERRIDE[$reportUniqueId][$isMultiplePeriod]))
 				{
-					$graphType = self::$DEFAULT_GRAPH_TYPE_OVERRIDE[$reportUniqueId];
+					$graphType = self::$DEFAULT_GRAPH_TYPE_OVERRIDE[$reportUniqueId][$isMultiplePeriod];
 				}
 			}
 			else
@@ -192,20 +211,11 @@ class Piwik_ImageGraph_API
 			{
 				$height = self::$DEFAULT_PARAMETERS[$graphType][self::HEIGHT_KEY];
 			}
+
 			// Cap width and height to a safe amount
 			$width = min($width, self::MAX_WIDTH);
 			$height = min($height, self::MAX_HEIGHT);
 
-			if($reportHasDimension)
-			{
-				$abscissaColumn = 'label';
-			}
-			else
-			{
-				// if it's a dimension-less report, the abscissa column can only be the date-index
-				$abscissaColumn = 'date';
-			}
-			
 			$reportColumns = array_merge(
 				!empty($metadata['metrics']) ? $metadata['metrics'] : array(),
 				!empty($metadata['processedMetrics']) ? $metadata['processedMetrics'] : array(),
@@ -213,26 +223,34 @@ class Piwik_ImageGraph_API
 				!empty($metadata['processedMetricsGoal']) ? $metadata['processedMetricsGoal'] : array()
 			);
 
-			$ordinateColumn = $column;
-			if(empty($ordinateColumn))
+			$ordinateColumns = array();
+			if(empty($columns))
 			{
-				$ordinateColumn = self::DEFAULT_ORDINATE_METRIC;
-
-				// if default ordinate metric not available for this report
-				if(empty($reportColumns[$ordinateColumn]))
+				$ordinateColumns[] =
+					empty($reportColumns[self::DEFAULT_ORDINATE_METRIC]) ? key($metadata['metrics']) : self::DEFAULT_ORDINATE_METRIC;
+			}
+			else
+			{
+				$ordinateColumns = explode(',', $columns);
+				foreach($ordinateColumns as $column)
 				{
-					// take the first metric returned in the metadata
-					$ordinateColumn = key($metadata['metrics']);
+					if(empty($reportColumns[$column]))
+					{
+						throw new Exception(
+							Piwik_Translate(
+								'ImageGraph_ColumnOrdinateMissing',
+								array($column, implode(',',array_keys($reportColumns)))
+							)
+						);
+					}
 				}
 			}
-			
-			// if we still don't have an ordinate column or the one provided by the API caller is invalid
-			if(empty($ordinateColumn) || empty($reportColumns[$ordinateColumn]))
-			{
-				throw new Exception(Piwik_Translate('ImageGraph_ColumnOrdinateMissing', $ordinateColumn));
-			}
 
-			$ordinateLabel = $reportColumns[$ordinateColumn];
+			$ordinateLabels = array();
+			foreach($ordinateColumns as $column)
+			{
+				$ordinateLabels[$column] = $reportColumns[$column];
+			}
 
 			// sort and truncate filters
 			$defaultFilterTruncate = self::$DEFAULT_PARAMETERS[$graphType][self::TRUNCATE_KEY];
@@ -241,40 +259,140 @@ class Piwik_ImageGraph_API
 				case Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_3D_PIE:
 				case Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_PIE:
 
-					$_GET['filter_sort_column'] = $ordinateColumn;
+					if(count($ordinateColumns) > 1)
+					{
+						// pChart doesn't support multiple series on pie charts
+		            	throw new Exception("Pie charts do not currently support multiple series");
+					}
+
+					$_GET['filter_sort_column'] = reset($ordinateColumns);
 					$this->setFilterTruncate($defaultFilterTruncate);
 					break;
 
 				case Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_VERTICAL_BAR:
 				case Piwik_ImageGraph_StaticGraph::GRAPH_TYPE_BASIC_LINE:
 
-					if($reportHasDimension && !$constantRowsCount)
+					if(!$isMultiplePeriod && !$constantRowsCount)
 					{
 						$this->setFilterTruncate($defaultFilterTruncate);
 					}
 					break;
 			}
 
-			$processedReport = Piwik_API_API::getInstance()->getProcessedReport(
-				$idSite,
-				$period,
-				$date,
-				$apiModule,
-				$apiAction,
-				$segment = false,
-				$apiParameters = false, 
-				$idGoal, 
-				$languageLoaded
-			);
-			// prepare abscissa and ordinate series
-			$abscissaSerie = array();
-			$ordinateSerie = array();
 			$ordinateLogos = array();
+
+			// row evolutions
+			if($isMultiplePeriod && $reportHasDimension)
+			{
+				$plottedMetric = reset($ordinateColumns);
+
+				// when no labels are specified, getRowEvolution returns the top N=filter_limit row evolutions
+				// rows are sorted using filter_sort_column (see Piwik_API_DataTableGenericFilter for more info)
+				if(!$labels)
+				{
+					$savedFilterSortColumnValue = Piwik_Common::getRequestVar('filter_sort_column', '');
+					$_GET['filter_sort_column'] = $plottedMetric;
+
+					$savedFilterLimitValue = Piwik_Common::getRequestVar('filter_limit', -1, 'int');
+					if($savedFilterLimitValue == -1 || $savedFilterLimitValue > self::MAX_NB_ROW_LABELS)
+					{
+						$_GET['filter_limit'] = self::DEFAULT_NB_ROW_EVOLUTIONS;
+					}
+				}
+
+				$processedReport = Piwik_API_API::getInstance()->getRowEvolution(
+					$idSite,
+					$period,
+					$date,
+					$apiModule,
+					$apiAction,
+					$labels,
+					$segment = false,
+					$plottedMetric,
+					$languageLoaded,
+					$idGoal,
+					$legendAppendMetric,
+					$labelUseAbsoluteUrl = false
+				);
+
+				//@review this test will need to be updated after evaluating the @review comment in API/API.php
+				if(!$processedReport)
+				{
+					throw new Exception(Piwik_Translate('General_NoDataForGraph'));
+				}
+
+				// restoring generic filter parameters
+				if(!$labels)
+				{
+					$_GET['filter_sort_column'] = $savedFilterSortColumnValue;
+					if($savedFilterLimitValue != -1)
+					{
+						$_GET['filter_limit'] = $savedFilterLimitValue;
+					}
+				}
+
+				// retrieve metric names & labels
+				$metrics = $processedReport['metadata']['metrics'];
+				$ordinateLabels = array();
+
+				// getRowEvolution returned more than one label
+				if(!array_key_exists($plottedMetric, $metrics))
+				{
+					$ordinateColumns = array();
+					$i = 0;
+					foreach($metrics as $metric => $info)
+					{
+						$ordinateColumn = $plottedMetric . '_' . $i++;
+						$ordinateColumns[] = $metric;
+						$ordinateLabels[$ordinateColumn] = $info['name'];
+
+						if(isset($info['logo']))
+						{
+							$ordinateLogo = $info['logo'];
+
+							// @review pChart does not support gifs in graph legends, would it be possible to convert all plugin pictures (cookie.gif, flash.gif, ..) to png files?
+							if(!strstr($ordinateLogo, '.gif'))
+							{
+								$absoluteLogoPath = self::getAbsoluteLogoPath($ordinateLogo);
+								if(file_exists($absoluteLogoPath))
+								{
+									$ordinateLogos[$ordinateColumn] = $absoluteLogoPath;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					$ordinateLabels[$plottedMetric] = $processedReport['label'] . ' (' . $metrics[$plottedMetric]['name'] . ')';
+				}
+			}
+			else
+			{
+				$processedReport = Piwik_API_API::getInstance()->getProcessedReport(
+					$idSite,
+					$period,
+					$date,
+					$apiModule,
+					$apiAction,
+					$segment = false,
+					$apiParameters = false,
+					$idGoal,
+					$languageLoaded,
+					$showTimer = true,
+					$hideMetricsDoc = false,
+					$idSubtable
+				);
+			}
+			// prepare abscissa and ordinate series
+			$abscissaSeries = array();
+			$abscissaLogos = array();
+			$ordinateSeries = array();
 			$reportData = $processedReport['reportData'];
 			$hasData = false;
 			$hasNonZeroValue = false;
 
-			if($reportHasDimension)
+			if(!$isMultiplePeriod)
 			{
 				$reportMetadata = $processedReport['reportMetadata']->getRows();
 
@@ -284,24 +402,30 @@ class Piwik_ImageGraph_API
 				{
 					// $row instanceof Piwik_DataTable_Row
 					$rowData = $row->getColumns(); // Associative Array
-					$abscissaSerie[] = Piwik_Common::unsanitizeInputValue($rowData[$abscissaColumn]);
-					$parsedOrdinateValue = $this->parseOrdinateValue($rowData[$ordinateColumn]);
+					$abscissaSeries[] = Piwik_Common::unsanitizeInputValue($rowData['label']);
 
-					$hasData = true;
-
-					if($parsedOrdinateValue != 0)
+					foreach($ordinateColumns as $column)
 					{
-						$hasNonZeroValue = true;
-					}
+						$parsedOrdinateValue = $this->parseOrdinateValue($rowData[$column]);
+						$hasData = true;
 
-					$ordinateSerie[] = $parsedOrdinateValue;
+						if($parsedOrdinateValue != 0)
+						{
+							$hasNonZeroValue = true;
+						}
+						$ordinateSeries[$column][] = $parsedOrdinateValue;
+					}
 
 					if(isset($reportMetadata[$i]))
 					{
 						$rowMetadata = $reportMetadata[$i]->getColumns();
 						if(isset($rowMetadata['logo']))
 						{
-							$ordinateLogos[$i] = $rowMetadata['logo'];
+							$absoluteLogoPath = self::getAbsoluteLogoPath($rowMetadata['logo']);
+							if(file_exists($absoluteLogoPath))
+							{
+								$abscissaLogos[$i] = $absoluteLogoPath;
+							}
 						}
 					}
 					$i++;
@@ -325,49 +449,64 @@ class Piwik_ImageGraph_API
 					if(array_key_exists(0, $rows))
 					{
 						$rowData = $rows[0]->getColumns(); // associative Array
-						$ordinateValue = $rowData[$ordinateColumn];
-						$parsedOrdinateValue = $this->parseOrdinateValue($ordinateValue);
 
-						$hasData = true;
-
-						if(!empty($parsedOrdinateValue))
+						foreach($ordinateColumns as $column)
 						{
-							$hasNonZeroValue = true;
+							$ordinateValue = $rowData[$column];
+							$parsedOrdinateValue = $this->parseOrdinateValue($ordinateValue);
+
+							$hasData = true;
+
+							if(!empty($parsedOrdinateValue))
+							{
+								$hasNonZeroValue = true;
+							}
+
+							$ordinateSeries[$column][] = $parsedOrdinateValue;
 						}
+
 					}
 					else
 					{
-						$parsedOrdinateValue = 0;
+						foreach($ordinateColumns as $column)
+						{
+							$ordinateSeries[$column][] = 0;
+						}
 					}
 
 					$rowId = $periodsMetadata[$i]['period']->getLocalizedShortString();
-
-					$abscissaSerie[] = Piwik_Common::unsanitizeInputValue($rowId);
-					$ordinateSerie[] = $parsedOrdinateValue;
+					$abscissaSeries[] = Piwik_Common::unsanitizeInputValue($rowId);
 				}
 			}
+
 			if(!$hasData || !$hasNonZeroValue)
 			{
 				throw new Exception(Piwik_Translate('General_NoDataForGraph'));
 			}
-			
+
 			//Setup the graph
 			$graph = Piwik_ImageGraph_StaticGraph::factory($graphType);
 			$graph->setWidth($width);
 			$graph->setHeight($height);
 			$graph->setFont($font);
 			$graph->setFontSize($fontSize);
-			$graph->setMetricTitle($ordinateLabel);
-			$graph->setShowMetricTitle($showMetricTitle);
+			$graph->setLegendFontSize($legendFontSize);
+			$graph->setOrdinateLabels($ordinateLabels);
+			$graph->setShowLegend($showLegend);
 			$graph->setAliasedGraph($aliasedGraph);
-			$graph->setAbscissaSerie($abscissaSerie);
-			$graph->setOrdinateSerie($ordinateSerie);
+			$graph->setAbscissaSeries($abscissaSeries);
+			$graph->setAbscissaLogos($abscissaLogos);
+			$graph->setOrdinateSeries($ordinateSeries);
 			$graph->setOrdinateLogos($ordinateLogos);
 			$graph->setColors(!empty($colors) ? explode(',', $colors) : array());
+			if($period == 'day')
+			{
+				$graph->setForceSkippedLabels(6);
+			}
 
 			// render graph
 			$graph->renderGraph();
-			
+
 		} catch (Exception $e) {
 
 			$graph = new Piwik_ImageGraph_StaticGraph_Exception();
@@ -413,7 +552,7 @@ class Piwik_ImageGraph_API
 	{
 		$_GET['filter_truncate'] = Piwik_Common::getRequestVar('filter_truncate', $default, 'int');
 	}
-	
+
 	private static function parseOrdinateValue($ordinateValue)
 	{
 		$ordinateValue = @str_replace(',', '.', $ordinateValue);
@@ -436,5 +575,10 @@ class Piwik_ImageGraph_API
 	private static function getFontPath($font)
 	{
 		return PIWIK_INCLUDE_PATH . self::FONT_DIR . $font;
+	}
+
+	protected static function getAbsoluteLogoPath($relativeLogoPath)
+	{
+		return PIWIK_INCLUDE_PATH . '/' . $relativeLogoPath;
 	}
 }

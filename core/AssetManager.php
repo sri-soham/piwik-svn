@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: AssetManager.php 5951 2012-03-04 22:04:41Z vipsoft $
+ * @version $Id: AssetManager.php 7054 2012-09-24 23:55:44Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -296,6 +296,7 @@ class Piwik_AssetManager
 			'libs/',
 			'themes/default/common.js',
 			'themes/default/',
+			'plugins/CoreHome/templates/broadcast.js',
 			'plugins/',
 		);
 

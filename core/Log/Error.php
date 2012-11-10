@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Error.php 6412 2012-05-31 03:24:39Z matt $
+ * @version $Id: Error.php 7060 2012-09-25 21:17:06Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -127,7 +127,7 @@ class Piwik_Log_Error_Formatter_ScreenFormatter extends Piwik_Log_Formatter_Scre
 	    }
 	    $strReturned .= ":</strong> <i>$errstr</i> in <b>$errfile</b> on line <b>$errline</b>\n";
 	    $strReturned .= "<br /><br />Backtrace --&gt;<div style=\"font-family:Courier;font-size:10pt\">";
-	    $strReturned .= str_replace("\n", "<br />\n", $backtrace);
+	    $strReturned .= str_replace(array("\n",'#'), array("<br />\n","<br />\n#"), $backtrace);
 	    $strReturned .= "</div><br />";
 	    $strReturned .= "\n </pre></div><br />";
 	    

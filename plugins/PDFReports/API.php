@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: API.php 6957 2012-09-10 06:13:08Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_PDFReports
@@ -37,8 +37,11 @@ class Piwik_PDFReports_API
 
 	const OUTPUT_DOWNLOAD = 1;
 	const OUTPUT_SAVE_ON_DISK = 2;
+	const OUTPUT_INLINE = 3;
+	const OUTPUT_RETURN = 4;
 
 	const REPORT_TYPE_INFO_KEY = 'reportType';
+	const OUTPUT_TYPE_INFO_KEY = 'outputType';
 	const ID_SITE_INFO_KEY = 'idSite';
 	const REPORT_KEY = 'report';
 	const REPORT_CONTENT_KEY = 'contents';
@@ -50,7 +53,6 @@ class Piwik_PDFReports_API
 	const REPORT_TRUNCATE = 23;
 
 	static private $instance = null;
-	static private $dao = null;
 
 	/**
 	 * @return Piwik_PDFReports_API
@@ -60,7 +62,6 @@ class Piwik_PDFReports_API
 		if (self::$instance == null)
 		{
 			self::$instance = new self;
-			self::$dao = Piwik_Db_Factory::getDAO('report');
 		}
 		return self::$instance;
 	}
@@ -73,8 +74,8 @@ class Piwik_PDFReports_API
 	 * @param string $period Schedule frequency: day, week or month
 	 * @param string $reportType 'email' or any other format provided via the PDFReports.getReportTypes hook
 	 * @param string $reportFormat 'pdf', 'html' or any other format provided via the PDFReports.getReportFormats hook
-	 * @param string $reports JSON array of reports
-	 * @param string $parameters JSON encoded parameters
+	 * @param array $reports array of reports
+	 * @param array $parameters array of parameters
 	 *
 	 * @return int idReport generated
 	 */
@@ -98,13 +99,14 @@ class Piwik_PDFReports_API
 		// validation of requested reports
 		$reports = self::validateRequestedReports($idSite, $reportType, $reports);
 		
-		$idReport = self::$dao->getMaxIdreport();
+		$dao = Piwik_Db_Factory::getDAO('report');
+		$idReport = $dao->getMaxIdreport();
 		if($idReport == false)
 		{
 			$idReport = 1;
 		}
 
-		self::$dao->insert(
+		$dao->insert(
 			$idReport,
 			$idSite,
 			$currentUser,
@@ -145,7 +147,6 @@ class Piwik_PDFReports_API
 		$idReport = $report['idreport'];
 
 		$currentUser = Piwik::getCurrentUserLogin();
-
 		self::ensureLanguageSetForUser($currentUser);
 
 		// common validations
@@ -160,7 +161,8 @@ class Piwik_PDFReports_API
 		// validation of requested reports
 		$reports = self::validateRequestedReports($idSite, $reportType, $reports);
 		
-		$self::$dao->updateByIdreport(
+		$dao = Piwik_Db_Factory::getDAO('report');
+		$dao->updateByIdreport(
 					array(
 						'description' => $description,
 						'period' => $period,
@@ -169,7 +171,7 @@ class Piwik_PDFReports_API
 						'parameters' => $parameters,
 						'reports' => $reports,
 						),
-					"idreport = '$idReport'"
+					$idReport
 		);
 
 		self::$cache = array();
@@ -186,7 +188,8 @@ class Piwik_PDFReports_API
 		$report = reset($pdfReports);
 		Piwik::checkUserIsSuperUserOrTheUser($report['login']);
 
-		self::$dao->updateByIdreport(array('deleted' => 1), $idReport);
+		$dao = Piwik_Db_Factory::getDAO('report');
+		$dao->updateByIdreport(array('deleted' => 1), $idReport);
 		self::$cache = array();
 	}
 	
@@ -221,7 +224,8 @@ class Piwik_PDFReports_API
 			Piwik::checkUserHasViewAccess($idSite);
 		}
 
-		$reports = self::$dao->getAllActive(
+		$dao = Piwik_Db_Factory::getDAO('report');
+		$reports = $dao->getAllActive(
 						$idSite,
 						$period,
 						$idReport,
@@ -237,10 +241,10 @@ class Piwik_PDFReports_API
 
 		foreach($reports as &$report) {
 			// decode report parameters
-			$report['parameters'] = json_decode($report['parameters'], true);
+			$report['parameters'] = Piwik_Common::json_decode($report['parameters'], true);
 
 			// decode report list
-			$report['reports'] = json_decode($report['reports'], true);
+			$report['reports'] = Piwik_Common::json_decode($report['reports'], true);
 		}
 
 		// static cache
@@ -255,10 +259,10 @@ class Piwik_PDFReports_API
      * @param int $idReport ID of the report to generate.
      * @param string $date YYYY-MM-DD
 	 * @param bool|false|string $language If not passed, will use default language.
-	 * @param bool|false|int $outputType 1 = download report, 2 = save report to disk, defaults to download
+	 * @param bool|false|int $outputType 1 = download report, 2 = save report to disk, 3 = output report in browser, 4 = return report content to caller, defaults to download
 	 * @param bool|false|string $period Defaults to 'day'. If not specified, will default to the report's period set when creating the report
 	 * @param bool|false|string $reportFormat 'pdf', 'html' or any other format provided via the PDFReports.getReportFormats hook
-	 * @param bool|false|string $parameters JSON encoded parameters
+	 * @param bool|false|array $parameters array of parameters
 	 * @return array|void
 	 */
 	public function generateReport($idReport, $date, $language = false, $outputType = false, $period = false, $reportFormat = false, $parameters = false)
@@ -296,18 +300,11 @@ class Piwik_PDFReports_API
 			$reportFormat  = $report['format'];
 		}
 
-		// override report parameters
-		if(!empty($parameters))
-		{
-			$report['parameters'] = json_decode(
-				self::validateReportParameters($reportType, $parameters),
-				true
-			);
-		}
-		else
-		{
-			$parameters = $report['parameters'];
-		}
+		// override and/or validate report parameters
+		$report['parameters'] = Piwik_Common::json_decode(
+			self::validateReportParameters($reportType, empty($parameters) ? $report['parameters'] : $parameters),
+			true
+		);
 
 		// decode report list
 		$reportUniqueIds = $report['reports'];
@@ -356,6 +353,7 @@ class Piwik_PDFReports_API
 
 					// when a view/admin user created a report, workaround the fact that "Super User"
 					// is enforced in Scheduled tasks, and ensure Multisites.getAll only return the websites that this user can access
+					$userLogin = $report['login'];
 					if(!empty($userLogin)
 						&& $userLogin != Piwik_Config::getInstance()->superuser['login'])
 					{
@@ -388,6 +386,7 @@ class Piwik_PDFReports_API
 
 		$notificationInfo = array(
 			self::REPORT_TYPE_INFO_KEY => $reportType,
+			self::OUTPUT_TYPE_INFO_KEY => $outputType,
 			self::REPORT_KEY => $report,
 		);
 
@@ -408,11 +407,9 @@ class Piwik_PDFReports_API
 
 		// init report renderer
 		$reportRenderer->setLocale($language);
-		$reportRenderer->setRenderImageInline($outputType == self::OUTPUT_DOWNLOAD ? true : false);
 
 		// render report
-		$site = Piwik_SitesManager_API::getInstance()->getSiteFromId($idSite);
-		$websiteName = $site['name'];
+		$websiteName = Piwik_Site::getNameFor($idSite);
 		$description = str_replace(array("\r", "\n"), ' ', $report['description']);
 
 		$reportRenderer->renderFrontPage($websiteName, $prettyDate, $description, $reportMetadata);
@@ -435,9 +432,10 @@ class Piwik_PDFReports_API
 							$additionalFile['cid'] = $report['metadata']['uniqueId'];
 							$additionalFile['content'] =
 									Piwik_ReportRenderer::getStaticGraph(
-										$report['metadata']['imageGraphUrl'],
+										$report['metadata'],
 										Piwik_ReportRenderer_Html::IMAGE_GRAPH_WIDTH,
-										Piwik_ReportRenderer_Html::IMAGE_GRAPH_HEIGHT
+										Piwik_ReportRenderer_Html::IMAGE_GRAPH_HEIGHT,
+										$report['evolutionGraph']
 									);
 							$additionalFile['mimeType'] = 'image/png';
 							$additionalFile['encoding'] = Zend_Mime::ENCODING_BASE64;
@@ -454,6 +452,16 @@ class Piwik_PDFReports_API
 					$additionalFiles,
 				);
 			break;
+
+			case self::OUTPUT_INLINE:
+
+				$reportRenderer->sendToBrowserInline("$websiteName - $prettyDate - $description");
+				break;
+
+			case self::OUTPUT_RETURN:
+
+				return $reportRenderer->getRenderedReport();
+				break;
 
 			default:
 			case self::OUTPUT_DOWNLOAD:
@@ -522,7 +530,8 @@ class Piwik_PDFReports_API
 		);
 
 		// Update flag in DB
-		self::$dao->updateByIdreport(
+		$dao = Piwik_Db_Factory::getDAO('report');
+		$dao->updateByIdreport(
 			array('ts_last_sent' => Piwik_Date::now()->getDatetime()),
 			$report['idreport']
 		);
@@ -531,7 +540,6 @@ class Piwik_PDFReports_API
 		if(!isset($GLOBALS['PIWIK_TRACKER_DEBUG']) || !$GLOBALS['PIWIK_TRACKER_DEBUG'])
 		{
 			@chmod($outputFilename, 0600);
-			@unlink($outputFilename);
 		}
 	}
 
@@ -568,7 +576,7 @@ class Piwik_PDFReports_API
 		// delegate report parameter validation
 		Piwik_PostEvent(self::VALIDATE_PARAMETERS_EVENT, $parameters, $notificationInfo);
 
-		return json_encode($parameters);
+		return Piwik_Common::json_encode($parameters);
 	}
 
 	private static function validateDescription($description)
@@ -580,7 +588,7 @@ class Piwik_PDFReports_API
 	{
 		if(!self::allowMultipleReports($reportType))
 		{
-			//@review sms can only contain one report, we currently silently discard all reports except the first one, is this ok or should we raise an exception?
+			//sms can only contain one report, we silently discard all but the first
 			$requestedReports = array_slice($requestedReports, 0, 1);
 		}
 
@@ -601,7 +609,7 @@ class Piwik_PDFReports_API
 			}
 		}
 
-		return json_encode($requestedReports);
+		return Piwik_Common::json_encode($requestedReports);
 	}
 
 	private static function validateReportPeriod($period)
@@ -620,7 +628,7 @@ class Piwik_PDFReports_API
 		if(!in_array($reportType, $reportTypes))
 		{
 			throw new Exception(
-				'Rerport type \'' . $reportType . '\' not valid. Try one of the following ' . implode(', ', $reportTypes)
+				'Report type \'' . $reportType . '\' not valid. Try one of the following ' . implode(', ', $reportTypes)
 			);
 		}
 	}

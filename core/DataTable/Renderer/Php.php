@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Php.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: Php.php 6593 2012-07-30 09:14:18Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -247,20 +247,16 @@ class Piwik_DataTable_Renderer_Php extends Piwik_DataTable_Renderer
 			}
 			
 			if($this->isRenderSubtables()
-				&& $row->getIdSubDataTable() !== null)
+				&& $row->isSubtableLoaded() )
 			{
-				try{
-					$subTable = $this->renderTable( Piwik_DataTable_Manager::getInstance()->getTable($row->getIdSubDataTable()));
-					$newRow['subtable'] = $subTable;
-					if($this->hideIdSubDatatable === false
-						&& isset($newRow['metadata']['idsubdatatable_in_db']))
-					{
-						$newRow['columns']['idsubdatatable'] = $newRow['metadata']['idsubdatatable_in_db'];
-					}
-					unset($newRow['metadata']['idsubdatatable_in_db']);
-				} catch (Exception $e) {
-					// the subtables are not loaded we dont do anything 
+				$subTable = $this->renderTable( Piwik_DataTable_Manager::getInstance()->getTable($row->getIdSubDataTable()));
+				$newRow['subtable'] = $subTable;
+				if($this->hideIdSubDatatable === false
+					&& isset($newRow['metadata']['idsubdatatable_in_db']))
+				{
+					$newRow['columns']['idsubdatatable'] = $newRow['metadata']['idsubdatatable_in_db'];
 				}
+				unset($newRow['metadata']['idsubdatatable_in_db']);
 			}
 			if($this->hideIdSubDatatable !== false)
 			{

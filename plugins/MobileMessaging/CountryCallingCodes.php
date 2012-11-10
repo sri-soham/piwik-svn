@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CountryCallingCodes.php 6478 2012-06-14 16:19:42Z JulienM $
+ * @version $Id: CountryCallingCodes.php 6727 2012-08-13 20:26:46Z JulienM $
  *
  * @category Piwik_Plugins
  * @package Piwik_MobileMessaging
@@ -16,7 +16,6 @@
  */
 class Piwik_MobileMessaging_CountryCallingCodes
 {
-	// @review is this the correct way to store calling codes or should we use GLOBALS like in core/DataFiles/Countries.php?
 	// list taken from core/DataFiles/Countries.php
 	public static $countryCallingCodes = array(
 		'ad' => '376',

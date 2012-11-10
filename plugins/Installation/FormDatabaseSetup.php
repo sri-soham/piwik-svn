@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: FormDatabaseSetup.php 6483 2012-06-18 20:05:18Z capedfuzz $
+ * @version $Id: FormDatabaseSetup.php 6642 2012-08-02 04:27:50Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Installation
@@ -295,6 +295,7 @@ class Piwik_Installation_FormDatabaseSetup_Rule_checkUserPrivileges extends HTML
 	 */
 	private function isAccessDenied( $ex )
 	{
+		//NOte: this code is duplicated in Tracker.php error handler
 		return $ex->getCode() == 1044 || $ex->getCode() == 42000;
 	}
 	

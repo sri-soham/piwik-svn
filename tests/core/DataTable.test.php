@@ -51,7 +51,18 @@ class Test_Piwik_DataTable extends UnitTestCase
 		
 		// normal row
 		$idToDelete = 1;
-		$this->assertEqual(count($table->getRowFromId($idToDelete)->getColumns()), 2);
+		$row = $table->getRowFromId($idToDelete);
+		
+		// ----- Also testing the Serialize output to ensure there is no unexpected Backward breaking changes in the future
+		$serializedRow = 'O:19:"Piwik_DataTable_Row":1:{s:1:"c";a:3:{i:0;a:2:{s:5:"label";s:6:"ninety";s:5:"count";i:90;}i:1;a:0:{}i:3;N;}}';
+		$this->assertEqual($serializedRow, serialize($row));
+
+		$serializedTable = 'O:15:"Piwik_DataTable":3:{s:7:"' . "\0" . '*' . "\0" . 'rows";a:3:{i:0;O:19:"Piwik_DataTable_Row":1:{s:1:"c";a:3:{i:0;a:2:{s:5:"label";s:3:"ten";s:5:"count";i:10;}i:1;a:0:{}i:3;N;}}i:1;O:19:"Piwik_DataTable_Row":1:{s:1:"c";a:3:{i:0;a:2:{s:5:"label";s:6:"ninety";s:5:"count";i:90;}i:1;a:0:{}i:3;N;}}i:2;O:19:"Piwik_DataTable_Row":1:{s:1:"c";a:3:{i:0;a:2:{s:5:"label";s:7:"hundred";s:5:"count";i:100;}i:1;a:0:{}i:3;N;}}}s:10:"' . "\0" . '*' . "\0" . 'parents";N;s:13:"' . "\0" . '*' . "\0" . 'summaryRow";O:19:"Piwik_DataTable_Row":1:{s:1:"c";a:3:{i:0;a:2:{s:5:"label";s:7:"summary";s:5:"count";i:200;}i:1;a:0:{}i:3;N;}}}';
+		$s = serialize($table);
+		$this->assertEqual($serializedTable, $s);
+		// ----- End test unserialize
+		
+		$this->assertEqual(count($row->getColumns()), 2);
 		$table->deleteRow($idToDelete);
 		$this->assertEqual($table->getRowFromId($idToDelete), false);
 
@@ -208,7 +219,6 @@ class Test_Piwik_DataTable extends UnitTestCase
 						'test_float3'=> 1.5,
 						'test_stringint'=> "145",
 						"test" => 'string fake',
-						'super'=>array('this column has an array string that will be 0 when algorithm sums the value'),
 						'integerArrayToSum'=>array( 1 => 1, 2 => 10.0, 3 => array(1 => 2, 2 => 3)),
 						);
 		$metadata = array('logo'=> 'piwik.png',
@@ -225,7 +235,6 @@ class Test_Piwik_DataTable extends UnitTestCase
 						'test_float2'=> 14.5,
 						'test_stringint'=> "5",
 						0925824 => 'toto',
-						'super'=>array('this column has geagaean array value, amazing'),
 						'integerArrayToSum'=>array( 1 => 5, 2 => 5.5, 3 => array(2 => 4)),
 					);
 		$finalRow = new Piwik_DataTable_Row( array(Piwik_DataTable_Row::COLUMNS => $columns2));
@@ -235,13 +244,38 @@ class Test_Piwik_DataTable extends UnitTestCase
 						'test_float2'=> 14.5,
 						'test_float3'=> 1.5,
 						'test_stringint'=> 150, //add also strings!!
-						'super'=>array(0),
-						'test' => 0,
+						'test' => 'string fake',
 						'integerArrayToSum' => array( 1 => 6, 2 => 15.5, 3 => array(1 => 2, 2 => 7)),
 						0925824 => 'toto',
 				);
 		$rowWanted = new Piwik_DataTable_Row( array(Piwik_DataTable_Row::COLUMNS => $columnsWanted));
 		$this->assertTrue( Piwik_DataTable_Row::isEqual($rowWanted, $finalRow));
+	}
+	
+	/**
+	 * Test that adding two string column values results in an exception.
+	 */
+	public function testSumRow_stringException()
+	{
+		$columns = array(
+			'super'=>array('this column has an array string that will be 0 when algorithm sums the value'),
+		);
+		$row1 = new Piwik_DataTable_Row(array(Piwik_DataTable_Row::COLUMNS => $columns));
+		
+		$columns2 = array(
+			'super'=>array('this column has geagaean array value, amazing'),
+		);
+		$row2 = new Piwik_DataTable_Row(array(Piwik_DataTable_Row::COLUMNS => $columns2));
+		
+		try
+		{
+			$row2->sumRow($row1);
+			$this->fail("sumRow did not throw when adding two string columns.");
+		}
+		catch (Exception $ex)
+		{
+			// pass
+		}
 	}
 	
 	/**
@@ -259,6 +293,8 @@ class Test_Piwik_DataTable extends UnitTestCase
         	$this->fail("Exception not raised.");
     	}
     	catch (Exception $expected) {
+    		// manually tell the manager it is deleted otherwise infinite recursion in __destruct
+    		Piwik_DataTable_Manager::getInstance()->setTableDeleted($table->getId());
     		$this->pass();
             return;
         }
@@ -413,10 +449,31 @@ class Test_Piwik_DataTable extends UnitTestCase
 	  	$serialized = ($table->getSerialized());
 	  	
 		$this->assertEqual(array_keys($serialized), array($idsubsubtable,$idsubtable,0));
+		
+		
+  		// In the next test we compare an unserialized datatable with its original instance.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+		// The unserialized datatable rows will have positive DATATABLE_ASSOCIATED ids.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		// Positive DATATABLE_ASSOCIATED ids mean that the associated sub-datatables are not loaded in memory.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+		// In this case, this is NOT true: we know that the sub-datatable is loaded in memory.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+		// HOWEVER, because of datatable id conflicts happening in the datatable manager, it is not yet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
+		// possible to know, after unserializing a datatable, if its sub-datatables are loaded in memory.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+		$expectedTableRows = array();                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+		foreach ($table->getRows() as $currentRow) {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       
+			$expectedTableRow = clone $currentRow;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+			$currentRowAssociatedDatatableId = $currentRow->c[Piwik_DataTable_Row::DATATABLE_ASSOCIATED];                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              
+			if($currentRowAssociatedDatatableId != null)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
+			{                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+				// making DATATABLE_ASSOCIATED ids positive                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        
+				$expectedTableRow->c[Piwik_DataTable_Row::DATATABLE_ASSOCIATED] = -1 * $currentRowAssociatedDatatableId;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           
+			}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+			$expectedTableRows[] = $expectedTableRow;                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  
+		}        
+		
 		$tableAfter = new Piwik_DataTable;
 		$tableAfter->addRowsFromSerializedArray($serialized[0]);
-		$this->assertEqual($table->getRows(),$tableAfter->getRows());
-
+        $this->assertEqual($expectedTableRows, $tableAfter->getRows());
 		$subsubtableAfter = new Piwik_DataTable;
 		$subsubtableAfter->addRowsFromSerializedArray($serialized[$idsubsubtable]);
 		$this->assertEqual($subsubtable->getRows(),$subsubtableAfter->getRows());

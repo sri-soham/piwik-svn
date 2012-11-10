@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitTest.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: VisitTest.php 6953 2012-09-09 20:54:44Z capedfuzz $
  */
 class Tracker_VisitTest extends DatabaseTestCase
 {
@@ -16,6 +16,8 @@ class Tracker_VisitTest extends DatabaseTestCase
         $pseudoMockAccess = new FakeAccess;
         FakeAccess::$superUser = true;
         Zend_Registry::set('access', $pseudoMockAccess);
+        
+        Piwik_PluginsManager::getInstance()->loadPlugins(array('SitesManager'));
     }
 
     /**

@@ -36,7 +36,7 @@
                     <a class="tableIcon" format="tableAllColumns" var="tableAllColumns"><img title="{'General_DisplayTableWithMoreMetrics'|translate}" src="themes/default/images/table_more.png" /></a>
                     {/if}
                     {if $properties.show_goals}
-					<a class="tableIcon" format="tableGoals" var="tableGoals"><img title="{'General_DisplayTableWithGoalMetrics'|translate}" src="themes/default/images/{if $javascriptVariablesToSet.idGoal=='ecommerceOrder'}ecommerceOrder.gif{else}goal.png{/if}" /></a>
+					<a class="tableIcon" format="tableGoals" var="tableGoals"><img title="{'General_DisplayTableWithGoalMetrics'|translate}" src="themes/default/images/{if isset($javascriptVariablesToSet.idGoal) && $javascriptVariablesToSet.idGoal=='ecommerceOrder'}ecommerceOrder.gif{else}goal.png{/if}" /></a>
                     {/if}
                     {if $properties.show_ecommerce}
                     <a class="tableIcon" format="ecommerceOrder" var="ecommerceOrder"><img title="{'General_EcommerceOrders'|translate}" src="themes/default/images/ecommerceOrder.gif" /> <span>{'General_EcommerceOrders'|translate}</span></a>
@@ -82,7 +82,7 @@
 			</div>
 			
 		</div>
-        <div class="limitSelection {if !$properties.show_pagination_control} hidden{/if}" title="{'General_RowsToDisplay'|translate:escape:'html'}"></div>
+		<div class="limitSelection {if !$properties.show_pagination_control && !$properties.show_limit_control} hidden{/if}" title="{'General_RowsToDisplay'|translate:escape:'html'}"></div>
 		<div class="tableConfiguration">
 			<a class="tableConfigurationIcon" href="#"></a>
 			<ul>

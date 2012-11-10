@@ -19,7 +19,7 @@ class Piwik_Db_DAO_User extends Piwik_Db_DAO_Base
 	public function __construct($db, $table)
 	{
 		parent::__construct($db, $table);
-		$this->table = $db->quoteIdentifier($this->table);
+//		$this->table = $db->quoteIdentifier($this->table);
 	}
 
 	public function getAll($userLogins = '')

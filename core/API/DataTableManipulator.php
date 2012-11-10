@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTableManipulator.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: DataTableManipulator.php 7064 2012-09-26 08:34:19Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -55,7 +55,8 @@ abstract class Piwik_API_DataTableManipulator
 	 * @throws Exception
 	 * @return Piwik_DataTable_Array|Piwik_DataTable
 	 */
-	protected function manipulate($dataTable) {
+	protected function manipulate($dataTable)
+	{
 		if ($dataTable instanceof Piwik_DataTable_Array)
 		{
 			$newTableArray = new Piwik_DataTable_Array;

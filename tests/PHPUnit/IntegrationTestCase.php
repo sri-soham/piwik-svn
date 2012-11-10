@@ -127,9 +127,10 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
             }
             Piwik_PluginsManager::getInstance()->unloadPlugins();
         } catch (Exception $e) {}
+
         if ($dropDatabase)
         {
-            Piwik::dropDatabase();
+           	Piwik::dropDatabase();
         }
         Piwik_DataTable_Manager::getInstance()->deleteAll();
         Piwik_Option::getInstance()->clearCache();

@@ -37,11 +37,6 @@ class Piwik_Option
 	static private $instance = null;
 
 	/**
-	 *	Single dao class
-	 */
-	static private $dao = null;
-
-	/**
 	 * Returns Singleton instance
 	 *
 	 * @return Piwik_Option
@@ -51,7 +46,6 @@ class Piwik_Option
 		if (self::$instance == null)
 		{
 			self::$instance = new self;
-			self::$dao = Piwik_Db_Factory::getDAO('option');
 		}
 		return self::$instance;
 	}
@@ -75,7 +69,8 @@ class Piwik_Option
 			return $this->all[$name];
 		}
 		
-		$value = self::$dao->getValueByName($name);
+		$dao = Piwik_Db_Factory::getDAO('option');
+		$value = $dao->getValueByName($name);
 		if($value === false)
 		{
 			return false;
@@ -94,7 +89,8 @@ class Piwik_Option
 	public function set($name, $value, $autoload = 0)
 	{
 		$autoload = (int)$autoload;
-		self::$dao->addRecord($name, $value, $autoload);
+		$dao = Piwik_Db_Factory::getDAO('option');
+		$dao->addRecord($name, $value, $autoload);
 		$this->all[$name] = $value;
 	}
 
@@ -106,7 +102,8 @@ class Piwik_Option
 	 */
 	public function delete($name, $value = null)
 	{
-		self::$dao->delete($name, $value);
+		$dao = Piwik_Db_Factory::getDAO('option');
+		$dao->delete($name, $value);
 
 		$this->clearCache();
 	}
@@ -120,7 +117,8 @@ class Piwik_Option
 	 */
 	public function deleteLike($name, $value = null)
 	{
-		self::$dao->deleteLike($name, $value);
+		$dao = Piwik_Db_Factory::getDAO('option');
+		$dao->deleteLike($name, $value);
 
 		$this->clearCache();
 	}
@@ -137,7 +135,8 @@ class Piwik_Option
 			return;
 		}
 
-		$all = self::$dao->getAllAutoload();
+		$dao = Piwik_Db_Factory::getDAO('option');
+		$all = $dao->getAllAutoload();
 		foreach($all as $option)
 		{
 			$this->all[$option['option_name']] = $option['option_value'];

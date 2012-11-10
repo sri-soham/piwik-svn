@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DataTableTest.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: DataTableTest.php 6669 2012-08-04 15:18:28Z JulienM $
  */
 class DataTableTest extends PHPUnit_Framework_TestCase
 {
@@ -249,7 +249,6 @@ class DataTableTest extends PHPUnit_Framework_TestCase
                         'test_float3'=> 1.5,
                         'test_stringint'=> "145",
                         "test" => 'string fake',
-                        'super'=>array('this column has an array string that will be 0 when algorithm sums the value'),
                         'integerArrayToSum'=>array( 1 => 1, 2 => 10.0, 3 => array(1 => 2, 2 => 3)),
                         );
         $metadata = array('logo'=> 'piwik.png',
@@ -266,7 +265,6 @@ class DataTableTest extends PHPUnit_Framework_TestCase
                         'test_float2'=> 14.5,
                         'test_stringint'=> "5",
                         0925824 => 'toto',
-                        'super'=>array('this column has geagaean array value, amazing'),
                         'integerArrayToSum'=>array( 1 => 5, 2 => 5.5, 3 => array(2 => 4)),
                     );
         $finalRow = new Piwik_DataTable_Row( array(Piwik_DataTable_Row::COLUMNS => $columns2));
@@ -276,15 +274,44 @@ class DataTableTest extends PHPUnit_Framework_TestCase
                         'test_float2'=> 14.5,
                         'test_float3'=> 1.5,
                         'test_stringint'=> 150, //add also strings!!
-                        'super'=>array(0),
-                        'test' => 0,
+                        'test' => 'string fake',
                         'integerArrayToSum' => array( 1 => 6, 2 => 15.5, 3 => array(1 => 2, 2 => 7)),
                         0925824 => 'toto',
                 );
         $rowWanted = new Piwik_DataTable_Row( array(Piwik_DataTable_Row::COLUMNS => $columnsWanted));
         $this->assertTrue( Piwik_DataTable_Row::isEqual($rowWanted, $finalRow));
     }
-    
+		
+	/**
+	 * Test that adding two string column values results in an exception.
+	 * 
+     * @group Core
+     * @group DataTable
+	 */
+	public function testSumRow_stringException()
+	{
+		$columns = array(
+			'super'=>array('this column has an array string that will be 0 when algorithm sums the value'),
+		);
+		$row1 = new Piwik_DataTable_Row(array(Piwik_DataTable_Row::COLUMNS => $columns));
+		
+		$columns2 = array(
+			'super'=>array('this column has geagaean array value, amazing'),
+		);
+		$row2 = new Piwik_DataTable_Row(array(Piwik_DataTable_Row::COLUMNS => $columns2));
+		
+		// TODO: when phpunit 3.7 is released, can do check w/ "@expectedException Exception"
+		try
+		{
+			$row2->sumRow($row1);
+			$this->fail("sumRow did not throw when adding two string columns.");
+		}
+		catch (Exception $ex)
+		{
+			// pass
+		}
+	}
+	
     /**
      * Test serialize with an infinite recursion (a row linked to a table in the parent hierarchy)
      * After 100 recursion must throw an exception
@@ -459,9 +486,31 @@ class DataTableTest extends PHPUnit_Framework_TestCase
         $serialized = ($table->getSerialized());
         
         $this->assertEquals(array_keys($serialized), array($idsubsubtable,$idsubtable,0));
+
+		// In the next test we compare an unserialized datatable with its original instance.
+		// The unserialized datatable rows will have positive DATATABLE_ASSOCIATED ids.
+		// Positive DATATABLE_ASSOCIATED ids mean that the associated sub-datatables are not loaded in memory.
+		// In this case, this is NOT true: we know that the sub-datatable is loaded in memory.
+		// HOWEVER, because of datatable id conflicts happening in the datatable manager, it is not yet
+		// possible to know, after unserializing a datatable, if its sub-datatables are loaded in memory.
+		$expectedTableRows = array();
+		foreach ($table->getRows() as $currentRow) {
+			$expectedTableRow = clone $currentRow;
+
+			$currentRowAssociatedDatatableId = $currentRow->c[Piwik_DataTable_Row::DATATABLE_ASSOCIATED];
+			if($currentRowAssociatedDatatableId != null)
+			{
+				// making DATATABLE_ASSOCIATED ids positive
+				$expectedTableRow->c[Piwik_DataTable_Row::DATATABLE_ASSOCIATED] = -1 * $currentRowAssociatedDatatableId;
+			}
+
+			$expectedTableRows[] = $expectedTableRow;
+		}
+
         $tableAfter = new Piwik_DataTable;
         $tableAfter->addRowsFromSerializedArray($serialized[0]);
-        $this->assertEquals($table->getRows(),$tableAfter->getRows());
+
+        $this->assertEquals($expectedTableRows, $tableAfter->getRows());
 
         $subsubtableAfter = new Piwik_DataTable;
         $subsubtableAfter->addRowsFromSerializedArray($serialized[$idsubsubtable]);
@@ -615,7 +664,7 @@ class DataTableTest extends PHPUnit_Framework_TestCase
         
         $this->assertTrue( Piwik_DataTable::isEqual($table, $tableExpected) );
     }
-    
+
     /**
      * test add 2 different tables to the same table
      * 
@@ -671,8 +720,59 @@ class DataTableTest extends PHPUnit_Framework_TestCase
         
         $this->assertTrue( Piwik_DataTable::isEqual($table, $tableExpected) );
     }
-    
-    protected function _getDataTable1ForTest()
+
+
+	/**
+	 * @group Core
+	 * @group DataTable
+	 */
+	public function testUnrelatedDataTableNotDestructed()
+	{
+		$mockedDataTable = $this->getMock('Piwik_DataTable', array('__destruct'));
+		$mockedDataTable->expects($this->never())->method('__destruct');
+
+		$rowBeingDestructed = new Piwik_DataTable_Row();
+
+		// we simulate the fact that the value of Piwik_DataTable_Row::DATATABLE_ASSOCIATED retrieved
+		// from the database is in conflict with one of the Piwik_DataTable_Manager managed table identifiers.
+		// This is a rare but legitimate case as identifiers are not thoroughly synchronized
+		// when the expanded parameter is false.
+		$rowBeingDestructed->c[Piwik_DataTable_Row::DATATABLE_ASSOCIATED] = $mockedDataTable->getId();
+
+		destroy($rowBeingDestructed);
+	}
+
+	/**
+	 * @group Core
+	 * @group DataTable
+	 */
+	public function testGetSerializedCallsCleanPostSerialize()
+	{
+		$mockedDataTableRow = $this->getMock('Piwik_DataTable_Row', array('cleanPostSerialize'));
+		$mockedDataTableRow->expects($this->once())->method('cleanPostSerialize');
+
+		$dataTableBeingSerialized = new Piwik_DataTable();
+		$dataTableBeingSerialized->addRow($mockedDataTableRow);
+
+		$dataTableBeingSerialized->getSerialized();
+	}
+
+	/**
+	 * @group Core
+	 * @group DataTable
+	 */
+	public function testSubDataTableIsDestructed()
+	{
+		$mockedDataTable = $this->getMock('Piwik_DataTable', array('__destruct'));
+		$mockedDataTable->expects($this->once())->method('__destruct');
+
+		$rowBeingDestructed = new Piwik_DataTable_Row();
+		$rowBeingDestructed->setSubtable($mockedDataTable);
+
+		destroy($rowBeingDestructed);
+	}
+
+	protected function _getDataTable1ForTest()
     {
         $rows = $this->_getRowsDataTable1ForTest();
         $table = new Piwik_DataTable;

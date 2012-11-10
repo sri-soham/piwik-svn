@@ -15,6 +15,8 @@
  */
 class Piwik_PrivacyManager_LogDataPurger
 {
+	const TEMP_TABLE_NAME = 'tmp_log_actions_to_keep';
+
 	/**
 	 * The max set of rows each table scan select should query at one time.
 	 */
@@ -108,12 +110,12 @@ class Piwik_PrivacyManager_LogDataPurger
 		$maxIdVisit = $this->getDeleteIdVisitOffset();
 		if (!empty($maxIdVisit))
 		{
-			foreach ($this->getDeleteTableLogTables() as $table)
+			foreach (self::getDeleteTableLogTables() as $table)
 			{
 				// getting an estimate for log_action is not supported since it can take too long
 				if ($table != Piwik_Common::prefixTable('log_action'))
 				{
-					$TableDAO = Piwik_Db_Factory::getDAO($table);
+					$TableDAO = Piwik_Db_Factory::getDAO(Piwik_Common::unprefixTable($table));
 					$rowCount = $TableDAO->getCountByIdvisit($maxIdVisit);
 					if ($rowCount > 0)
 					{
@@ -131,10 +133,8 @@ class Piwik_PrivacyManager_LogDataPurger
 	 */
 	private function purgeUnusedLogActions()
 	{
-		// get current max visit ID in log tables w/ idaction references.
-		$maxIds = $this->getMaxVisitIdsInLogTables();
 		$LogAction = Piwik_Db_Factory::getDAO('log_action');
-		$LogAction->purgeUnused($maxIds);
+		$LogAction->purgeUnused();
 	}
 	
 	/**
@@ -160,20 +160,6 @@ class Piwik_PrivacyManager_LogDataPurger
 				  $maxIdVisit,
 				  -self::$selectSegmentSize
 				);
-	}
-
-	private function getMaxVisitIdsInLogTables()
-	{
-		$tables = array('log_conversion', 'log_link_visit_action', 'log_visit', 'log_conversion_item');
-		
-		$result = array();
-		foreach ($tables as $table)
-		{
-			$dao = Piwik_Db_Factory::getDAO($table);
-			$result[$table] = $dao->getMaxIdvisit();
-		}
-		
-		return $result;
 	}
 	
 	// let's hardcode, since these are not dynamically created tables

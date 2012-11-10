@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: SafeDecodeLabel.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: SafeDecodeLabel.php 7064 2012-09-26 08:34:19Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -34,7 +34,7 @@ class Piwik_DataTable_Filter_SafeDecodeLabel extends Piwik_DataTable_Filter
 	 * @param string  $value
 	 * @return mixed|string
 	 */
-	static public function filterValue($value)
+	static public function safeDecodeLabel($value)
 	{
 		$value = htmlspecialchars_decode( urldecode($value), ENT_QUOTES);
 		if(self::$outputHtml)
@@ -56,7 +56,7 @@ class Piwik_DataTable_Filter_SafeDecodeLabel extends Piwik_DataTable_Filter
 			$value = $row->getColumn($this->columnToDecode);
 			if($value !== false)
 			{
-				$value = self::filterValue($value);
+				$value = self::safeDecodeLabel($value);
 				$row->setColumn($this->columnToDecode,$value);
 				
 				$this->filterSubTable($row);

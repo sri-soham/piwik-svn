@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UpdaterTest.php 6502 2012-06-24 19:56:27Z SteveG $
+ * @version $Id: UpdaterTest.php 6819 2012-08-17 21:02:48Z SteveG $
  */
 class UpdaterTest extends DatabaseTestCase 
 {
@@ -44,7 +44,6 @@ class UpdaterTest extends DatabaseTestCase
             $path . '0.1.php' => '0.1'
         );
         $this->assertEquals($expectedInOrder, array_map("basename", $updateFiles));
-        
     }
 
     /**

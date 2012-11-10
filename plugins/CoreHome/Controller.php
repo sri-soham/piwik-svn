@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Controller.php 6117 2012-03-26 11:00:54Z EZdesign $
+ * @version $Id: Controller.php 7068 2012-09-27 04:45:55Z capedfuzz $
  * 
  * @category Piwik_Plugins
  * @package Piwik_CoreHome
@@ -135,7 +135,7 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	/** Render the entire row evolution popover for a single row */
 	public function getRowEvolutionPopover()
 	{
-		$rowEvolution = new Piwik_CoreHome_DataTableRowAction_RowEvolution($this->idSite, $this->date);
+		$rowEvolution = $this->makeRowEvolution($isMulti = false);
 		self::$rowEvolutionCache = $rowEvolution;
 		$view = Piwik_View::factory('popover_rowevolution');
 		echo $rowEvolution->renderPopover($this, $view);
@@ -144,7 +144,7 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	/** Render the entire row evolution popover for multiple rows */
 	public function getMultiRowEvolutionPopover()
 	{
-		$rowEvolution = new Piwik_CoreHome_DataTableRowAction_MultiRowEvolution($this->idSite, $this->date);
+		$rowEvolution = $this->makeRowEvolution($isMulti = true);
 		self::$rowEvolutionCache = $rowEvolution;
 		$view = Piwik_View::factory('popover_multirowevolution');
 		echo $rowEvolution->renderPopover($this, $view);
@@ -154,8 +154,29 @@ class Piwik_CoreHome_Controller extends Piwik_Controller
 	public function getRowEvolutionGraph($fetch = false)
 	{
 		$rowEvolution = self::$rowEvolutionCache;
+		if ($rowEvolution === null)
+		{
+			$paramName = Piwik_CoreHome_DataTableRowAction_MultiRowEvolution::IS_MULTI_EVOLUTION_PARAM;
+			$isMultiRowEvolution = Piwik_Common::getRequestVar($paramName, false, 'int');
+			
+			$rowEvolution = $this->makeRowEvolution($isMultiRowEvolution, $graphType = 'graphEvolution');
+			self::$rowEvolutionCache = $rowEvolution;
+		}
+		
 		$view = $rowEvolution->getRowEvolutionGraph();
 		return $this->renderView($view, $fetch);
 	}
 	
+	/** Utility function. Creates a RowEvolution instance. */
+	private function makeRowEvolution( $isMultiRowEvolution, $graphType = null )
+	{
+		if ($isMultiRowEvolution)
+		{
+			return new Piwik_CoreHome_DataTableRowAction_MultiRowEvolution($this->idSite, $this->date, $graphType);
+		}
+		else
+		{
+			return new Piwik_CoreHome_DataTableRowAction_RowEvolution($this->idSite, $this->date, $graphType);
+		}
+	}
 }

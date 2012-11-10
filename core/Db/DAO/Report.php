@@ -55,10 +55,17 @@ class Piwik_Db_DAO_Report extends Piwik_Db_DAO_Base
 	public function getAllActive($idSite, $period, $idReport, $ifSuperUserReturnOnlySuperUserReports)
 	{
 		list($where, $params) = $this->varsGetAllActive($idSite, $period, $idReport, $ifSuperUserReturnOnlySuperUserReports);
+		if (empty($where)) {
+			$where = '';
+		}
+		else {
+			$where = ' AND ' . implode(' AND ', $where) . ' ';
+		}
+
 		$sql = 'SELECT * FROM ' . $this->table . ' '
 			 . 'INNER JOIN ' . Piwik_Common::prefixTable('site') . ' '
 			 . '	USING (idsite) '
-			 . 'WHERE deleted = 0 AND ' . implode(' AND ', $where);
+			 . 'WHERE deleted = 0 ' . $where;
 
 		return $this->db->fetchAll($sql, $params);
 	}
@@ -117,16 +124,16 @@ class Piwik_Db_DAO_Report extends Piwik_Db_DAO_Base
 			$where[] = ' period = ? ';
 			$params[] = $period;
 		}
-		if (!empty($idSite))
+		if (!empty($idsite))
 		{
 			// Joining with the site table to work around pre-1.3 where reports could still be linked to a deleted site
 			$where[] = Piwik_Common::prefixTable('site') . '.idsite = ? ';
-			$params[] = $idSite;
+			$params[] = $idsite;
 		}
-		if (!empty($idReport))
+		if (!empty($idreport))
 		{
 			$where[] = ' idreport = ? ';
-			$params[] = $idReport;
+			$params[] = $idreport;
 		}
 
 		return array($where, $params);

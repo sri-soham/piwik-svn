@@ -11,10 +11,6 @@
 ; WARNING - YOU SHOULD NOT EDIT THIS FILE DIRECTLY - Edit config.ini.php instead.
 ;--------
 
-[superuser]
-login			= 
-password		=
-
 [database]
 host			=
 username		=
@@ -31,12 +27,16 @@ adapter			= PDO_MYSQL
 [database_tests]
 host 			= localhost
 username 		= root
-password 		=
+password 		= 
 dbname			= piwik_tests
 tables_prefix	= piwiktests_
 port			= 3306
 adapter 		= PDO_MYSQL
  
+[superuser]
+login			= 
+password		=
+
 [Debug]
 ; if set to 1, the archiving process will always be triggered, even if the archive has already been computed
 ; this is useful when making changes to the archiving code so we can force the archiving process
@@ -96,7 +96,7 @@ action_category_level_limit = 10
 autocomplete_min_sites = 5
 
 ; maximum number of websites showed in search results in autocompleter
-site_selector_max_sites = 10
+site_selector_max_sites = 15
 
 ; if set to 1, shows sparklines (evolution graph) in 'All Websites' report (MultiSites plugin)
 show_multisites_sparklines = 1
@@ -234,6 +234,11 @@ datatable_archiving_maximum_rows_subtable_actions = 100
 ; maximum number of rows for other tables (Providers, User settings configurations)
 datatable_archiving_maximum_rows_standard = 500
 
+; maximum number of rows to fetch from the database when archiving. if set to 0, no limit is used.
+; this can be used to speed up the archiving process, but is only useful if you're site has a large
+; amount of actions, referrers or custom variable name/value pairs.
+archiving_ranking_query_row_limit = 50000
+
 ; by default, the real time Live! widget will update every 5 seconds and refresh with new visits/actions/etc.
 ; you can change the timeout so the widget refreshes more often, or not as frequently
 live_widget_refresh_after_seconds = 5
@@ -247,8 +252,8 @@ multisites_refresh_after_seconds = 300
 use_ajax_cdn = 0
 
 ; required AJAX library versions
-jquery_version = 1.7.1
-jqueryui_version = 1.8.16
+jquery_version = 1.7.2
+jqueryui_version = 1.8.22
 swfobject_version = 2.2
 
 ; Set to 1 if you're using https on your Piwik server and Piwik can't detect it,
@@ -519,5 +524,5 @@ Plugins_Tracker[] = DoNotTrack
 SDK_batch_size = 10
 SDK_interval_value = 30
 
-; NOTE: do not directly in this file! See notice at the top
+; NOTE: do not directly edit this file! See notice at the top
  

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Row.php 6400 2012-05-30 09:50:00Z matt $
+ * @version $Id: Row.php 7080 2012-09-30 16:06:34Z capedfuzz $
  * 
  * @category Piwik
  * @package Piwik
@@ -42,6 +42,7 @@ class Piwik_DataTable_Row
 	 * @see constructor for more information
 	 */
 	public $c = array();
+	private $subtableIdWasNegativeBeforeSerialize = false;
 	
 	const COLUMNS = 0;
 	const METADATA = 1;
@@ -83,8 +84,36 @@ class Piwik_DataTable_Row
 		if(isset($row[self::DATATABLE_ASSOCIATED])
 			&& $row[self::DATATABLE_ASSOCIATED] instanceof Piwik_DataTable)
 		{
-			$this->c[self::DATATABLE_ASSOCIATED] = $row[self::DATATABLE_ASSOCIATED]->getId();
-		}	
+			$this->setSubtable($row[self::DATATABLE_ASSOCIATED]);
+		}
+	}
+	
+	/**
+	 * Because $this->c[self::DATATABLE_ASSOCIATED] is negative when the table is in memory,
+	 * we must prior to serialize() call, make sure the ID is saved as positive integer
+	 */
+	public function __sleep()
+	{
+		if(!empty($this->c[self::DATATABLE_ASSOCIATED]) 
+			&& $this->c[self::DATATABLE_ASSOCIATED] < 0)
+		{
+			$this->c[self::DATATABLE_ASSOCIATED] = -1 * $this->c[self::DATATABLE_ASSOCIATED];
+			$this->subtableIdWasNegativeBeforeSerialize = true;
+		}
+		return array('c');
+	}
+
+	/**
+	 * Must be called after the row was serialized and __sleep was called
+	 * 
+	 */
+	public function cleanPostSerialize()
+	{
+		if($this->subtableIdWasNegativeBeforeSerialize)
+		{
+			$this->c[self::DATATABLE_ASSOCIATED] = -1 * $this->c[self::DATATABLE_ASSOCIATED];
+			$this->subtableIdWasNegativeBeforeSerialize = false;
+		}
 	}
 	
 	/**
@@ -92,11 +121,10 @@ class Piwik_DataTable_Row
 	 */
 	public function __destruct()
 	{
-		$idSubtable = $this->c[self::DATATABLE_ASSOCIATED];
-		if($idSubtable !== null)
+		if($this->isSubtableLoaded())
 		{
-			Piwik_DataTable_Manager::getInstance()->deleteTable($idSubtable);
-			$idSubtable = null;
+			Piwik_DataTable_Manager::getInstance()->deleteTable( $this->getIdSubDataTable() );
+			$this->c[self::DATATABLE_ASSOCIATED] = null;
 		}
 	}
 
@@ -216,7 +244,24 @@ class Piwik_DataTable_Row
 	 */
 	public function getIdSubDataTable()
 	{
-		return $this->c[self::DATATABLE_ASSOCIATED];
+		return !is_null($this->c[self::DATATABLE_ASSOCIATED])
+				// abs() is to ensure we return a positive int, @see isSubtableLoaded()
+				? abs($this->c[self::DATATABLE_ASSOCIATED])
+				: null;
+	}
+	
+	/**
+	 * Returns the associated subtable, if one exists.
+	 * 
+	 * @return Piwik_DataTable|false
+	 */
+	public function getSubtable()
+	{
+		if ($this->isSubtableLoaded())
+		{
+			return Piwik_DataTable_Manager::getInstance()->getTable($this->getIdSubDataTable());
+		}
+		return false;
 	}
 	
 	/**
@@ -229,17 +274,15 @@ class Piwik_DataTable_Row
 	 */
 	public function sumSubtable(Piwik_DataTable $subTable)
 	{
-		$thisSubtableID = $this->getIdSubDataTable();
-		if($thisSubtableID === null)
+		if($this->isSubtableLoaded())
+		{
+			$thisSubTable = $this->getSubtable();
+		}
+		else
 		{
 			$thisSubTable = new Piwik_DataTable();
 			$this->addSubtable($thisSubTable);
 		}
-		else
-		{
-			$thisSubTable = Piwik_DataTable_Manager::getInstance()->getTable( $thisSubtableID );
-		}
-		
 		$thisSubTable->addDataTable($subTable);
 	}
 	
@@ -249,8 +292,8 @@ class Piwik_DataTable_Row
 	 * If the row already has a DataTable associated to it, throws an Exception.
 	 * 
 	 * @param Piwik_DataTable  $subTable  DataTable to associate to this row
+	 * @return Piwik_DataTable Returns $subTable.
 	 * @throws Exception 
-	 * 
 	 */
 	public function addSubtable(Piwik_DataTable $subTable)
 	{
@@ -258,7 +301,7 @@ class Piwik_DataTable_Row
 		{
 			throw new Exception("Adding a subtable to the row, but it already has a subtable associated.");
 		}
-		$this->c[self::DATATABLE_ASSOCIATED] = $subTable->getId();
+		return $this->setSubtable($subTable);
 	}
 	
 	/**
@@ -266,12 +309,30 @@ class Piwik_DataTable_Row
 	 * a DataTable associated, it is simply overwritten.
 	 * 
 	 * @param Piwik_DataTable  $subTable  DataTable to associate to this row
+	 * @return Piwik_DataTable Returns $subTable.
 	 */
 	public function setSubtable(Piwik_DataTable $subTable)
 	{
-		$this->c[self::DATATABLE_ASSOCIATED] = $subTable->getId();
+		// Hacking -1 to ensure value is negative, so we know the table was loaded
+		// @see isSubtableLoaded()
+		$this->c[self::DATATABLE_ASSOCIATED] = -1 * $subTable->getId();
+		return $subTable;
 	}
 	
+	/**
+	 * Returns true if the subtable is currently loaded in memory via DataTable_Manager
+	 * 
+	 * 
+	 * @return bool
+	 */
+	public function isSubtableLoaded()
+	{
+		// self::DATATABLE_ASSOCIATED are set as negative values, 
+		// as a flag to signify that the subtable is loaded in memory
+		return !is_null($this->c[self::DATATABLE_ASSOCIATED])
+	  			&& $this->c[self::DATATABLE_ASSOCIATED] < 0;
+	}
+		
 	/**
 	 * Remove the sub table reference
 	 */
@@ -424,7 +485,8 @@ class Piwik_DataTable_Row
 	}
 
 	/**
-	 *
+	 * Helper function: sums 2 values
+	 * 
 	 * @param number|bool   $thisColumnValue
 	 * @param number|array  $columnToSumValue
 	 * @return array|int
@@ -457,6 +519,24 @@ class Piwik_DataTable_Row
 			}
 			return $newValue;
 		}
+		
+		if (is_string($columnToSumValue))
+		{
+			if ($thisColumnValue === false)
+			{
+				return $columnToSumValue;
+			}
+			else if ($columnToSumValue === false)
+			{
+				return $thisColumnValue;
+			}
+			else
+			{
+				throw new Exception("Trying to add two strings values in DataTable_Row::sumRowArray: "
+					. "'$thisColumnValue' + '$columnToSumValue'");
+			}
+		}
+		
 		return 0;
 	}
 
@@ -528,8 +608,8 @@ class Piwik_DataTable_Row
 			)
 		)
 		{
-			$subtable1 = Piwik_DataTable_Manager::getInstance()->getTable($row1->getIdSubDataTable());
-			$subtable2 = Piwik_DataTable_Manager::getInstance()->getTable($row2->getIdSubDataTable());
+			$subtable1 = $row1->getSubtable();
+			$subtable2 = $row2->getSubtable();
 			if(!Piwik_DataTable::isEqual($subtable1, $subtable2))
 			{
 				return false;

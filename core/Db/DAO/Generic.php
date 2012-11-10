@@ -40,7 +40,7 @@ class Piwik_Db_DAO_Generic
 	 * @param array $parameters Parameters to bind in the query, array( param1 => value1, param2 => value2)
 	 * @return array
 	 */
-	public function segmentedQuery($sql, $first, $last, $step, $params)
+	public function segmentedQuery($sql, $first, $last, $step, $params=array())
 	{
 		if ($step > 0)
 		{

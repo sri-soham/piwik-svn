@@ -13,13 +13,11 @@
  * @package Piwik
  * @subpackage Piwik_Db
  */
-class Piwik_Db_DAO_Mysql_Generic
+class Piwik_Db_DAO_Mysql_Generic extends Piwik_Db_DAO_Generic
 {
-	private $db;
-
 	public function __construct($db)
 	{
-		$this->db = $db;
+		parent::__construct($db);
 	}
 
 	public function getSqlRevenue($field)

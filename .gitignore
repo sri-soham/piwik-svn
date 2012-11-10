@@ -5,4 +5,6 @@ config/.htaccess
 *.swp
 *.DS_Store
 tests/integration/processed/
+tests/PHPUnit/phpunit.xml
 /nbproject/private/
+tests/PHPUnit/codecoverage/

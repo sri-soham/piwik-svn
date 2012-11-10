@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: CustomVariables.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: CustomVariables.php 6966 2012-09-10 15:42:12Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_CustomVariables
@@ -65,18 +65,27 @@ class Piwik_CustomVariables extends Piwik_Plugin
 	public function getReportMetadata($notification)
 	{
 		$reports = &$notification->getNotificationObject();
-		$reports = array_merge($reports, array(
-		array(
-        			'category'  => Piwik_Translate('General_Visitors'),
-        			'name'   => Piwik_Translate('CustomVariables_CustomVariables'),
-        			'module' => 'CustomVariables',
-        			'action' => 'getCustomVariables',
-					'actionToLoadSubTables' => 'getCustomVariablesValuesFromNameId',
-        			'dimension' => Piwik_Translate('CustomVariables_ColumnCustomVariableName'),
-        			'documentation' => Piwik_Translate('CustomVariables_CustomVariablesReportDocumentation', array('<br />', '<a href="http://piwik.org/docs/custom-variables/" target="_blank">', '</a>')),
-        			'order' => 10
-		),
-		));
+		
+		$documentation = Piwik_Translate('CustomVariables_CustomVariablesReportDocumentation',
+			array('<br />', '<a href="http://piwik.org/docs/custom-variables/" target="_blank">', '</a>'));
+		
+		$reports[] = array( 'category'  => Piwik_Translate('General_Visitors'),
+							'name'   => Piwik_Translate('CustomVariables_CustomVariables'),
+							'module' => 'CustomVariables',
+							'action' => 'getCustomVariables',
+							'actionToLoadSubTables' => 'getCustomVariablesValuesFromNameId',
+							'dimension' => Piwik_Translate('CustomVariables_ColumnCustomVariableName'),
+							'documentation' => $documentation,
+							'order' => 10 );
+		
+		$reports[] = array( 'category' => Piwik_Translate('General_Visitors'),
+							'name' => Piwik_Translate('CustomVariables_CustomVariables'),
+							'module' => 'CustomVariables',
+							'action' => 'getCustomVariablesValuesFromNameId',
+							'dimension' => Piwik_Translate('CustomVariables_ColumnCustomVariableValue'),
+							'documentation' => $documentation,
+							'isSubtableReport' => true,
+							'order' => 15 );
 	}
 
 	/**
@@ -307,7 +316,9 @@ class Piwik_CustomVariables extends Piwik_Plugin
 		$recordName = 'CustomVariables_valueByName';
 		$table = $archiveProcessing->getDataTableWithSubtablesFromArraysIndexedByLabel($this->interestByCustomVariablesAndValue, $this->interestByCustomVariables);
 
-		$blob = $table->getSerialized($this->maximumRowsInDataTableLevelZero, $this->maximumRowsInSubDataTable);
+		$blob = $table->getSerialized(
+			$this->maximumRowsInDataTableLevelZero, $this->maximumRowsInSubDataTable,
+			$columnToSort = Piwik_Archive::INDEX_NB_VISITS);
 		$archiveProcessing->insertBlobRecord($recordName, $blob);
 		destroy($table);
 	}
@@ -323,6 +334,8 @@ class Piwik_CustomVariables extends Piwik_Plugin
 		if(!$archiveProcessing->shouldProcessReportsForPlugin($this->getPluginName())) return;
 
 		$dataTableToSum = 'CustomVariables_valueByName';
-		$nameToCount = $archiveProcessing->archiveDataTable($dataTableToSum, null, $this->maximumRowsInDataTableLevelZero, $this->maximumRowsInSubDataTable);
+		$nameToCount = $archiveProcessing->archiveDataTable(
+			$dataTableToSum, null, $this->maximumRowsInDataTableLevelZero, $this->maximumRowsInSubDataTable, 
+			$columnToSort = Piwik_Archive::INDEX_NB_VISITS);
 	}
 }

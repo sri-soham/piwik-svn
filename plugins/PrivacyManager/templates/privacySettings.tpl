@@ -117,18 +117,16 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 			</td>
 		</tr>
 		<tr id='deleteReportsSettingEnabled'>
-			<td width="250">{'PrivacyManager_UseDeleteReports'|translate}<br/>
-			
+			<td width="250">{'PrivacyManager_UseDeleteReports'|translate}
 			</td>
 			<td width="500">
 				<label><input type="radio" name="deleteReportsEnable" value="1" {if $deleteData.config.delete_reports_enable eq '1'}checked="true"{/if}/> {'General_Yes'|translate}</label>
 				<label><input type="radio" name="deleteReportsEnable" value="0" {if $deleteData.config.delete_reports_enable eq '0'}checked="true"{/if} style="margin-left:20px;"/> {'General_No'|translate}
-				<span class="form-description">{'General_Recommended'|translate}</span>
 				</label>
 				
 				<span class="ajaxSuccess">
 					{capture assign=deleteOldLogs}{'PrivacyManager_UseDeleteLog'|translate}{/capture}
-					{'PrivacyManager_DeleteReportsInfo'|translate}
+					{'PrivacyManager_DeleteReportsInfo'|translate:'<em>':'</em>'}
 					<span id='deleteOldReportsMoreInfo'><br/><br/>
 					{'PrivacyManager_DeleteReportsInfo2'|translate:$deleteOldLogs}<br/><br/>
 					{'PrivacyManager_DeleteReportsInfo3'|translate:$deleteOldLogs}</span>
@@ -165,7 +163,7 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 			<td width="250">{'PrivacyManager_ReportsDataSavedEstimate'|translate}<br/></td>
 			<td width="500">
 				<div id="deleteDataEstimate"></div>
-				<span class='loadingPiwik' style='display:none'><img src='/themes/default/images/loading-blue.gif' /> {'General_LoadingData'|translate}</span>
+				<span class='loadingPiwik' style='display:none'><img src='./themes/default/images/loading-blue.gif' /> {'General_LoadingData'|translate}</span>
 			</td>
 			<td width="200">
 			{if $deleteData.config.enable_auto_database_size_estimate eq '0'}
@@ -197,7 +195,8 @@ See also our official guide <b><a href='http://piwik.org/privacy/' target='_blan
 					<strong>{'PrivacyManager_NextDelete'|translate}:</strong>
 					{$deleteData.nextRunPretty}
 					<br/><br/><em><a id="purgeDataNowLink" href="#">{'PrivacyManager_PurgeNow'|translate}</a></em>
-					<span class='loadingPiwik' style='display:none'><img src='/themes/default/images/loading-blue.gif' /> {'PrivacyManager_PurgingData'|translate}</span>
+					<span class='loadingPiwik' style='display:none'><img src='./themes/default/images/loading-blue.gif' /> {'PrivacyManager_PurgingData'|translate}</span>
+					<span id="db-purged-message" style="display: none;"><em>{'PrivacyManager_DBPurged'|translate}</em></span>
 				{/capture}
 				{$purgeStats|inlineHelp}
 			</td>

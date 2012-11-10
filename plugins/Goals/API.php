@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: API.php 6974 2012-09-12 04:57:40Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Goals
@@ -33,8 +33,6 @@
 class Piwik_Goals_API 
 {
 	static private $instance = null;
-	static private $dao      = null;
-
 	/**
 	 * @return Piwik_Goals_API
 	 */
@@ -43,7 +41,6 @@ class Piwik_Goals_API
 		if (self::$instance == null)
 		{
 			self::$instance = new self;
-			self::$dao = Piwik_Db_Factory::getDAO('goal');
 		}
 		return self::$instance;
 	}
@@ -58,16 +55,14 @@ class Piwik_Goals_API
 	{
 		//TODO calls to this function could be cached as static
 		// would help UI at least, since some UI requests would call this 2-3 times..
-		if(!is_array($idSite))
-		{
-			$idSite = Piwik_Site::getIdSitesFromIdSitesString($idSite);
-		}
-		if(empty($idSite)) 
+		$idSite = Piwik_Site::getIdSitesFromIdSitesString($idSite);
+		if(empty($idSite))
 		{
 			return array();
 		}
 		Piwik::checkUserHasViewAccess($idSite);
-		$goals = self::$dao->getAllForIdsites($idSite);
+		$dao = Piwik_Db_Factory::getDAO('goal');
+		$goals = $dao->getAllForIdsites($idSite);
 		$cleanedGoals = array();
 		foreach($goals as &$goal)
 		{
@@ -103,12 +98,13 @@ class Piwik_Goals_API
 		$pattern = $this->checkPattern($pattern);
 
 		// save in db
-		$idGoal = self::$dao->getIdgoalForIdsite($idSite);
+		$dao = Piwik_Db_Factory::getDAO('goal');
+		$idGoal = $dao->getIdgoalForIdsite($idSite);
 		if($idGoal == false)
 		{
 			$idGoal = 1;
 		}
-		self::$dao->addRecord(
+		$dao->addRecord(
 			$idSite,
 			$idGoal,
 			$name,
@@ -147,7 +143,8 @@ class Piwik_Goals_API
 		$name = $this->checkName($name);
 		$pattern = $this->checkPattern($pattern);
 		$this->checkPatternIsValid($patternType, $pattern);
-		self::$dao->update(
+		$dao = Piwik_Db_Factory::getDao('goal');
+		$dao->update(
 			$name,
 			$matchAttribute,
 			$pattern,
@@ -191,7 +188,8 @@ class Piwik_Goals_API
 	public function deleteGoal( $idSite, $idGoal )
 	{
 		Piwik::checkUserHasAdminAccess($idSite);
-		self::$dao->markAsDeleted($idSite, $idGoal);
+		$dao = Piwik_Db_Factory::getDao('goal');
+		$dao->markAsDeleted($idSite, $idGoal);
 		Piwik_Db_Factory::getGeneric()->deleteAll(
 			Piwik_Common::prefixTable('log_conversion'),
 			array(' idgoal = ? '),

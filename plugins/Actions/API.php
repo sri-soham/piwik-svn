@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6363 2012-05-29 05:50:06Z matt $
+ * @version $Id: API.php 7065 2012-09-26 08:40:42Z matt $
  * 
  * @category Piwik_Plugins
  * @package Piwik_Actions
@@ -246,7 +246,8 @@ class Piwik_Actions_API
 					$searchedString = $search;
 				}
     		}
-			$searchTree = Piwik_Actions::getActionExplodedNames($searchedString, $actionType);
+			Piwik_Actions_ArchivingHelper::reloadConfig();
+			$searchTree = Piwik_Actions_ArchivingHelper::getActionExplodedNames($searchedString, $actionType);
 		}
 
 		if ($table === false)

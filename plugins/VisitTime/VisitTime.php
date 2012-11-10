@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: VisitTime.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: VisitTime.php 6679 2012-08-05 22:13:23Z capedfuzz $
  *
  * @category Piwik_Plugins
  * @package Piwik_VisitTime
@@ -68,12 +68,24 @@ class Piwik_VisitTime extends Piwik_Plugin
 			'constantRowsCount' => true,
 			'order' => 15,
 		);
+		
+		$reports[] = array(
+			'category' => Piwik_Translate('VisitsSummary_VisitsSummary'),
+			'name' => Piwik_Translate('VisitTime_VisitsByDayOfWeek'),
+			'module' => 'VisitTime',
+			'action' => 'getByDayOfWeek',
+			'dimension' => Piwik_Translate('VisitTime_DayOfWeek'),
+			'documentation' => Piwik_Translate('VisitTime_WidgetByDayOfWeekDocumentation'),
+			'constantRowsCount' => true,
+			'order' => 25,
+		);
 	}
 	
 	function addWidgets()
 	{
 		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_WidgetLocalTime', 'VisitTime', 'getVisitInformationPerLocalTime');
 		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_WidgetServerTime', 'VisitTime', 'getVisitInformationPerServerTime');
+		Piwik_AddWidget( 'VisitsSummary_VisitsSummary', 'VisitTime_VisitsByDayOfWeek', 'VisitTime', 'getByDayOfWeek');
 	}
 	
 	function addMenu()

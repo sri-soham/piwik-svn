@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: View.php 6300 2012-05-23 21:19:25Z SteveG $
+ * @version $Id: View.php 6900 2012-09-02 11:14:40Z capedfuzz $
  *
  * @category Piwik
  * @package Piwik
@@ -170,22 +170,8 @@ class Piwik_View implements Piwik_View_Interface
 	{
 		if($form instanceof Piwik_QuickForm2)
 		{
-			static $registered = false;
-			if(!$registered)
-			{
-				HTML_QuickForm2_Renderer::register('smarty', 'HTML_QuickForm2_Renderer_Smarty');
-				$registered = true;
-			}
-
-			// Create the renderer object
-			$renderer = HTML_QuickForm2_Renderer::factory('smarty');
-			$renderer->setOption('group_errors', true);
-
-			// build the HTML for the form
-			$form->render($renderer);
-
 			// assign array with form data
-			$this->smarty->assign('form_data', $renderer->toArray());
+			$this->smarty->assign('form_data', $form->getFormData());
 			$this->smarty->assign('element_list', $form->getElementList());
 		}
 	}

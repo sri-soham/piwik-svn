@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: API.php 6243 2012-05-02 22:08:23Z SteveG $
+ * @version $Id: API.php 6792 2012-08-16 13:59:58Z EZdesign $
  *
  * @category Piwik_Plugins
  * @package Piwik_Live
@@ -114,8 +114,8 @@ class Piwik_Live_API
 	 * You can define any number of filters: none, one, many or all parameters can be defined
 	 *
 	 * @param int $idSite Site ID
-	 * @param bool|string $period (optional) Period to restrict to when looking at the logs
-	 * @param bool|string $date (optional) Date to restrict to
+	 * @param bool|string $period Period to restrict to when looking at the logs
+	 * @param bool|string $date Date to restrict to
 	 * @param bool|int $segment (optional) Number of visits rows to return
 	 * @param bool|int $filter_limit (optional)
 	 * @param bool|int $maxIdVisit (optional) Maximum idvisit to restrict the query to (useful when paginating)
@@ -123,7 +123,7 @@ class Piwik_Live_API
 	 *
 	 * @return Piwik_DataTable
 	 */
-	public function getLastVisitsDetails( $idSite, $period = false, $date = false, $segment = false, $filter_limit = false, $maxIdVisit = false, $minTimestamp = false )
+	public function getLastVisitsDetails( $idSite, $period, $date, $segment = false, $filter_limit = false, $maxIdVisit = false, $minTimestamp = false )
 	{
 		if(empty($filter_limit)) 
 		{
@@ -138,6 +138,7 @@ class Piwik_Live_API
 	/**
 	 * @deprecated
 	 */
+	
 	public function getLastVisits( $idSite, $filter_limit = 10, $minTimestamp = false )
 	{
 		return $this->getLastVisitsDetails($idSite, $period = false, $date = false, $segment = false, $filter_limit, $maxIdVisit = false, $minTimestamp );
@@ -188,7 +189,7 @@ class Piwik_Live_API
 			}
 			$actionDetails = $LogLinkVisitAction->getActionDetailsOfIdvisit($sqlCustomVariables, $idvisit);
 			
-			foreach($actionDetails as &$actionDetail)
+			foreach($actionDetails as $actionIdx => &$actionDetail)
 			{
 				$customVariablesPage = array();
 				for($i = 1; $i <= Piwik_Tracker::MAX_CUSTOM_VARIABLES; $i++)
@@ -208,6 +209,17 @@ class Piwik_Live_API
 				{
 					$actionDetail['customVariables'] = $customVariablesPage;
 				}
+				// reconstruct url from prefix
+				$actionDetail['url'] = Piwik_Tracker_Action::reconstructNormalizedUrl($actionDetail['url'], $actionDetail['url_prefix']);
+				unset($actionDetail['url_prefix']);
+				// set the time spent for this action (which is the timeSpentRef of the next action)
+				if (isset($actionDetails[$actionIdx + 1]))
+				{
+					$actionDetail['timeSpent'] = $actionDetails[$actionIdx + 1]['timeSpentRef'];
+					$actionDetail['timeSpentPretty'] = Piwik::getPrettyTimeFromSeconds($actionDetail['timeSpent']);
+					
+				}
+				unset($actionDetails[$actionIdx]['timeSpentRef']); // not needed after timeSpent is added
 			}
 			
 			// If the visitor converted a goal, we shall select all Goals
@@ -250,7 +262,7 @@ class Piwik_Live_API
 						$detail['price'] = round($detail['price']);
 					}
 				}
-				$ecommerceConversion['itemDetails'] = $itemDetails;
+				$ecommerceConversion['itemDetails'] = $itemsDetails;
 			}
 			
 			$actions = array_merge($actionDetails, $goalDetails, $ecommerceDetails);

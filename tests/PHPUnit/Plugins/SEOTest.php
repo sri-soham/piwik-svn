@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: SEOTest.php 6499 2012-06-24 14:50:58Z SteveG $
+ * @version $Id: SEOTest.php 6819 2012-08-17 21:02:48Z SteveG $
  */
 class SEOTest extends PHPUnit_Framework_TestCase
 {
@@ -45,7 +45,7 @@ class SEOTest extends PHPUnit_Framework_TestCase
         $ranks = $renderer->render($dataTable);
         foreach ($ranks as $rank)
         {
-            $this->assertTrue(!empty($rank['rank']), $rank['id'] . ' expected non-zero rank, got [' . $rank['rank'] . ']');
+            $this->assertNotEmpty($rank['rank'], $rank['id'] . ' expected non-zero rank, got [' . $rank['rank'] . ']');
         }
     }
 }

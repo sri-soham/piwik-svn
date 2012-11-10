@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: DocumentationGenerator.php 6412 2012-05-31 03:24:39Z matt $
+ * @version $Id: DocumentationGenerator.php 6918 2012-09-04 21:44:26Z JulienM $
  * 
  * @category Piwik
  * @package Piwik
@@ -191,16 +191,20 @@ class Piwik_API_DocumentationGenerator
         $aParameters['label'] = false;
 		$aParameters['flat'] = false;
 		$aParameters['include_aggregate_rows'] = false;
+        $aParameters['filter_limit'] = false; //@review without adding this, I can not set filter_limit in $otherRequestParameters integration tests
+        $aParameters['filter_sort_column'] = false; //@review without adding this, I can not set filter_sort_column in $otherRequestParameters integration tests
         $aParameters['filter_truncate'] = false;
-		
+        $aParameters['hideColumns'] = false;
+        $aParameters['showColumns'] = false;
+        
 		$moduleName = Piwik_API_Proxy::getInstance()->getModuleNameFromClassName($class);
-		$urlExample = '?module=API&method='.$moduleName.'.'.$methodName.'&';
-		foreach($aParameters as $nameVariable=> $defaultValue)
+		$aParameters = array_merge(array('module' => 'API', 'method' => $moduleName.'.'.$methodName), $aParameters);
+		
+		foreach($aParameters as $nameVariable => &$defaultValue)
 		{
 			if(isset($knowExampleDefaultParametersValues[$nameVariable]))
 			{
-				$exampleValue = $knowExampleDefaultParametersValues[$nameVariable];
-				$urlExample .= $nameVariable . '=' . $exampleValue . '&';
+				$defaultValue = $knowExampleDefaultParametersValues[$nameVariable];
 			}
 			// if there isn't a default value for a given parameter, 
 			// we need a 'know default value' or we can't generate the link
@@ -209,7 +213,7 @@ class Piwik_API_DocumentationGenerator
 				return false;
 			}
 		}
-		return substr($urlExample,0,-1);
+		return '?'.Piwik_Url::getQueryStringFromParameters($aParameters);
 	}
 	
 	

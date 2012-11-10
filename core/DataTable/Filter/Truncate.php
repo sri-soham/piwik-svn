@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Truncate.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: Truncate.php 6593 2012-07-30 09:14:18Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -38,12 +38,11 @@ class Piwik_DataTable_Filter_Truncate extends Piwik_DataTable_Filter
 	
 		foreach($table->getRows() as $row)
 		{
-			try {
+			if($row->isSubtableLoaded())
+			{
 				$idSubTable = $row->getIdSubDataTable();
 				$subTable = Piwik_DataTable_Manager::getInstance()->getTable($idSubTable);
 				$subTable->filter('Truncate', array($this->truncateAfter));
-			} catch(Exception $e) {
-				// there is no subtable loaded for example
 			}
 		}
 	}

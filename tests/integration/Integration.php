@@ -82,8 +82,19 @@ abstract class Test_Integration extends Test_Database_Base
 	static public $apiTestingLevel = self::COMPARE_API_OUTPUT;
 
 	const DEFAULT_USER_PASSWORD = 'nopass';
-
-	abstract function getPathToTestDirectory();
+	
+	/**
+	 * Whether to send tracking requests through CURL or to the Tracker directly.
+	 */
+	static public $useLocalTracking = false;
+	
+	/**
+	 * Path where expected/processed output files are stored. Can be overridden.
+	 */
+	public function getPathToTestDirectory()
+	{
+		return PIWIK_INCLUDE_PATH . '/tests/integration';
+	}
 
 	/**
 	 * Load english translations to ensure API response have english text
@@ -179,7 +190,16 @@ abstract class Test_Integration extends Test_Database_Base
 	 */
 	protected function getTracker($idSite, $dateTime, $defaultInit = true )
 	{
-		$t = new PiwikTracker( $idSite, $this->getTrackerUrl());
+		if (self::$useLocalTracking)
+		{
+			require_once PIWIK_INCLUDE_PATH.'/tests/LocalTracker.php';
+			$t = new Piwik_LocalTracker($idSite, $this->getTrackerUrl());
+		}
+		else
+		{
+			$t = new PiwikTracker( $idSite, $this->getTrackerUrl());
+		}
+		
 		$t->setForceVisitDateTime($dateTime);
 
 		if($defaultInit)
@@ -253,14 +273,13 @@ abstract class Test_Integration extends Test_Database_Base
 		}
 		echo "Expected GIF beacon, got: <br/>\n" . $response ."<br/>\n";
 	}
-
+	
 	/**
-	 * Returns URL to the proxy script, used to ensure piwik.php
-	 * uses the test environment, and allows variable overwriting
-	 *
+	 * Returns URL to Piwik root.
+	 * 
 	 * @return string
 	 */
-	protected function getTrackerUrl()
+	protected function getRootUrl()
 	{
 		$piwikUrl = Piwik_Url::getCurrentUrlWithoutFileName();
 
@@ -270,8 +289,20 @@ abstract class Test_Integration extends Test_Database_Base
 		{
 			$pathBeforeRoot = 'plugins';
 		}
-		$piwikUrl = substr($piwikUrl, 0, strpos($piwikUrl, $pathBeforeRoot.'/')) . 'tests/integration/proxy-piwik.php';
+		
+		$piwikUrl = substr($piwikUrl, 0, strpos($piwikUrl, $pathBeforeRoot.'/'));
 		return $piwikUrl;
+	}
+	
+	/**
+	 * Returns URL to the proxy script, used to ensure piwik.php
+	 * uses the test environment, and allows variable overwriting
+	 *
+	 * @return string
+	 */
+	protected function getTrackerUrl()
+	{
+		return $this->getRootUrl().'tests/PHPUnit/proxy/piwik.php';
 	}
 
 	/**
@@ -333,6 +364,11 @@ abstract class Test_Integration extends Test_Database_Base
 		if (isset($_GET['apiTestingLevel']))
 		{
 			self::setApiTestingLevel($_GET['apiTestingLevel']);
+		}
+		
+		if (isset($_GET['useLocalTracking']) && strtolower($_GET['useLocalTracking']) == 'true')
+		{
+			self::$useLocalTracking = true;
 		}
 	}
 
@@ -519,7 +555,7 @@ abstract class Test_Integration extends Test_Database_Base
 		}
 		if(!is_writable($pathProcessed))
 		{
-			$this->fail('To run the tests, you need to give write permissions to the following directory (create it if it doesn\'t exist).<code><br/>mkdir '. $pathProcessed.'<br/>chmod 777 '.$pathProcessed.'</code><br/>');
+			$this->fail('To run the tests, you need to give write permissions to the following directory (create it if it doesn\'t exist).<code><br/>mkdir '. $pathProcessed.'<br/>chmod 777 -R '.$pathProcessed.'</code><br/>');
 		}
 		$parametersToSet = array(
 			'idSite' 	=> $idSite,
@@ -532,10 +568,10 @@ abstract class Test_Integration extends Test_Database_Base
 			// Used in Actions.getPageUrl, .getDownload, etc.
 			// tied to Main.test.php doTest_oneVisitorTwoVisits
 			// will need refactoring when these same API functions are tested in a new function
-			'downloadUrl' 	=> urlencode('http://piwik.org/path/again/latest.zip?phpsessid=this is ignored when searching'),
-			'outlinkUrl' 	=> urlencode('http://dev.piwik.org/svn'),
-			'pageUrl' 		=> urlencode('http://example.org/index.htm?sessionid=this is also ignored by default'),
-			'pageName' 		=> urlencode(' Checkout / Purchasing... '),
+			'downloadUrl' 	=> 'http://piwik.org/path/again/latest.zip?phpsessid=this is ignored when searching',
+			'outlinkUrl' 	=> 'http://dev.piwik.org/svn',
+			'pageUrl' 		=> 'http://example.org/index.htm?sessionid=this is also ignored by default',
+			'pageName' 		=> ' Checkout / Purchasing... ',
 
 			// do not show the millisec timer in response or tests would always fail as value is changing
 			'showTimer'	 => 0,
@@ -1017,7 +1053,8 @@ abstract class Test_Integration extends Test_Database_Base
 	 */
 	protected function changeLanguage( $langId )
 	{
-		if (isset($this->lastLanguage) && $this->lastLanguage != $langId)
+		if (empty($this->lastLanguage) 
+			|| $this->lastLanguage != $langId)
 		{
 			$_GET['language'] = $langId;
 			Piwik_Translate::reset();
@@ -1270,14 +1307,6 @@ abstract class Test_Integration_Facade extends Test_Integration
 				$this->changeLanguage('en');
 			}
 		}
-	}
-
-	/**
-	 * Path where expected/processed output files are stored. Can be overridden.
-	 */
-	public function getPathToTestDirectory()
-	{
-		return PIWIK_INCLUDE_PATH . '/tests/integration';
 	}
 }
 

@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Array.php 6353 2012-05-28 17:29:23Z SteveG $
+ * @version $Id: Array.php 6628 2012-08-01 21:49:16Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -363,6 +363,23 @@ class Piwik_DataTable_Array
 				Piwik_DataTable_Row::DATATABLE_ASSOCIATED => $fromRow->getIdSubDataTable()
 			));
 			$toTable->addRow($row);
+		}
+	}
+	
+	/**
+	 * Adds a DataTable to all the tables in this array
+	 * NOTE: Will only add $tableToSum if the childTable has some rows
+	 * 
+	 * @param Piwik_DataTable $tableToSum
+	 */
+	public function addDataTable( Piwik_DataTable $tableToSum )
+	{
+		foreach ($this->getArray() as $childTable)
+		{
+			if($childTable->getRowsCount() > 0)
+			{
+				$childTable->addDataTable($tableToSum);
+			}
 		}
 	}
 }

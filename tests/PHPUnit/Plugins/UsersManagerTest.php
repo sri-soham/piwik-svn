@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: UsersManagerTest.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: UsersManagerTest.php 6975 2012-09-12 05:07:17Z matt $
  */
 class UsersManagerTest extends DatabaseTestCase
 {
@@ -650,13 +650,14 @@ class UsersManagerTest extends DatabaseTestCase
     public function testSetUserAccessIdsitesEmpty()
     {
         Piwik_UsersManager_API::getInstance()->addUser("gegg4564eqgeqag", "geqgegagae", "tegst@tesgt.com", "alias");
-        
-        Piwik_UsersManager_API::getInstance()->setUserAccess("gegg4564eqgeqag", "view", array());
-        
-        $access = Piwik_UsersManager_API::getInstance()->getSitesAccessFromUser("gegg4564eqgeqag");
-        $access = $this->_flatten($access);
-        $this->assertEquals( array(), $access);
-        
+
+	    try {
+	        Piwik_UsersManager_API::getInstance()->setUserAccess("gegg4564eqgeqag", "view", array());
+		    $access = Piwik_UsersManager_API::getInstance()->getSitesAccessFromUser("gegg4564eqgeqag");
+	    } catch(Exception $e) {
+		    return;
+	    }
+	    $this->fail('Expected exception not raised');
     }
     
     /**

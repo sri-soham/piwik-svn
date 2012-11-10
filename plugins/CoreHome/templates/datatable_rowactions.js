@@ -1,5 +1,90 @@
 /**
- * DataTable RowActions
+ * Registry for row actions
+ * 
+ * Plugins can call DataTable_RowActions_Registry.register() from their JS
+ * files in order to add new actions to arbitrary data tables. The register()
+ * method takes an object containing:
+ * - name: string identifying the action. must be short, no spaces.
+ * - dataTableIcon: path to the icon for the action
+ * - createInstance: a factory method to create an instance of the appropriate
+ *                   subclass of DataTable_RowAction
+ * - isAvailable: a method to determine whether the action is available in a
+ *                given row of a data table
+ */
+var DataTable_RowActions_Registry = {
+	
+	registry: [],
+	
+	register: function(action) {
+		var createInstance = action.createInstance;
+		action.createInstance = function(dataTable) {
+			var instance = createInstance(dataTable);
+			instance.actionName = action.name;
+			return instance;
+		};
+		
+		this.registry.push(action);
+	},
+	
+	getAvailableActions: function(dataTableParams, tr) {
+		if (dataTableParams.disable_row_actions == '1')
+		{
+			return [];
+		}
+		
+		var available = [];
+		for (var i = 0; i < this.registry.length; i++) {
+			if (this.registry[i].isAvailable(dataTableParams, tr)) {
+				available.push(this.registry[i]);
+			}
+		}
+		return available;
+	},
+	
+	getActionByName: function(name) {
+		for (var i = 0; i < this.registry.length; i++) {
+			if (this.registry[i].name == name) {
+				return this.registry[i];
+			}
+		}
+		return false;
+	}
+	
+};
+
+// Register Row Evolution (also servers as example)
+DataTable_RowActions_Registry.register({
+	
+	name: 'RowEvolution',
+	
+	dataTableIcon: 'themes/default/images/row_evolution.png',
+	dataTableIconHover: 'themes/default/images/row_evolution_hover.png',
+	
+	dataTableIconTooltip: [
+		_pk_translate('CoreHome_RowEvolutionRowActionTooltipTitle_js'),
+		_pk_translate('CoreHome_RowEvolutionRowActionTooltip_js')
+	],
+	
+	createInstance: function(dataTable) {
+		return new DataTable_RowActions_RowEvolution(dataTable);
+	},
+	
+	isAvailable: function(dataTableParams, tr) {
+		return (
+			typeof dataTableParams.disable_row_evolution == 'undefined'
+			|| dataTableParams.disable_row_evolution == "0"
+		) && (
+			typeof dataTableParams.flat == 'undefined'
+			|| dataTableParams.flat == "0"
+		);
+	}
+
+});
+
+
+
+/**
+ * DataTable Row Actions
  *
  * The lifecycle of an action is as follows:
  * - for each data table, a new instance of the action is created using the factory
@@ -32,6 +117,12 @@ function DataTable_RowActions_Factory(actionName, dataTable) {
 
 function DataTable_RowAction(dataTable) {
 	this.dataTable = dataTable;
+	
+	// has to be overridden in subclasses
+	this.trEventName = 'piwikTriggerRowAction';
+	
+	// set in registry
+	this.actionName = 'RowAction';
 }
 
 /** Initialize a row when the table is loaded */
@@ -111,17 +202,23 @@ DataTable_RowAction.prototype.getLabelFromTr = function(tr) {
 
 /**
  * Base method for opening popovers.
- * TODO: In the future, this method will remember the parameter in the url.
- * After doing general things, doOpenPopover is called.
+ * This method will remember the parameter in the url and call doOpenPopover().
  */
 DataTable_RowAction.prototype.openPopover = function(parameter) {
-	// maybe add popover name / param after a second hash?
-	//var currentHashStr = broadcast.getHashFromUrl().replace(/^#/, '');
-	//currentHashStr = broadcast.updateParamValue('foo=bar', currentHashStr);
-	//$.history.load(currentHashStr);
-
-	this.doOpenPopover(parameter);
+	broadcast.propagateNewSecondHash('RowAction', this.actionName + ':' + encodeURIComponent(parameter));
 };
+
+broadcast.addSecondHashHandler('RowAction', function(param) {
+	var paramParts = param.split(':');
+	var rowActionName = paramParts[0];
+	paramParts.shift();
+	param = decodeURIComponent(paramParts.join(':'));
+	
+	var rowAction = DataTable_RowActions_Registry.getActionByName(rowActionName);
+	if (rowAction) {
+		rowAction.createInstance().doOpenPopover(param);
+	}
+});
 
 /** To be overridden */
 DataTable_RowAction.prototype.performAction = function(label, tr, e) {

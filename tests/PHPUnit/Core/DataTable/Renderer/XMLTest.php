@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: XMLTest.php 6498 2012-06-24 10:18:12Z SteveG $
+ * @version $Id: XMLTest.php 6669 2012-08-04 15:18:28Z JulienM $
  */
 class DataTable_Renderer_XMLTest extends PHPUnit_Framework_TestCase
 {
@@ -129,7 +129,7 @@ class DataTable_Renderer_XMLTest extends PHPUnit_Framework_TestCase
 		<bounce_count>90</bounce_count>
 		<url>http://www.yahoo.com</url>
 		<logo>./plugins/Referers/images/searchEngines/www.yahoo.com.png</logo>
-		<idsubdatatable>1</idsubdatatable>
+		<idsubdatatable>2</idsubdatatable>
 		<subtable>
 			<row>
 				<label>sub1</label>

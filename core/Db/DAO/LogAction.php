@@ -106,10 +106,10 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 	public function deleteUnusedActions()
 	{
 		$tempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME);
-		$sql = 'DELETE LOW_PRIORITY QUICK IGNORE ' . $this->table . ' '
-			  .'FROM ' . $this->table . ' AS la '
+		$sql = "DELETE LOW_PRIORITY QUICK IGNORE {$this->table} "
+			  ."FROM {$this->table} "
 			  .'LEFT OUTER JOIN ' . $tempTable . ' AS tmp '
-			  .'	ON tmp.idaction = la.idaction '
+			  ."	ON tmp.idaction = {$this->table}.idaction "
 			  .'WHERE tmp.idaction IS NULL';
 		$this->db->query($sql);
 	}
@@ -126,8 +126,10 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 		return $this->db->fetchOne($idaction);
 	}
 
-	public function purgeUnused($maxIds)
+	public function purgeUnused()
 	{
+		// get current max visit ID in log tables w/ idaction references.
+		$maxIds = $this->getMaxIdsInLogTables();
 		$generic = Piwik_Db_Factory::getGeneric($this->db);
 		$this->createTempTable();
 
@@ -233,15 +235,31 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 
 	protected function insertActionsToKeep($maxIds, $olderThan = true)
 	{
+		$Generic = Piwik_Db_Factory::getGeneric($this->db);
+
 		$tempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME);
-		$idvisitCondition = $olderThan ? ' idvisit <= ? ' : ' idvisit > ? ';
-		foreach ($this->getIdActionColumns as $table => $column)
+
+		$idColumns = $this->getTableIdColumns();
+		foreach ($this->getIdActionColumns() as $table => $columns)
 		{
+			$idCol = $idColumns[$table];
 			foreach ($columns as $col)
 			{
-				$select = "SELECT $col from " . Piwik_Common::prefixTable($table) . " WHERE $idvisitCondition";
+				$select = "SELECT $col from " . Piwik_Common::prefixTable($table) . " WHERE $idCol >= ? AND $idCol < ?";
 				$sql = "INSERT IGNORE INTO $tempTable $select";
-				$this->db->query($sql, array($maxIds[$table]));
+
+				if ($olderThan)
+				{
+					$start  = 0;
+					$finish = $maxIds[$table];
+				}
+				else
+				{
+					$start  = $maxIds[$table];
+					$finish = $Generic->getMax(Piwik_Common::prefixTable($table), $idCol);
+				}
+
+				$Generic->segmentedQuery($sql, $start, $finish, Piwik_PrivacyManager_LogDataPurger::$selectSegmentSize);
 			}
 		}
 
@@ -275,5 +293,27 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 			  .'  PRIMARY KEY(idaction) '
 			  .' );';
 		$this->db->query($sql);
+	}
+
+	protected function getTableIdColumns()
+	{
+		return array(
+			'log_link_visit_action' => 'idlink_va',
+			'log_conversion'        => 'idvisit',
+			'log_visit'             => 'idvisit',
+			'log_conversion_item'   => 'idvisit'
+		);
+	}
+
+	protected function getMaxIdsInLogTables()
+	{
+		$Generic = Piwik_Db_Factory::getGeneric($this->db);
+
+		$result = array();
+		foreach ($this->getTableIdColumns() as $table => $col) {
+			$result[$table] = $Generic->getMax(Piwik_Common::prefixTable($table), $col);
+		}
+
+		return $result;
 	}
 } 

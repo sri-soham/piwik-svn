@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: LimitTest.php 6496 2012-06-23 22:49:28Z SteveG $
+ * @version $Id: LimitTest.php 6819 2012-08-17 21:02:48Z SteveG $
  */
 class DataTable_Filter_LimitTest extends PHPUnit_Framework_TestCase
 {
@@ -18,16 +18,16 @@ class DataTable_Filter_LimitTest extends PHPUnit_Framework_TestCase
         $table = new Piwik_DataTable;
         $idcol = Piwik_DataTable_Row::COLUMNS;
         $rows = array(
-            array( $idcol => array('label'=>'google',     'idRow' => 0)),
-            array( $idcol => array('label'=>'ask',         'idRow' => 1)),
-            array( $idcol => array('label'=>'piwik',     'idRow' => 2)),
-            array( $idcol => array('label'=>'yahoo',     'idRow' => 3)),
-            array( $idcol => array('label'=>'amazon',     'idRow' => 4)),
-            array( $idcol => array('label'=>'238949',     'idRow' => 5)),
-            array( $idcol => array('label'=>'test',     'idRow' => 6)),
-            array( $idcol => array('label'=>'amazing',     'idRow' => 7)),
-            array( $idcol => array('label'=>'great',     'idRow' => 8)),
-            Piwik_DataTable::ID_SUMMARY_ROW => array( $idcol => array('label'=>'summary row',    'idRow' => 9)),
+            array($idcol => array('label'=> 'google',  'idRow' => 0)),
+            array($idcol => array('label'=> 'ask',     'idRow' => 1)),
+            array($idcol => array('label'=> 'piwik',   'idRow' => 2)),
+            array($idcol => array('label'=> 'yahoo',   'idRow' => 3)),
+            array($idcol => array('label'=> 'amazon',  'idRow' => 4)),
+            array($idcol => array('label'=> '238949',  'idRow' => 5)),
+            array($idcol => array('label'=> 'test',    'idRow' => 6)),
+            array($idcol => array('label'=> 'amazing', 'idRow' => 7)),
+            array($idcol => array('label'=> 'great',   'idRow' => 8)),
+            Piwik_DataTable::ID_SUMMARY_ROW => array($idcol => array('label'=> 'summary row', 'idRow' => 9)),
         );
         $table->addRowsFromArray( $rows );
         return $table;

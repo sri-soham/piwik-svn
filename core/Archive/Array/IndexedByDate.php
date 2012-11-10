@@ -79,6 +79,8 @@ class Piwik_Archive_Array_IndexedByDate extends Piwik_Archive_Array
 	 */
 	public function getDataTableFromNumeric( $fields )
 	{
+		$inNames = Piwik_Common::getSqlStringFieldsArray($fields);
+		
 		// we select in different shots
 		// one per distinct table (case we select last 300 days, maybe we will  select from 10 different tables)
 		$queries = array();
@@ -103,7 +105,7 @@ class Piwik_Archive_Array_IndexedByDate extends Piwik_Archive_Array
 		$arrayValues = array();
 		foreach($queries as $table => $aIds)
 		{
-			$inIds = array_filter($aIds);
+			$inIds = implode(', ', array_filter($aIds));
 			if(empty($inIds))
 			{
 				// Probable timezone configuration error, i.e., mismatch between PHP and MySQL server.

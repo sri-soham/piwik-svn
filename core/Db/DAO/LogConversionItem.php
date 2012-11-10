@@ -185,7 +185,7 @@ class Piwik_Db_DAO_LogConversionItem extends Piwik_Db_DAO_Base
 
 	public function getCountByIdvisit($idvisit)
 	{
-		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit = ?';
+		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit <= ?';
 		return (int)$this->db->fetchOne($sql, array($idvisit));
 	}
 

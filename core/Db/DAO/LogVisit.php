@@ -59,7 +59,7 @@ class Piwik_Db_DAO_LogVisit extends Piwik_Db_DAO_Base
 			 . 'ORDER BY idvisit DESC '
 			 . 'LIMIT 1';
 
-		return Piwik_SegmentedFetchFirst($sql, $maxIdVist, 0, $segmentSize);
+		return Piwik_SegmentedFetchFirst($sql, $maxIdVisit, 0, $segmentSize);
 	}
 
 	public function update($sqlActionUpdate, $valuesToUpdate, $idsite, $idvisit)
@@ -160,7 +160,7 @@ class Piwik_Db_DAO_LogVisit extends Piwik_Db_DAO_Base
 
 	public function getCountByIdvisit($idvisit)
 	{
-		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit = ?';
+		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit <= ?';
 		return (int)$this->db->fetchOne($sql, array($idvisit));
 	}
 

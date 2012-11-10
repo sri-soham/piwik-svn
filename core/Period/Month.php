@@ -4,7 +4,7 @@
  * 
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Month.php 6385 2012-05-29 21:36:24Z SteveG $
+ * @version $Id: Month.php 6678 2012-08-05 21:07:18Z matt $
  * 
  * @category Piwik
  * @package Piwik
@@ -26,7 +26,7 @@ class Piwik_Period_Month extends Piwik_Period
 	public function getLocalizedShortString()
 	{
 		//"Aug 09"
-		$out = $this->getDateStart()->getLocalized("%shortMonth% %longYear%");
+		$out = $this->getDateStart()->getLocalized(Piwik_Translate('CoreHome_ShortMonthFormat'));
 		return $out;
 	}
 

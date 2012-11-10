@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Url.php 6510 2012-07-13 20:05:39Z SteveG $
+ * @version $Id: Url.php 7020 2012-09-19 07:54:02Z matt $
  *
  * @category Piwik
  * @package Piwik
@@ -305,12 +305,12 @@ class Piwik_Url
 			{
 				foreach($value as $theValue)
 				{
-					$query .= $name . "[]=" . urlencode($theValue) . "&";
+					$query .= $name . "[]=" . $theValue . "&";
 				}
 			}
 			else
 			{
-				$query .= $name . "=" . urlencode($value) . "&";
+				$query .= $name . "=" . $value . "&";
 			}
 		}
 		$query = substr($query, 0, -1);
@@ -381,7 +381,7 @@ class Piwik_Url
 		$requestUri = isset($_SERVER['SCRIPT_URI']) ? $_SERVER['SCRIPT_URI'] : '';
 		$parseRequest = @parse_url($requestUri);
 		$hosts = array(	self::getHost(), self::getCurrentHost() );
-		if(isset($parseRequest['host']))
+		if(!empty($parseRequest['host']))
 		{
 			$hosts[] = $parseRequest['host'];
 		}
@@ -391,8 +391,10 @@ class Piwik_Url
 
 		// compare scheme and host
 		$parsedUrl = @parse_url($url);
-		$scheme = $parsedUrl['scheme'];
-		$host = Piwik_IP::sanitizeIp($parsedUrl['host']);
-		return (in_array($scheme, array('http', 'https')) && in_array($host, $hosts));
+		$host = Piwik_IP::sanitizeIp(@$parsedUrl['host']);
+		return     !empty($host)
+				&& in_array($host, $hosts)
+				&& !empty($parsedUrl['scheme'])
+				&& in_array($parsedUrl['scheme'], array('http', 'https'));
 	}
 }

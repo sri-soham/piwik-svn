@@ -26,6 +26,7 @@ class Piwik_Db_DAO_LogLinkVisitAction extends Piwik_Db_DAO_Base
 		// eg. Downloads, Outlinks. For these, idaction_name is set to 0
 		$serverTimePretty = $this->db->quoteIdentifier('serverTimePretty');
 		$pageId = $this->db->quoteIdentifier('pageId');
+		$timeSpentRef = $this->db->quoteIdentifier('timeSpentRef');
 		# ORDER BY clause has been added to make sure the result set is in specific order
 		# so that the tests pass. Without ORDER BY postgresql is returning in descending order
 		# of serverTimePretty; when serverTimePretty is equal, result set is in descending
@@ -39,6 +40,7 @@ class Piwik_Db_DAO_LogLinkVisitAction extends Piwik_Db_DAO_Base
 			 . ' , log_action.idaction AS ' . $this->db->quoteIdentifier('pageIdAction') .' '
 			 . ' , log_link_visit_action.idlink_va AS ' . $pageId . ' '
 			 . ' , log_link_visit_action.server_time AS ' . $serverTimePretty . ' '
+			 . ' , log_link_visit_action.time_spent_ref_action AS ' . $timeSpentRef . ' '
 			 . $customVariables . ' '
 			 . 'FROM ' . $this->table . ' AS log_link_visit_action '
 			 . 'INNER JOIN ' . Piwik_Common::prefixTable('log_action') . ' AS log_action '
@@ -98,7 +100,7 @@ class Piwik_Db_DAO_LogLinkVisitAction extends Piwik_Db_DAO_Base
 
 	public function getCountByIdvisit($idvisit)
 	{
-		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit = ?';
+		$sql = 'SELECT COUNT(*) FROM ' . $this->table . ' WHERE idvisit <= ?';
 		return (int)$this->db->fetchOne($sql, array($idvisit));
 	}
 

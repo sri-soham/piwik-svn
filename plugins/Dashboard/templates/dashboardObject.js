@@ -349,9 +349,9 @@
         var widgetContent = '<div class="sortable" widgetId="'+uniqueId+'"></div>';
 
         if (addWidgetOnTop) {
-            $('.col::nth-child('+columnNumber+')', dashboardElement).prepend(widgetContent);
+            $('.col:nth-child('+columnNumber+')', dashboardElement).prepend(widgetContent);
         } else {
-            $('.col::nth-child('+columnNumber+')', dashboardElement).append(widgetContent);
+            $('.col:nth-child('+columnNumber+')', dashboardElement).append(widgetContent);
         }
 
         $('[widgetId='+uniqueId+']', dashboardElement).dashboardWidget({
@@ -418,7 +418,7 @@
                 if (dashboards.length > 1) {
                     dashboardMenuList.show();
                     for (var i=0; i<dashboards.length; i++) {
-                        dashboardMenuList.append('<li id="Dashboard_embeddedIndex_'+dashboards[i].iddashboard+'" class="dashboardMenuItem"><a dashboardId="'+dashboards[i].iddashboard+'">'+dashboards[i].name+'</a></li>');
+                        dashboardMenuList.append('<li id="Dashboard_embeddedIndex_'+dashboards[i].iddashboard+'" class="dashboardMenuItem"><a dashboardId="'+dashboards[i].iddashboard+'">'+ piwikHelper.htmlEntities( dashboards[i].name ) +'</a></li>');
                         if(dashboards[i].iddashboard == dashboardId) {
                             dashboardName = dashboards[i].name;
                         }
