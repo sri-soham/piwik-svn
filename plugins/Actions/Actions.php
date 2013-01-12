@@ -125,6 +125,12 @@ class Piwik_Actions extends Piwik_Plugin
 							? Piwik_Tracker_Action::TYPE_ACTION_URL
 							: Piwik_Tracker_Action::TYPE_ACTION_NAME;
 
+		if ($actionType == Piwik_Tracker_Action::TYPE_ACTION_URL)
+		{
+			// for urls trim protocol and www because it is not recorded in the db
+			$string = preg_replace('@^http[s]?://(www\.)?@i', '', $string);
+		}
+		
 		$LogAction = Piwik_Db_Factory::getDAO('log_action');
 		
         // exact matches work by returning the id directly

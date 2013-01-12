@@ -4,7 +4,7 @@
  *
  * @link http://piwik.org
  * @license http://www.gnu.org/licenses/gpl-3.0.html GPL v3 or later
- * @version $Id: Myisam.php 6448 2012-06-02 23:52:13Z matt $
+ * @version $Id: Myisam.php 6792 2012-08-16 13:59:58Z EZdesign $
  *
  * @category Piwik
  * @package Piwik
@@ -85,7 +85,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
   						  timezone VARCHAR( 50 ) NOT NULL,
   						  currency CHAR( 3 ) NOT NULL,
   						  excluded_ips TEXT NOT NULL,
-  						  excluded_parameters VARCHAR ( 255 ) NOT NULL,
+  						  excluded_parameters TEXT NOT NULL,
   						  `group` VARCHAR(250) NOT NULL, 
 						  PRIMARY KEY(idsite)
 						)  DEFAULT CHARSET=utf8
@@ -164,7 +164,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 									  name TEXT,
 									  hash INTEGER(10) UNSIGNED NOT NULL,
   									  type TINYINT UNSIGNED NULL,
-									  url_prefix TINYINT(2) NULL,
+  									  url_prefix TINYINT(2) NULL,
 									  PRIMARY KEY(idaction),
 									  INDEX index_type_hash (type, hash)
 						)  DEFAULT CHARSET=utf8
@@ -299,7 +299,7 @@ class Piwik_Db_Schema_Myisam implements Piwik_Db_Schema_Interface
 			",
 
 			'log_link_visit_action' => "CREATE TABLE {$prefixTables}log_link_visit_action (
-											  idlink_va INTEGER(11) NOT NULL AUTO_INCREMENT,
+											  idlink_va INTEGER(11) UNSIGNED NOT NULL AUTO_INCREMENT,
 									          idsite int(10) UNSIGNED NOT NULL,
 									  		  idvisitor BINARY(8) NOT NULL,
 									          server_time DATETIME NOT NULL,

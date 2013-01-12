@@ -167,6 +167,13 @@ dataTable.prototype =
 			$('#'+self.workingDivId+' .loadingPiwik').last().css('display','block');
 		}
 		
+		// when switching to display graphs, reset limit
+		if (self.param.viewDataTable && self.param.viewDataTable.indexOf('graph') === 0)
+		{
+			delete self.param.filter_offset;
+			delete self.param.filter_limit;
+		}
+		
 		var container = $('#'+self.workingDivId+' .piwik-graph');
 		piwikHelper.queueAjaxRequest($.ajax(self.buildAjaxRequest(function(response) {
 			container.trigger('piwikDestroyPlot');
@@ -994,7 +1001,25 @@ dataTable.prototype =
 		truncationLimit += truncationOffset;
 		domElemToTruncate.truncate(truncationLimit);
 		
-		$('.truncated', domElemToTruncate).tooltip();
+		var tooltipElem = $('.truncated', domElemToTruncate),
+			customToolTipText = domElemToTruncate.attr('title');
+		
+		// if there's a title on the dom element, use this as the tooltip instead of
+		// the one set by the truncate plugin
+		if (customToolTipText)
+		{
+			// make sure browser doesn't add its own tooltip for the truncated element
+			if (tooltipElem[0])
+			{
+				tooltipElem.removeAttr('title');
+			}
+			
+			tooltipElem = domElemToTruncate;
+			tooltipElem.attr('title', customToolTipText);
+		}
+		
+		// use tooltip (tooltip text determined by the 'title' attribute)
+		tooltipElem.tooltip();
 	},
 
 	//Apply some miscelleaneous style to the DataTable
@@ -1274,27 +1299,47 @@ dataTable.prototype =
 		trs.each(function()
 		{
 			var tr = $(this);
-			var actions = tr.find('div.dataTableRowActions');
-			if (actions.size() == 0)
+			var td = tr.find('td:first');
+			
+			// load available actions for this row
+			var availableActions = DataTable_RowActions_Registry.getAvailableActions(self.param, tr);
+			if (availableActions.length == 0)
 			{
-				return true;
+				return;
 			}
 			
-			// move before image in actions data table
-			if (actions.prev().size() > 0)
+			// call initTr on all available actions
+			for (var i = 0; i < availableActions.length; i++)
 			{
-				actions.prev().before(actions);
+				var action = availableActions[i];
+				if (typeof actionInstances[action.name] == "undefined")
+				{
+					actionInstances[action.name] = action.createInstance(self);
+				}
+				var actionInstance = actionInstances[action.name];
+				actionInstance.initTr(tr);
 			}
 			
 			// show actions on hover
+			var actionsDom = null;
 			tr.hover(function()
 			{
-				self.repositionRowActions($(this));
-				actions.show();
+				if (actionsDom === null)
+				{
+					// create dom nodes on the fly
+					actionsDom = self.createRowActions(availableActions, tr, actionInstances);
+					td.prepend(actionsDom);
+				}
+				// reposition and show the actions
+				self.repositionRowActions(tr);
+				actionsDom.show();
 			},
 			function()
 			{
-				actions.hide();
+				if (actionsDom !== null)
+				{
+					actionsDom.hide();
+				}
 			});
 		});
 	},
@@ -1320,9 +1365,7 @@ dataTable.prototype =
 			
 			actionEl.click((function(action)
 			{
-				var a = $(this);
-				var className = a.attr('class');
-				if (className.substring(0, 6) == 'action')
+				return function(e)
 				{
 					$(this).blur();
 					container.hide();
@@ -1373,8 +1416,8 @@ dataTable.prototype =
 	repositionRowActions: function(tr) {
 		var td = tr.find('td:first');
 		var actions = tr.find('div.dataTableRowActions');
-		actions.height(tr.innerHeight() - 2)
-			.css('marginLeft', (td.width() + 5 - actions.outerWidth())+'px');
+		actions.height(tr.innerHeight() - 2);
+		actions.css('marginLeft', (td.width() + 5 - actions.outerWidth()) + 'px');
 	},
 	
 	_findReportHeader: function(domElem) {
@@ -1432,6 +1475,7 @@ actionDataTable.prototype =
 	handleColumnDocumentation: dataTable.prototype.handleColumnDocumentation,
 	handleReportDocumentation: dataTable.prototype.handleReportDocumentation,
 	doHandleRowActions: dataTable.prototype.doHandleRowActions,
+	createRowActions: dataTable.prototype.createRowActions,
 	repositionRowActions: dataTable.prototype.repositionRowActions,
 	onClickSort: dataTable.prototype.onClickSort,
 	truncate: dataTable.prototype.truncate,

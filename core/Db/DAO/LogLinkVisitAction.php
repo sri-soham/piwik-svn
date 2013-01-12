@@ -36,6 +36,7 @@ class Piwik_Db_DAO_LogLinkVisitAction extends Piwik_Db_DAO_Base
 		$sql = 'SELECT '
 			 . '   log_action.type AS type '
 			 . ' , log_action.name AS url '
+			 . ' , log_action.url_prefix '
 			 . ' , log_action_title.name AS ' . $this->db->quoteIdentifier('pageTitle') .' '
 			 . ' , log_action.idaction AS ' . $this->db->quoteIdentifier('pageIdAction') .' '
 			 . ' , log_link_visit_action.idlink_va AS ' . $pageId . ' '

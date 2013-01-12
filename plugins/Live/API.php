@@ -254,8 +254,8 @@ class Piwik_Live_API
 			usort($ecommerceDetails, array($this, 'sortByServerTime'));
 			foreach($ecommerceDetails as $key => &$ecommerceConversion)
 			{
-				$itemDetails = $LogConversionItem->getEcommerceDetails($idvisit, $ecommerceConversion);
-				foreach($itemDetails as &$detail)
+				$itemsDetails = $LogConversionItem->getEcommerceDetails($idvisit, $ecommerceConversion);
+				foreach($itemsDetails as &$detail)
 				{
 					if($detail['price'] == round($detail['price']))
 					{
