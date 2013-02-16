@@ -142,6 +142,18 @@ class Piwik_Config
 	}
 
 	/**
+	 *	isTestEnvironment
+	 *
+	 *	Returns the value of isTest
+	 *	
+	 *	@return bool
+	 */
+	public function isTestEnvironment()
+	{
+		return $this->isTest;
+	}
+
+	/**
 	 * Returns absolute path to the global configuration file
 	 *
 	 * @return string

@@ -39,7 +39,12 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
 	{
         $dbConfig = Piwik_Config::getInstance()->database;
         $oldDbName = $dbConfig['dbname'];
-        $dbConfig['dbname'] = null;
+		if ($dbConfig['adapter'] === 'PDO_MYSQL') {
+           	$dbConfig['dbname'] = null;
+		}
+		else {
+			$dbConfig['dbname'] = 'postgres';
+		}
         
         Piwik::createDatabaseObject($dbConfig);
         

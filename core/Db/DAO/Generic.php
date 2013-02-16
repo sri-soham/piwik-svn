@@ -93,4 +93,17 @@ class Piwik_Db_DAO_Generic
 		}
 		return $result;
 	}
+
+	/**
+	 * getQuoteIdentifierSymbol
+	 *
+	 * Returns the symbol/character used to quote the keywords in the sql queries.
+	 * Most DBMSes use ", mysql uses `
+	 *
+	 * @return string
+	 */
+	public function getQuoteIdentifierSymbol()
+	{
+		return '"';
+	}
 }

@@ -13,10 +13,8 @@
  * @package Piwik
  * @subpackage Piwik_Db
   */
-class Piwik_Db_DAO_Pgsql_Generic
+class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 {
-	private $db;
-
 	private $isByteaOutputHex;
 
 	private $hexEscapeLookup;

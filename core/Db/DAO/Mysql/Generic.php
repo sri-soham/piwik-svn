@@ -224,4 +224,9 @@ class Piwik_Db_DAO_Mysql_Generic extends Piwik_Db_DAO_Generic
 
 		return $sub;
 	}
+
+	public function getQuoteIdentifierSymbol()
+	{
+		return '`';
+	}
 }

@@ -45,7 +45,7 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 						  password CHAR(32) NOT NULL,
 						  alias VARCHAR(45) NOT NULL,
 						  email VARCHAR(100) NOT NULL,
-						  token_auth CHAR(32) NOT NULL,
+						  token_auth VARCHAR(32) NOT NULL,
 						  date_registered TIMESTAMP NULL,
 						  PRIMARY KEY(login),
 						  UNIQUE (token_auth)
@@ -561,6 +561,7 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 		$db = Zend_Registry::get('db');
 		$sql = 'INSERT INTO "' . Piwik_Common::prefixTable('user'). '" '
 			 . "VALUES ('anonymous', '', 'anonymous', 'anonymous@example.org', 'anonymous', '".Piwik_Date::factory('now')->getDateTime()."' );";
+		$db->query($sql);
 	}
 
 	/**
@@ -595,7 +596,7 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 					)
 				)
 			{
-				$db->query('DROP TABLE "'.$tableName.'"');
+				$db->query('DROP TABLE IF EXISTS "'.$tableName.'"');
 			}
 		}
 	}

@@ -59,7 +59,8 @@ class Piwik_Transitions extends Piwik_Plugin
 	public function queryExternalReferrers($idaction, Piwik_ArchiveProcessing_Day $archiveProcessing,
 				$limitBeforeGrouping = false)
 	{
-		$rankingQuery = new Piwik_RankingQuery($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
 		
 		// we generate a single column that contains the interesting data for each referrer.
 		// the reason we cannot group by referer_* becomes clear when we look at search engine keywords.
@@ -138,7 +139,8 @@ class Piwik_Transitions extends Piwik_Plugin
 	{
 		$dimension = 'idaction_url_ref';
 		
-		$rankingQuery = new Piwik_RankingQuery($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
 		$rankingQuery->addLabelColumn(array('name', 'url_prefix'));
 		$rankingQuery->setColumnToMarkExcludedRows('is_self');
 		$rankingQuery->partitionResultIntoMultipleGroups('is_page', array(0, 1));
@@ -212,7 +214,8 @@ class Piwik_Transitions extends Piwik_Plugin
 		
 		$dimension = 'idaction_url';
 				
-		$rankingQuery = new Piwik_RankingQuery($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
 		$rankingQuery->addLabelColumn(array('name', 'url_prefix'));
 		$rankingQuery->partitionResultIntoMultipleGroups('type', array_keys($types));
 		

@@ -47,7 +47,8 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 		$sql = $this->sqlActionId();
 		$bind = array(Piwik_Common::getCrc32($name), $name, $type);
 
-		return $this->db->fetchOne($sql, $bind);
+		$row = $this->db->fetchOne($sql, $bind);
+		return $row;
 	}
 
 	/**
@@ -60,11 +61,11 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 	 *	@param string $type
 	 *  @returns int
 	 */
-	public function add($name, $type)
+	public function add($name, $type, $urlPrefix)
 	{
-		$sql = 'INSERT INTO ' . $this->table . ' (name, hash, type) '
-			 . 'VALUES (?, ?, ?)';
-		$this->db->query($sql, array($name, Piwik_Common::getCrc32($name), $type));
+		$sql = 'INSERT INTO ' . $this->table . ' (name, hash, type, url_prefix) '
+			 . 'VALUES (?, ?, ?, ?)';
+		$this->db->query($sql, array($name, Piwik_Common::getCrc32($name), $type, $urlPrefix));
 
 		return $this->db->lastInsertId();
 	}
@@ -75,6 +76,7 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 		$res = $this->sqlActionIdsFromNameType($actionNamesAndTypes);
 		$sql  = $res['sql'];
 		$bind = $res['bind'];
+		$normalizedUrls = $res['normalizedUrls'];
 		// if URL and Title are empty
 		if (empty($bind))
 		{
@@ -83,14 +85,20 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 
 		$actionIds = $this->db->fetchAll($sql, $bind);
 
-		$actionsToInsert = $this->actionsToInsertFromNamesTypes($actionNamesAndTypes, $actionIds);
+		$actionsToInsert = $this->actionsToInsertFromNamesTypes($actionNamesAndTypes, $actionIds, $normalizedUrls);
 
 		// Then, we insert all new actions in the lookup table
 		foreach($actionsToInsert as $actionToInsert)
 		{
 			list($name,$type) = $actionNamesAndTypes[$actionToInsert];
 	
-			$actionId = $this->add($name, $type);
+			$urlPrefix = null;
+			if (isset($normalizedUrls[$actionToInsert]))
+			{
+				$name = $normalizedUrls[$actionToInsert]['url'];
+				$urlPrefix = $normalizedUrls[$actionToInsert]['prefixId'];
+			}
+			$actionId = $this->add($name, $type, $urlPrefix);
 			printDebug("Recorded a new action (".Piwik_Tracker_Action::getActionTypeName($type).") in the lookup table: ". $name . " (idaction = ".$actionId.")");
 			
 			$actionNamesAndTypes[$actionToInsert][] = $actionId;
@@ -183,8 +191,9 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 	protected function sqlActionIdsFromNameType(&$actionNamesAndTypes) {
 		$sql = $this->sqlActionId();
 		$bind = array();
+		$normalizedUrls = array();
 		$i = 0;
-		foreach ($actionNamesAndTypes as &$actionNameType)
+		foreach ($actionNamesAndTypes as $index => &$actionNameType)
 		{
 			list($name, $type) = $actionNameType;
 			if (empty($name))
@@ -196,16 +205,21 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 			{
 				$sql .= ' OR (hash = ? AND name = ? AND type = ? )';
 			}
+			if ($type == Piwik_Tracker_Action::TYPE_ACTION_URL)
+			{
+				$normalizedUrls[$index] = Piwik_Tracker_Action::normalizeUrl($name);
+				$name = $normalizedUrls[$index]['url'];
+			}
 			$bind[] = Piwik_Common::getCrc32($name);
 			$bind[] = $name;
 			$bind[] = $type;
 			++$i;
 		}
 
-		return array('sql' => $sql, 'bind' => $bind);
+		return array('sql' => $sql, 'bind' => $bind, 'normalizedUrls' => $normalizedUrls);
 	}
 
-	protected function actionsToInsertFromNamesTypes(&$actionNamesAndTypes, $actionIds) {
+	protected function actionsToInsertFromNamesTypes(&$actionNamesAndTypes, $actionIds, $normalizedUrls) {
 		// For the Actions found in the lookup table, add the idaction in the array, 
 		// If not found in lookup table, queue for INSERT
 		$actionsToInsert = array();
@@ -213,6 +227,10 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 		{
 			list($name,$type) = $actionNameType;
 			if(empty($name)) { continue; }
+			if (isset($normalizedUrls[$index]))
+			{
+				$name = $normalizedUrls[$index]['url'];
+			}
 			$found = false;
 			foreach($actionIds as $row)
 			{

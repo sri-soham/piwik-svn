@@ -38,6 +38,7 @@ class Piwik_Db_DAO_Pgsql_UserLanguage extends Piwik_Db_DAO_UserLanguage
 		else
 		{
 			$this->db->insert(
+				$this->table,
 				array('login' => $login, 'language' => $languageCode)
 			);
 		}

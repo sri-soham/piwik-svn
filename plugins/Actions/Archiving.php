@@ -102,9 +102,9 @@ class Piwik_Actions_Archiving
 				log_action.type,
 				log_action.idaction,
 				log_action.url_prefix,
-				count(distinct log_link_visit_action.idvisit) as `" . Piwik_Archive::INDEX_NB_VISITS . "`,
-				count(distinct log_link_visit_action.idvisitor) as `" . Piwik_Archive::INDEX_NB_UNIQ_VISITORS . "`,
-				count(*) as `" . Piwik_Archive::INDEX_PAGE_NB_HITS . "`";
+				count(distinct log_link_visit_action.idvisit) as " . $archiveProcessing->C('INDEX_NB_VISITS') . ",
+				count(distinct log_link_visit_action.idvisitor) as " . $archiveProcessing->C('INDEX_NB_UNIQ_VISITORS') . ",
+				count(*) as " . $archiveProcessing->C('INDEX_PAGE_NB_HITS') . " ";
 
 		$from = array(
 			"log_link_visit_action",
@@ -120,11 +120,12 @@ class Piwik_Actions_Archiving
 				AND log_link_visit_action.%s IS NOT NULL";
 
 		$groupBy = "log_action.idaction";
-		$orderBy = "`" . Piwik_Archive::INDEX_PAGE_NB_HITS . "` DESC, name ASC";
+		$orderBy = $archiveProcessing->C('INDEX_PAGE_NB_HITS') . " DESC, name ASC";
 
 		$rankingQuery = false;
 		if ($rankingQueryLimit > 0) {
-			$rankingQuery = new Piwik_RankingQuery($rankingQueryLimit);
+			$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+			$rankingQuery->setLimit($rankingQueryLimit);
 			$rankingQuery->setOthersLabel(Piwik_DataTable::LABEL_SUMMARY_ROW);
 			$rankingQuery->addLabelColumn(array('idaction', 'name'));
 			$rankingQuery->addColumn(array('url_prefix', Piwik_Archive::INDEX_NB_UNIQ_VISITORS));
@@ -147,7 +148,8 @@ class Piwik_Actions_Archiving
 	{
 		$rankingQuery = false;
 		if ($rankingQueryLimit > 0) {
-			$rankingQuery = new Piwik_RankingQuery($rankingQueryLimit);
+			$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+			$rankingQuery->setLimit($rankingQueryLimit);
 			$rankingQuery->setOthersLabel(Piwik_DataTable::LABEL_SUMMARY_ROW);
 			$rankingQuery->addLabelColumn('idaction');
 			$rankingQuery->addColumn(Piwik_Archive::INDEX_PAGE_ENTRY_NB_UNIQ_VISITORS);
@@ -165,7 +167,7 @@ class Piwik_Actions_Archiving
 					"joinOn" => "log_visit.%s = log_action.idaction"
 				)
 			);
-			$orderBy = "`" . Piwik_Archive::INDEX_PAGE_ENTRY_NB_ACTIONS . "` DESC, log_action.name ASC";
+			$orderBy =  $archiveProcessing->C('INDEX_PAGE_ENTRY_NB_ACTIONS') . " DESC, log_action.name ASC";
 		} else {
 			$extraSelects = false;
 			$from = "log_visit";
@@ -173,11 +175,11 @@ class Piwik_Actions_Archiving
 		}
 
 		$select = "log_visit.%s as idaction, $extraSelects
-				count(distinct log_visit.idvisitor) as `" . Piwik_Archive::INDEX_PAGE_ENTRY_NB_UNIQ_VISITORS . "`,
-				count(*) as `" . Piwik_Archive::INDEX_PAGE_ENTRY_NB_VISITS . "`,
-				sum(log_visit.visit_total_actions) as `" . Piwik_Archive::INDEX_PAGE_ENTRY_NB_ACTIONS . "`,
-				sum(log_visit.visit_total_time) as `" . Piwik_Archive::INDEX_PAGE_ENTRY_SUM_VISIT_LENGTH . "`,
-				sum(case log_visit.visit_total_actions when 1 then 1 when 0 then 1 else 0 end) as `" . Piwik_Archive::INDEX_PAGE_ENTRY_BOUNCE_COUNT . "`";
+				count(distinct log_visit.idvisitor) as " . $archiveProcessing->C('INDEX_PAGE_ENTRY_NB_UNIQ_VISITORS') . ",
+				count(*) as " . $archiveProcessing->C('INDEX_PAGE_ENTRY_NB_VISITS') . ",
+				sum(log_visit.visit_total_actions) as " . $archiveProcessing->C('INDEX_PAGE_ENTRY_NB_ACTIONS') . ",
+				sum(log_visit.visit_total_time) as " . $archiveProcessing->C('INDEX_PAGE_ENTRY_SUM_VISIT_LENGTH') . ",
+				sum(case log_visit.visit_total_actions when 1 then 1 when 0 then 1 else 0 end) as " . $archiveProcessing->C('INDEX_PAGE_ENTRY_BOUNCE_COUNT');
 
 		$where = "log_visit.visit_last_action_time >= ?
 				AND log_visit.visit_last_action_time <= ?
@@ -202,13 +204,14 @@ class Piwik_Actions_Archiving
 		$rankingQuery = false;
 		if ($rankingQueryLimit > 0)
 		{
-			$rankingQuery = new Piwik_RankingQuery($rankingQueryLimit);
+			$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+			$rankingQuery->setLimit($rankingQueryLimit);
 			$rankingQuery->setOthersLabel(Piwik_DataTable::LABEL_SUMMARY_ROW);
 			$rankingQuery->addLabelColumn('idaction');
 			$rankingQuery->addColumn(Piwik_Archive::INDEX_PAGE_SUM_TIME_SPENT, 'sum');
 			$rankingQuery->partitionResultIntoMultipleGroups('type', array_keys($this->actionsTablesByType));
 
-			$extraSelects = "log_action.type, log_action.name, count(*) as `" . Piwik_Archive::INDEX_PAGE_NB_HITS . "`,";
+			$extraSelects = "log_action.type, log_action.name, count(*) as " . $archiveProcessing->C('INDEX_PAGE_NB_HITS') . ",";
 			$from = array(
 				"log_link_visit_action",
 				array(
@@ -216,7 +219,7 @@ class Piwik_Actions_Archiving
 					"joinOn" => "log_link_visit_action.%s = log_action.idaction"
 				)
 			);
-			$orderBy = "`" . Piwik_Archive::INDEX_PAGE_NB_HITS . "` DESC, log_action.name ASC";
+			$orderBy = $archiveProcessing->C('INDEX_PAGE_NB_HITS') . " DESC, log_action.name ASC";
 		} else {
 			$extraSelects = false;
 			$from = "log_link_visit_action";
@@ -224,7 +227,7 @@ class Piwik_Actions_Archiving
 		}
 
 		$select = "log_link_visit_action.%s as idaction, $extraSelects
-				sum(log_link_visit_action.time_spent_ref_action) as `" . Piwik_Archive::INDEX_PAGE_SUM_TIME_SPENT . "`";
+				sum(log_link_visit_action.time_spent_ref_action) as " . $archiveProcessing->C('INDEX_PAGE_SUM_TIME_SPENT');
 
 		$where = "log_link_visit_action.server_time >= ?
 				AND log_link_visit_action.server_time <= ?
@@ -248,7 +251,8 @@ class Piwik_Actions_Archiving
 	{
 		$rankingQuery = false;
 		if ($rankingQueryLimit > 0) {
-			$rankingQuery = new Piwik_RankingQuery($rankingQueryLimit);
+			$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
+			$rankingQuery->setLimit($rankingQueryLimit);
 			$rankingQuery->setOthersLabel(Piwik_DataTable::LABEL_SUMMARY_ROW);
 			$rankingQuery->addLabelColumn('idaction');
 			$rankingQuery->addColumn(Piwik_Archive::INDEX_PAGE_EXIT_NB_UNIQ_VISITORS);
@@ -263,7 +267,7 @@ class Piwik_Actions_Archiving
 					"joinOn" => "log_visit.%s = log_action.idaction"
 				)
 			);
-			$orderBy = "`" . Piwik_Archive::INDEX_PAGE_EXIT_NB_VISITS . "` DESC, log_action.name ASC";
+			$orderBy = $archiveProcessing->C('INDEX_PAGE_EXIT_NB_VISITS') . " DESC, log_action.name ASC";
 		} else {
 			$extraSelects = false;
 			$from = "log_visit";
@@ -271,8 +275,8 @@ class Piwik_Actions_Archiving
 		}
 
 		$select = "log_visit.%s as idaction, $extraSelects
-				count(distinct log_visit.idvisitor) as `" . Piwik_Archive::INDEX_PAGE_EXIT_NB_UNIQ_VISITORS . "`,
-				count(*) as `" . Piwik_Archive::INDEX_PAGE_EXIT_NB_VISITS . "`";
+				count(distinct log_visit.idvisitor) as " . $archiveProcessing->C('INDEX_PAGE_EXIT_NB_UNIQ_VISITORS') . ",
+				count(*) as " . $archiveProcessing->C('INDEX_PAGE_EXIT_NB_VISITS');
 
 		$where = "log_visit.visit_last_action_time >= ?
 				AND log_visit.visit_last_action_time <= ?

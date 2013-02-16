@@ -17,6 +17,7 @@ class Piwik_Db_Factory
 {
 	private static $daos  = array();
 	private static $is_test = false;
+	private static $instance = null;
 
 	private $table;
 	private $adapter;
@@ -26,18 +27,29 @@ class Piwik_Db_Factory
 	private $base_path;
 	private $derived_path;
 
+	private static function setInstance()
+	{
+		if (is_null(self::$instance)) {
+			self::$instance = new self();
+		}
+	}
+
 	public static function getDAO($table, $db=null)
 	{
-		$class = __CLASS__;
-		$factory = new $class;
-		return $factory->dao($table, $db);
+		self::setInstance();
+		return self::$instance->dao($table, $db);
 	}
 
 	public static function getGeneric($db=null)
 	{
-		$class = __CLASS__;
-		$factory = new $class;
-		return $factory->generic($db);
+		self::setInstance();
+		return self::$instance->generic($db);
+	}
+
+	public static function getHelper($class_name, $db=null)
+	{
+		self::setInstance();
+		return self::$instance->helper($class_name, $db);
 	}
 
 	public static function setTest($test)
@@ -93,6 +105,37 @@ class Piwik_Db_Factory
 		}
 
 		self::$daos[$table] = $class;
+
+		return $class;
+	}
+
+	/**
+	 *	helper
+	 *
+	 *	Returns the helper class with the given name. This is for classes that
+	 *	rely on database specific functionality but are not tied to any particular
+	 *	table. Eg. RankingQuery
+	 *
+	 *	@param string	$class_name
+	 *	@param object	$db
+	 *	@return mixed
+	 */
+	public function helper($class_name, $db=null)
+	{
+		if (is_null($db))
+		{
+			if(!empty($GLOBALS['PIWIK_TRACKER_MODE']))
+			{
+				$db = Piwik_Tracker::getDatabase();
+			}
+			if($db === null)
+			{
+				$db = Zend_Registry::get('db');
+			}
+		}
+
+		$class_name = 'Piwik_Db_Helper_' . $this->folder . '_' . $class_name;
+		$class = new $class_name($db);
 
 		return $class;
 	}

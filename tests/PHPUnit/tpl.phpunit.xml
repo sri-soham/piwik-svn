@@ -19,7 +19,7 @@
          verbose="true">
 
 <php>
-    <server name="HTTP_HOST" value="piwik_svn.local"/>
+    <server name="HTTP_HOST" value="piwik.local"/>
     <server name="REQUEST_URI" value="/tests/all_tests.php"/>
     <server name="REMOTE_ADDR" value="127.0.0.1"/>
 </php>
