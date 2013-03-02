@@ -53,4 +53,17 @@ class Piwik_Db_DAO_Pgsql_Option extends Piwik_Db_DAO_Option
 		return $this->db->fetchAll($sql);
 	}
 
+	public function fetchAll()
+	{
+		$sql = 'SELECT * FROM ' . $this->table;
+		$rows = $this->db->fetchAll($sql);
+		while (list($k, $row) = each($rows))
+		{
+			$rows[$k]['autoload'] = ($row['autoload'] === '1' || $row['autoload'] === 't') ? 't' : 'f';
+
+		}
+		reset($rows);
+
+		return $rows;
+	}
 }

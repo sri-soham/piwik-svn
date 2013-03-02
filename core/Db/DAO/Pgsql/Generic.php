@@ -37,22 +37,19 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 	// second element will be the logical operator (AND or OR)
 	// third element will be the next condition
 	// and so on.
+	// http://postgres.cz/wiki/PostgreSQL_SQL_Tricks#Fast_first_n_rows_removing
+	// http://stackoverflow.com/questions/5170546/how-do-i-delete-a-fixed-number-of-rows-with-sorting-in-postgresql
 	public function deleteAll($table, $where, $maxRowsPerQuery, $parameters=array())
 	{
 		if (empty($where))
 		{
 			throw new Exception('This function will work only when there is a WHERE clause');
 		}
-		if ((count($where) % 2) == 0)
-		{
-			throw new Exception('Invalid where array. Number of elements should be odd');
-		}
-		$columns = $this->getColumnsFromWhere($where);
 
-		$sql = 'DELETE FROM ' . $table . ' WHERE (' . $columns . ') '
-			 . 'IN ((SELECT ' . $columns . ' FROM ' . $table . ' '
+		$sql = 'DELETE FROM ' . $table . ' WHERE ctid '
+			 . 'IN (SELECT ctid FROM ' . $table . ' '
 			 . '    WHERE ' . implode(' ', $where) . ' LIMIT ' . (int)$maxRowsPerQuery
-			 . '    ))';
+			 . '    )';
 
 		$totalRowsDeleted = 0;
 		do 
@@ -141,11 +138,14 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 			$tablesToWrite = array($tablesToWrite);
 		}
 
-		$sql = 'LOCK TABLES ' . implode(', ', $tablesToRead) . ' IN ACCESS SHARE MODE';
+		$sql = 'LOCK TABLE ' . implode(', ', $tablesToRead) . ' IN ACCESS SHARE MODE';
 		$this->db->exec($sql);
 
-		$sql = 'LOCK TABLES ' . implode(', ', $tablesToWrite) . ' IN ACCESS EXCLUSIVE MODE';
-		$this->db->exec($sql);
+		if (!empty($tablesToWrite))
+		{
+			$sql = 'LOCK TABLE ' . implode(', ', $tablesToWrite) . ' IN ACCESS EXCLUSIVE MODE';
+			$this->db->exec($sql);
+		}
 	}
 
 	public function insertIgnore($sql, $bind)
@@ -240,6 +240,18 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 		return " (CASE WHEN $colName = '' THEN '0' ELSE $colName END)::float ";
 	}
 
+	public function optimizeTables($tables)
+	{
+		if (!is_array($tables))
+		{
+			$tables = array($tables);
+		}
+		foreach ($tables as $table)
+		{
+			$this->db->query('VACUUM ANALYZE ' . $table);
+		}
+	}
+
 	public function checkByteaOutput() {
 		if ($this->isByteaOutputHex === null) {
 			$sql = 'SHOW bytea_output';
@@ -274,6 +286,21 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 	public function bin2db($value)
 	{
 		return bin2hex($value);
+	}
+
+	/**
+	 *	bin2db Raw Insert
+	 *
+	 *	Modifies binary values for insert queries that do not use parameterized
+	 *	queries. This is primarily for insertAll queries used in PHPUnit
+	 *	test cases.
+	 *
+	 *	@param	mixed $value
+	 *	@return string
+	 */
+	public function bin2dbRawInsert($value)
+	{
+		return "'" . $this->bin2db($value) . "'";
 	}
 
 	// undoes the conversion done by bin2db
@@ -336,6 +363,24 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 		}
 
 		return $sub;
+	}
+
+	public function isLockPrivilegeGranted()
+	{
+		$granted = false;
+		try
+		{
+			$this->beginTransaction();
+			$this->lockTables(Piwik_Common::prefixTables('log_visit'), array());
+			$this->rollback();
+			$granted = true;
+		}
+		catch (Exception $ex)
+		{
+			$granted = false;
+		}
+		
+		return $granted;
 	}
 
 	private function getColumnsFromWhere($where)

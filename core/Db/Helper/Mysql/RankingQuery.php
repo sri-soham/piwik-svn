@@ -41,61 +41,58 @@
  */
 class Piwik_Db_Helper_Mysql_RankingQuery
 {
-    
+ 	protected $db;
+
 	/**
 	 * Contains the labels of the inner query.
 	 * Format: "label" => true (to make sure labels don't appear twice)
 	 * @var array
 	 */
-	private $labelColumns = array();
+	protected $labelColumns = array();
 	
 	/**
 	 * The columns of the inner query that are not labels
 	 * Format: "label" => "aggregation function" or false for no aggregation
 	 * @var array
 	 */
-	private $additionalColumns = array();
+	protected $additionalColumns = array();
 	
 	/**
 	 * The limit for each group
 	 * @var int
 	 */
-	private $limit = 5;
+	protected $limit = 5;
 	
 	/**
 	 * The name of the columns that marks rows to be excluded from the limit
 	 * @var string
 	 */
-	private $columnToMarkExcludedRows = false;
+	protected $columnToMarkExcludedRows = false;
 
 	/**
 	 * The column that is used to partition the result
 	 * @var bool|string
 	 */
-	private $partitionColumn = false;
+	protected $partitionColumn = false;
 
 	/**
 	 * The possible values for the column $this->partitionColumn
 	 * @var array
 	 */
-	private $partitionColumnValues = array();
+	protected $partitionColumnValues = array();
 	
 	/**
 	 * The value to use in the label of the 'Others' row.
 	 * @var string
 	 */
-	private $othersLabelValue = 'Others';
+	protected $othersLabelValue = 'Others';
 	
 	/**
 	 * The constructor.
-	 * Can be used as a shortcut for setLimit() 
 	 */
-	public function __construct($limit = false)
+	public function __construct($db)
 	{
-		if ($limit !== false)
-		{
-			$this->setLimit($limit);
-		}
+		$this->db = $db;
 	}
 	
 	/**
@@ -213,7 +210,7 @@ class Piwik_Db_Helper_Mysql_RankingQuery
 	public function execute($innerQuery, $bind=array())
 	{
 		$query = $this->generateQuery($innerQuery);
-		$data = Piwik_FetchAll($query, $bind);
+		$data = $this->db->fetchAll($query, $bind);
 		
 		if ($this->columnToMarkExcludedRows !== false)
 		{
@@ -252,7 +249,7 @@ class Piwik_Db_Helper_Mysql_RankingQuery
 		return $data;
 	}
 	
-	private function splitPartitions(&$data)
+	protected function splitPartitions(&$data)
 	{
 		$result = array();
 		foreach ($data as &$row)
@@ -355,7 +352,7 @@ class Piwik_Db_Helper_Mysql_RankingQuery
 		return $groupOthers;
 	}
 	
-	private function getCounterExpression($limit)
+	protected function getCounterExpression($limit)
 	{
 		$whens = array();
 		

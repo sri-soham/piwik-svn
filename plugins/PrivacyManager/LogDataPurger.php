@@ -91,7 +91,7 @@ class Piwik_PrivacyManager_LogDataPurger
 		}
 		
 		// optimize table overhead after deletion
-		Piwik_OptimizeTables($logTables);
+		$Generic->optimizeTables($logTables);
 	}
 	
 	/**

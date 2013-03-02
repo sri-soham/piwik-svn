@@ -780,7 +780,7 @@ class SitesManagerTest extends DatabaseTestCase
     public function testGetSitesGroups()
     {
         $groups = array( 'group1', ' group1 ', '', 'group2');
-        $expectedGroups = array('group1','','group2');
+        $expectedGroups = array('', 'group1', 'group2');
         foreach($groups as $group)
         {
             Piwik_SitesManager_API::getInstance()->addSite("test toto@{}", 'http://example.org',$ecommerce=1,$excludedIps = null, $excludedQueryParameters = null, $timezone = null, $currency = null, $group);

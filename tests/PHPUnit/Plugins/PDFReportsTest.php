@@ -32,6 +32,13 @@ class PDFReportsTest extends DatabaseTestCase
         
     }
 
+	public function tearDown()
+	{
+		$Report = Piwik_Db_Factory::getDAO('report');
+		$Report->truncateTable();
+		parent::tearDown();
+	}
+
     /**
      * @group Plugins
      * @group PDFReports

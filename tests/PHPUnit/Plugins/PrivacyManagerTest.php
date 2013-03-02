@@ -715,15 +715,15 @@ class PrivacyManagerTest extends IntegrationTestCase
         
         // one metric for jan & one for feb
         Piwik_Query(sprintf($sql, Piwik_Common::prefixTable($archiveTables['numeric'][0])),
-                    array(self::GARBAGE_FIELD, $janDate1, $janDate1, $janDate1, 1, 100));
+                    array(self::GARBAGE_FIELD, $janDate1, $janDate1, 255, '2012-01-01 10:10:10', 100));
         Piwik_Query(sprintf($sql, Piwik_Common::prefixTable($archiveTables['numeric'][1])),
-                    array(self::GARBAGE_FIELD, $febDate1, $febDate1, $febDate1, 1, 200));
+                    array(self::GARBAGE_FIELD, $febDate1, $febDate1, 255, '2012-01-01 10:10:10', 200));
         
         // add garbage reports
         Piwik_Query(sprintf($sql, Piwik_Common::prefixTable($archiveTables['blob'][0])),
-                    array(self::GARBAGE_FIELD, $janDate1, $janDate1, $janDate1, 10, 'blobval'));
+                    array(self::GARBAGE_FIELD, $janDate1, $janDate1, 255, '2012-01-01 10:10:10', 'blobval'));
         Piwik_Query(sprintf($sql, Piwik_Common::prefixTable($archiveTables['blob'][1])),
-                    array(self::GARBAGE_FIELD, $febDate1, $febDate1, $febDate1, 20, 'blobval'));
+                    array(self::GARBAGE_FIELD, $febDate1, $febDate1, 255, '2012-01-01 10:10:10', 'blobval'));
     }
     
     protected function _checkNoDataChanges()

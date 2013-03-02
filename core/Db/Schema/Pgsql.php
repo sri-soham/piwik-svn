@@ -148,6 +148,7 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 									  name TEXT,
 									  hash BIGINT NOT NULL,
   									  type SMALLINT NULL,
+									  url_prefix SMALLINT NULL,
 									  PRIMARY KEY(idaction)
 						)
 			",
@@ -501,6 +502,7 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 		if (empty($one))
 		{
 			Piwik_Exec("CREATE DATABASE ".$dbName." ENCODING 'UTF8'");
+			Piwik_Exec("ALTER DATABASE $dbName SET bytea_output TO 'escape'");
 		}
 	}
 

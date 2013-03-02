@@ -1108,7 +1108,25 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
     	$result = array();
     	foreach (Piwik::getTablesInstalled() as $tableName)
     	{
-    		$result[$tableName] = Piwik_FetchAll("SELECT * FROM $tableName");
+			$table = Piwik_Common::unprefixTable($tableName);
+			if (strpos($table, 'archive_') === 0)
+			{
+				$dao = Piwik_Db_Factory::getDAO('archive');
+				$dao->setTable($tableName);
+			}
+			else
+			{
+				$dao = Piwik_Db_Factory::getDAO($table);
+			}
+
+			if (strpos($table, 'archive_blob_') === 0)
+			{
+				$result[$tableName] = $dao->fetchAllBlob($tableName);
+			}
+			else
+			{
+				$result[$tableName] = $dao->fetchAll();
+			}
     	}
     	return $result;
     }
@@ -1143,35 +1161,17 @@ abstract class IntegrationTestCase extends PHPUnit_Framework_TestCase
     			continue;
     		}
     		
-    		$rowsSql = array();
-    		foreach ($rows as $row)
-    		{
-    			$values = array();
-    			foreach ($row as $name => $value)
-    			{
-    				if (is_null($value))
-    				{
-    					$values[] = 'NULL';
-    				}
-    				else if (is_numeric($value))
-    				{
-    					$values[] = $value;
-    				}
-    				else if (!ctype_print($value))
-    				{
-    					$values[] = "x'".bin2hex(substr($value, 1))."'";
-    				}
-    				else
-    				{
-    					$values[] = "'$value'";
-    				}
-    			}
-    			
-    			$rowsSql[] = "(".implode(',', $values).")";
-    		}
-    		
-    		$sql = "INSERT INTO $table VALUES ".implode(',', $rowsSql);
-    		Piwik_Query($sql);
+			$no_prefix_table = Piwik_Common::unprefixTable($table);
+			if (strpos($no_prefix_table, 'archive_') === 0)
+			{
+				$dao = Piwik_Db_Factory::getDAO('archive');
+				$dao->setTable($table);
+			}
+			else
+			{
+				$dao = Piwik_Db_Factory::getDAO($no_prefix_table);
+			}
+			$dao->insertAll($rows);
     	}
     }
 	

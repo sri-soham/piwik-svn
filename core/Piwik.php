@@ -2561,17 +2561,8 @@ class Piwik
 	{
 		if (is_null(self::$lockPrivilegeGranted))
 		{
-			try
-			{
-				Piwik_LockTables(Piwik_Common::prefixTable('log_visit'));
-				Piwik_UnlockAllTables();
-				
-				self::$lockPrivilegeGranted = true;
-			}
-			catch (Exception $ex)
-			{
-				self::$lockPrivilegeGranted = false;
-			}
+			$generic = Piwik_Db_Factory::getGeneric();
+			self::$lockPrivilegeGranted = $generic->isLockPrivilegeGranted();
 		}
 		
 		return self::$lockPrivilegeGranted;

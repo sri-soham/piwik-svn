@@ -30,8 +30,8 @@ class Piwik_Db_DAO_Site extends Piwik_Db_DAO_Base
 
 	public function getAllGroups()
 	{
-		$sql = 'SELECT DISTINCT '.$this->db->quoteIdentifier('group').' '
-		     . 'FROM ' . $this->table;
+		$group = $this->db->quoteIdentifier('group');
+		$sql = "SELECT DISTINCT $group FROM {$this->table} ORDER BY $group";
 		return $this->db->fetchAll($sql);
 	}
 

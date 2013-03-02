@@ -13,29 +13,9 @@
  * @package Piwik
  * @subpackage Piwik_Db
  */
-class Piwik_Db_DAO_Pgsql_LogLinkVisitAction extends Piwik_Db_DAO_LogLinkVisitAction
-{
-	public function __construct($db, $table)
-	{
-		parent::__construct($db, $table);
-	}
 
-	public function record($idvisit, $idsite, $idvisitor, $server_time,
-						$url, $name, $ref_url, $ref_name, $time_spent,
-						$custom_variables
-						)
-	{
-		list($sql, $bind) = $this->paramsRecord(
-			$idvisit, $idsite, $idvisitor, $server_time,
-			$url, $name, $ref_url, $ref_name, $time_spent,
-			$custom_variables
-		);
-
-		$this->db->query($sql, $bind);
-
-		return $this->db->lastInsertId($this->table.'_idlink_va');
-	}
-
+class Piwik_Db_DAO_Pgsql_LogConversionItem extends Piwik_Db_DAO_LogConversionItem
+{ 
 	public function fetchAll()
 	{
 		$generic = Piwik_Db_Factory::getGeneric();
@@ -49,9 +29,11 @@ class Piwik_Db_DAO_Pgsql_LogLinkVisitAction extends Piwik_Db_DAO_LogLinkVisitAct
 				$rows[$k]['idvisitor'] = $generic->db2bin($row['idvisitor_text']);
 			}
 			unset($rows[$k]['idvisitor_text']);
+			$rows[$k]['deleted'] = ($row['deleted'] === '1' ||	$row['deleted'] === 't') ? 't' : 'f';
+
 		}
 		reset($rows);
 
 		return $rows;
 	}
-} 
+}

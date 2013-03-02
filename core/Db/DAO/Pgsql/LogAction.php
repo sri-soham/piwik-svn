@@ -77,12 +77,14 @@ class Piwik_Db_DAO_Pgsql_LogAction extends Piwik_Db_DAO_LogAction
 	{
 		$tempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME);
 		$sql = 'DELETE FROM ' . $this->table . ' AS la WHERE NOT EXISTS '
-			 . '(SELECT * FROM ' . $tempTable. ' AS tmp ON tmp.idaction = la.idaction)';
+			 . '(SELECT * FROM ' . $tempTable. ' AS tmp WHERE tmp.idaction = la.idaction)';
 		$this->db->query($sql);
 	}
 
-	public function purgeUnused($maxIds)
+	public function purgeUnused()
 	{
+		// get current max visit ID in log tables w/ idaction references.
+		$maxIds = $this->getMaxIdsInLogTables();
 		$this->generic = Piwik_Db_Factory::getGeneric($this->db);
 		$this->createTempTable();
 
@@ -91,11 +93,12 @@ class Piwik_Db_DAO_Pgsql_LogAction extends Piwik_Db_DAO_LogAction
 
 		// ... then do small insert w/ locked tables to minimize the amount of time tables are locked.
 		$this->generic->beginTransaction();
-		$this->lockLogTables($generic);
+		$this->lockLogTables($this->generic);
 		$this->insertActionsToKeep($maxIds, $deleteOlderThanMax = false);
 		
 		// delete before unlocking tables so there's no chance a new log row that references an
 		// unused action will be inserted.
+		$this->deleteDuplicatesFromTempTable();
 		$this->deleteUnusedActions();
 		// unlock the log tables
 		$this->generic->commit();
@@ -105,14 +108,25 @@ class Piwik_Db_DAO_Pgsql_LogAction extends Piwik_Db_DAO_LogAction
 	protected function insertActionsToKeep($maxIds, $olderThan = true)
 	{
 		$tempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME);
-		$idvisitCondition = $olderThan ? ' idvisit <= ? ' : ' idvisit > ? ';
-		foreach ($this->getIdActionColumns as $table => $column)
+		$idColumns = $this->getTableIdColumns();
+		foreach ($this->getIdActionColumns() as $table => $columns)
 		{
+			$idCol = $idColumns[$table];
 			foreach ($columns as $col)
 			{
-				$select = "SELECT $col from " . Piwik_Common::prefixTable($table) . " WHERE $idvisitCondition";
-				$sql = "INSERT IGNORE INTO $tempTable $select";
-				$this->generic->insertIgnore($sql, array($maxIds[$table]));
+				$select = "SELECT $col from " . Piwik_Common::prefixTable($table) . " WHERE $idCol >= ? AND $idCol < ?";
+				$sql = "INSERT INTO $tempTable $select";
+				if ($olderThan)
+				{
+					$start = 0;
+					$finish = $maxIds[$table];
+				}
+				else
+				{
+					$start = $maxIds[$table];
+					$finish = $this->generic->getMax(Piwik_Common::prefixTable($table), $idCol);
+				}
+				$this->generic->segmentedQuery($sql, $start, $finish, Piwik_PrivacyManager_LogDataPurger::$selectSegmentSize);
 			}
 		}
 
@@ -139,12 +153,31 @@ class Piwik_Db_DAO_Pgsql_LogAction extends Piwik_Db_DAO_LogAction
 		);
 	}
 
+	/**
+	 *	create temporary table
+	 *
+	 *	Creates the temporary table; idaction is not the primary key as it is
+	 *	in the mysql version. Postgres doesn't support INSERT IGNORE. To get
+	 *	around that, all idactions values are added to the temporary table
+	 *  and the duplicates are deleted before the call to "deleteUnusedActions".
+	 *	deleteDuplicatesFromTempTable does the job of removing duplicaets.
+	 */
 	protected function createTempTable()
 	{
 		$sql = 'CREATE TEMPORARY TABLE ' . Piwik_Common::prefixTable(self::TEMP_TABLE_NAME) . '( '
-			  .'  idaction INT, '
-			  .'  PRIMARY KEY(idaction) '
+			  .'  idaction INT'
 			  .' );';
 		$this->db->query($sql);
+	}
+
+	protected function deleteDuplicatesFromTempTable()
+	{
+		$tempTempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME . '_tmp');
+		$tempTable = Piwik_Common::prefixTable(self::TEMP_TABLE_NAME);
+		$sql = "CREATE TEMPORARY TABLE $tempTempTable AS SELECT idaction FROM $tempTable GROUP BY idaction";
+		$this->db->query($sql);
+		$this->db->query("TRUNCATE TABLE $tempTable");
+		$this->db->query("INSERT INTO $tempTable SELECT idaction FROM $tempTempTable");
+		$this->db->query("DROP TABLE $tempTempTable");
 	}
 } 

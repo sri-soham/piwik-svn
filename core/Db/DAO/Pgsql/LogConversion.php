@@ -18,6 +18,30 @@ class Piwik_Db_DAO_Pgsql_LogConversion extends Piwik_Db_DAO_LogConversion
 	}
 
 	/**
+	 *	fetchAll
+	 *
+	 *	Fetches all records in the table
+	 */
+	public function fetchAll()
+	{
+		$generic = Piwik_Db_Factory::getGeneric();
+		$generic->checkByteaOutput();
+		$sql = 'SELECT *, idvisitor::text AS idvisitor_text FROM ' . $this->table;
+		$rows = $this->db->fetchAll($sql);
+		while (list($k, $row) = each($rows))
+		{
+			if (!empty($row['idvisitor']))
+			{
+				$rows[$k]['idvisitor'] = $generic->db2bin($row['idvisitor_text']);
+			}
+			unset($rows[$k]['idvisitor_text']);
+		}
+		reset($rows);
+
+		return $rows;
+	}
+
+	/**
 	 *	uses tracker db
 	 */
 	protected function recordGoalInsert($goal)

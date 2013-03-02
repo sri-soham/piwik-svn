@@ -144,4 +144,42 @@ class Piwik_Db_DAO_Pgsql_LogVisit extends Piwik_Db_DAO_LogVisit
 
 		return array($result, $customVariables);
 	}
+
+	/**
+	 *	fetchAll
+	 *
+	 *	Returns all the rows of the table.
+	 *
+	 *	@return array
+	 */
+	public function fetchAll()
+	{
+		$generic = Piwik_Db_Factory::getGeneric();
+		$generic->checkByteaOutput();
+
+		$sql = 'SELECT *, idvisitor::text AS idvisitor_text, config_id::text as config_id_text,
+				location_ip::text AS location_ip_text FROM ' . $this->table;
+		$rows = $this->db->fetchAll($sql);
+		while (list($k, $row) = each($rows))
+		{
+			if (!empty($row['idvisitor']))
+			{
+				$rows[$k]['idvisitor'] = $generic->db2bin($row['idvisitor_text']);
+			}
+			unset($rows[$k]['idvisitor_text']);
+			if (!empty($row['config_id']))
+			{
+				$rows[$k]['config_id'] = $generic->db2bin($row['config_id_text']);
+			}
+			unset($rows[$k]['config_id_text']);
+			if (!empty($row['location_ip']))
+			{
+				$rows[$k]['location_ip'] = $generic->db2bin($row['location_ip_text']);
+			}
+			unset($rows[$k]['location_ip_text']);
+		}
+		reset($rows);
+
+		return $rows;
+	}
 }

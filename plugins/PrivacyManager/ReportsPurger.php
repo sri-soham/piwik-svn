@@ -98,6 +98,7 @@ class Piwik_PrivacyManager_ReportsPurger
 	 */
 	public function purgeData($optimize = false)
 	{
+		$Generic = Piwik_Db_Factory::getGeneric();
 		// find archive tables to purge
 		list($oldNumericTables, $oldBlobTables) = $this->getArchiveTablesToPurge();
 		
@@ -114,16 +115,12 @@ class Piwik_PrivacyManager_ReportsPurger
 				foreach ($oldBlobTables as $table)
 				{
 					$where = $this->getBlobTableWhereExpr($oldNumericTables, $table);
-					if (!empty($where))
-					{
-						$where = "WHERE $where";
-					}
-					Piwik_DeleteAllRows($table, $where, $this->maxRowsToDeletePerQuery);
+					$Generic->deleteAll($table, $where, $this->maxRowsToDeletePerQuery);
 				}
 				
 				if ($optimize)
 				{
-					Piwik_OptimizeTables($oldBlobTables);
+					$Generic->optimizeTables($oldBlobTables);
 				}
 			}
 		}
@@ -134,15 +131,17 @@ class Piwik_PrivacyManager_ReportsPurger
 			// if keep_basic_metrics is set, empty all numeric tables of metrics to purge
 			if ($this->keepBasicMetrics == 1 && !empty($this->metricsToKeep))
 			{
-				$where = "WHERE name NOT IN ('".implode("','", $this->metricsToKeep)."') AND name NOT LIKE 'done%'";
+				$where = array();
+				$where[] = " name NOT IN ('".implode("','", $this->metricsToKeep)."') ";
+				$where[] = " AND name NOT LIKE 'done%' ";
 				foreach ($oldNumericTables as $table)
 				{
-					Piwik_DeleteAllRows($table, $where, $this->maxRowsToDeletePerQuery);
+					$Generic->deleteAll($table, $where, $this->maxRowsToDeletePerQuery);
 				}
 				
 				if ($optimize)
 				{
-					Piwik_OptimizeTables($oldNumericTables);
+					$Generic->optimizeTables($oldNumericTables);
 				}
 			}
 			else // drop numeric tables
@@ -297,7 +296,7 @@ class Piwik_PrivacyManager_ReportsPurger
 		
 		$sql = "SELECT COUNT(*)
 				  FROM $table
-				 WHERE ".$this->getBlobTableWhereExpr($oldNumericTables, $table)."
+				 WHERE (".implode(' ', $this->getBlobTableWhereExpr($oldNumericTables, $table)).") 
 				   AND idarchive >= ?
 				   AND idarchive < ?";
 		
@@ -308,10 +307,10 @@ class Piwik_PrivacyManager_ReportsPurger
 	/** Returns SQL WHERE expression used to find reports that should be purged. */
 	private function getBlobTableWhereExpr( $oldNumericTables, $table )
 	{
-		$where = "";
+		$where = array();
 		if (!empty($this->reportPeriodsToKeep)) // if keeping reports
 		{
-			$where = "period NOT IN (".implode(',', $this->reportPeriodsToKeep).")";
+			$where[] = "period NOT IN (".implode(',', $this->reportPeriodsToKeep).")";
 			
 			// if not keeping segments make sure segments w/ kept periods are also deleted
 			if (!$this->keepSegmentReports)
@@ -321,11 +320,9 @@ class Piwik_PrivacyManager_ReportsPurger
 			
 				if (!empty($archiveIds))
 				{
-					$where .= " OR idarchive IN (".implode(',', $archiveIds).")";
+					$where[] = " OR idarchive IN (".implode(',', $archiveIds).")";
 				}
 			}
-			
-			$where = "($where)";
 		}
 		return $where;
 	}

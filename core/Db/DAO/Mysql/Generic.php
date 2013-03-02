@@ -187,6 +187,26 @@ class Piwik_Db_DAO_Mysql_Generic extends Piwik_Db_DAO_Generic
 		return $value;
 	}
 
+	/**
+	 *	bin2db Raw Insert
+	 *
+	 *	Modifies binary values for insert queries that do not use parameterized
+	 *	queries. This is primarily for insertAll queries used in PHPUnit
+	 *	test cases.
+	 *
+	 *	@param	mixed $value
+	 *	@return string
+	 */
+	public function bin2dbRawInsert($value)
+	{
+		if (!is_null($value))
+   		{
+   			$value = "x'".bin2hex(substr($value, 1))."'";
+   		}
+
+		return $value;
+	}
+
 	// undoes the conversion done by bin2db
 	public function db2bin($value)
 	{
@@ -223,6 +243,23 @@ class Piwik_Db_DAO_Mysql_Generic extends Piwik_Db_DAO_Generic
 		}
 
 		return $sub;
+	}
+
+	public function isLockPrivilegeGranted()
+	{
+		$granted = false;
+		try
+		{
+			$this->lockTables(Piwik_Common::prefixTable('log_visit'), array());
+			$this->unlockAllTables();
+			$granted = true;
+		}
+		catch (Exception $ex)
+		{
+			$granted = false;
+		}
+
+		return $granted;
 	}
 
 	public function getQuoteIdentifierSymbol()

@@ -434,7 +434,6 @@ class Piwik_Tracker_Action implements Piwik_Tracker_Action_Interface
 			'idRefererActionName' => $idRefererActionName, 
 			'timeSpentRefererAction' => $timeSpentRefererAction, 
 		); 
-		printDebug($insertWithoutNulls);
 
 		/* 
 		* send the Action object ($this)  and the list of ids ($info) as arguments to the event 

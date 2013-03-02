@@ -25,6 +25,12 @@ abstract class Piwik_Db_DAO_Base
 		$this->table = Piwik_Common::prefixTable($table);
 	}
 
+	public function setTable($table)
+	{
+		$table = Piwik_Common::unprefixTable($table);
+		$this->table = Piwik_Common::prefixTable($table);
+	}
+
 	public function getSqlRevenue($field)
 	{
 		return "ROUND(".$field.",".Piwik_Tracker_GoalManager::REVENUE_PRECISION.")";
@@ -39,5 +45,49 @@ abstract class Piwik_Db_DAO_Base
 	public function getDB()
 	{
 		return $this->db;
+	}
+
+	// Used primarily for the test case setup
+	public function fetchAll()
+	{
+		return $this->db->fetchAll('SELECT * FROM ' . $this->table);
+	}
+
+	// Used primarily for the test case setup
+	public function insertAll($rows)
+	{
+		$generic = Piwik_Db_Factory::getGeneric();
+   		$rowsSql = array();
+   		foreach ($rows as $row)
+   		{
+   			$values = array();
+   			foreach ($row as $name => $value)
+   			{
+   				if (is_null($value))
+   				{
+   					$values[] = 'NULL';
+   				}
+   				else if (is_numeric($value))
+   				{
+   					$values[] = $value;
+   				}
+   				else if (!ctype_print($value))
+   				{
+					$values[] = $generic->bin2dbRawInsert($value);
+   				}
+				else if (is_bool($value))
+				{
+					$values[] = $value ? '1' : '0';
+				}
+   				else
+   				{
+  					$values[] = "'$value'";
+				}
+   			}
+   			
+   			$rowsSql[] = "(".implode(',', $values).")";
+   		}
+		$sql = 'INSERT INTO ' . $this->table . ' VALUES ' . implode(',', $rowsSql);
+		$this->db->query($sql);
 	}
 }

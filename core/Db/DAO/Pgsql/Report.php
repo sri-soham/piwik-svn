@@ -48,18 +48,27 @@ class Piwik_Db_DAO_Pgsql_Report extends Piwik_Db_DAO_Report
 		{
 			$values['deleted'] = $values['deleted'] ? '1' : '0';
 		}
-		$this->db->update($this->table, $values, "idreport = '$idreport'");
+		// remove non-digits
+		$idreport = preg_replace("/[^\d]/", "", $idreport);
+		$this->db->update($this->table, $values, "idreport = $idreport");
 	}
 
 	public function getAllActive($idSite, $period, $idReport, $ifSuperUserReturnOnlySuperUserReports)
 	{
 		list($where, $params) = $this->varsGetAllActive($idSite, $period, $idReport, $ifSuperUserReturnOnlySuperUserReports);
+		if (empty($where)) {
+			$where = '';
+		}
+		else {
+			$where = ' AND ' . implode(' AND ', $where) . ' ';
+		}
 		$sql = 'SELECT * FROM ' . $this->table . ' '
 			 . 'INNER JOIN ' . Piwik_Common::prefixTable('site') . ' '
-			 . '	USING (idsite) '
-			 . 'WHERE deleted = \'0\' AND ' . implode(' AND ', $where);
+			 . '	USING(idsite) '
+			 . 'WHERE deleted = \'0\' ' . $where;
 
-		return $this->db->fetchAll($sql, $params);
+		$rows = $this->db->fetchAll($sql, $params);
+		return $rows;
 	}
 
 	public function createTable()
