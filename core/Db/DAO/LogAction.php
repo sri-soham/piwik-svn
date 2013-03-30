@@ -59,6 +59,7 @@ class Piwik_Db_DAO_LogAction extends Piwik_Db_DAO_Base
 	 *
 	 *	@param string $name
 	 *	@param string $type
+	 *	@param int    $urlPrefix
 	 *  @returns int
 	 */
 	public function add($name, $type, $urlPrefix)

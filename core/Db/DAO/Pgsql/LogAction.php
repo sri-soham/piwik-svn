@@ -57,13 +57,14 @@ class Piwik_Db_DAO_Pgsql_LogAction extends Piwik_Db_DAO_LogAction
 	 *
 	 *	@param string $name
 	 *	@param string $type
+	 *	@param int    $urlPrefix
 	 *  @returns int
 	 */
-	public function add($name, $type)
+	public function add($name, $type, $urlPrefix)
 	{
-		$sql = 'INSERT INTO ' . $this->table . ' (name, hash, type) '
-			 . 'VALUES (?, ?, ?)';
-		$this->db->query($sql, array($name, Piwik_Common::getCrc32($name), $type));
+		$sql = 'INSERT INTO ' . $this->table . ' (name, hash, type, url_prefix) '
+			 . 'VALUES (?, ?, ?, ?)';
+		$this->db->query($sql, array($name, Piwik_Common::getCrc32($name), $type, $urlPrefix));
 
 		return $this->db->lastInsertId($this->table.'_idaction');
 	}

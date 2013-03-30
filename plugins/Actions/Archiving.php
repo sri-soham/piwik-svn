@@ -119,7 +119,7 @@ class Piwik_Actions_Archiving
 				AND log_link_visit_action.idsite = ?
 				AND log_link_visit_action.%s IS NOT NULL";
 
-		$groupBy = "log_action.idaction";
+		$groupBy = "log_action.idaction, log_action.type, log_action.name, log_action.url_prefix";
 		$orderBy = $archiveProcessing->C('INDEX_PAGE_NB_HITS') . " DESC, name ASC";
 
 		$rankingQuery = false;
@@ -128,8 +128,9 @@ class Piwik_Actions_Archiving
 			$rankingQuery->setLimit($rankingQueryLimit);
 			$rankingQuery->setOthersLabel(Piwik_DataTable::LABEL_SUMMARY_ROW);
 			$rankingQuery->addLabelColumn(array('idaction', 'name'));
-			$rankingQuery->addColumn(array('url_prefix', Piwik_Archive::INDEX_NB_UNIQ_VISITORS));
+			$rankingQuery->addColumn(array('url_prefix'));
 			$rankingQuery->addColumn(array(Piwik_Archive::INDEX_PAGE_NB_HITS, Piwik_Archive::INDEX_NB_VISITS), 'sum');
+			$rankingQuery->addColumn(array(Piwik_Archive::INDEX_NB_UNIQ_VISITORS), 'count');
 			$rankingQuery->partitionResultIntoMultipleGroups('type', array_keys($this->actionsTablesByType));
 		}
 
