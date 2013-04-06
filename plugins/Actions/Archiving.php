@@ -130,7 +130,7 @@ class Piwik_Actions_Archiving
 			$rankingQuery->addLabelColumn(array('idaction', 'name'));
 			$rankingQuery->addColumn(array('url_prefix'));
 			$rankingQuery->addColumn(array(Piwik_Archive::INDEX_PAGE_NB_HITS, Piwik_Archive::INDEX_NB_VISITS), 'sum');
-			$rankingQuery->addColumn(array(Piwik_Archive::INDEX_NB_UNIQ_VISITORS), 'count');
+			$rankingQuery->addColumn(array(Piwik_Archive::INDEX_NB_UNIQ_VISITORS), 'sum');
 			$rankingQuery->partitionResultIntoMultipleGroups('type', array_keys($this->actionsTablesByType));
 		}
 

@@ -102,6 +102,9 @@ class Piwik_Db_Helper_Pgsql_RankingQuery extends Piwik_Db_Helper_Mysql_RankingQu
 			 */
 			$parts11 = array(); // this is for aggregates of rows within the $this->limit
 			$parts12 = array(); // this is for aggregates of rows after the $this->limit
+			
+			// subquery alias for the query with "where $this->partitionColumn is null"
+			$query_null = 'query_null';
 			foreach ($this->partitionColumnValues as $value)
 			{
 				$tmp = '( SELECT '.$labelColumnsString.$additionalColumnsString.' FROM actual_query '
@@ -113,6 +116,9 @@ class Piwik_Db_Helper_Pgsql_RankingQuery extends Piwik_Db_Helper_Mysql_RankingQu
 					       . $tmp
 						   . ' OFFSET ' . $this->limit.')';
 			}
+			$parts11[] = ' '.$query_null.' AS ( SELECT '.$labelColumnsString.$additionalColumnsString
+						.' FROM actual_query WHERE '.$this->partitionColumn.' IS NULL ) ';
+
 			$parts21 = array(); // this is for aggregates of rows within $this->limit
 			$parts22 = array(); // this is for aggregates of rows after $this->limit
 			foreach ($this->partitionColumnValues as $value)
@@ -121,6 +127,7 @@ class Piwik_Db_Helper_Pgsql_RankingQuery extends Piwik_Db_Helper_Mysql_RankingQu
 				$parts22[] = 'SELECT ' . $afterLimitLabelColumnsString.$additionalColumnsString
 							. ' FROM query'.$value.$value;
 			}
+			$parts21[] = 'SELECT * FROM '.$query_null;
 			// aggregates of rows outside the limit are part of the "tmp_query" sub query
 			$sql = $with_query
 				  . implode(",\n", $parts11) . ",\n"
