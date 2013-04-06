@@ -237,7 +237,7 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 	 */
 	public function castToNumeric($colName)
 	{
-		return " (CASE WHEN $colName = '' THEN '0' ELSE $colName END)::float ";
+		return " (CASE WHEN $colName = '' THEN '0' WHEN is_numeric($colName) THEN $colName ELSE '0' END)::float ";
 	}
 
 	public function optimizeTables($tables)

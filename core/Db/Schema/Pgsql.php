@@ -401,6 +401,27 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 	}
 
 	/**
+	 * Get the SQL to create functions
+	 *
+	 * @return array
+	 */
+	public function getFunctionsCreateSql()
+	{
+		$functions = array(
+			'is_numeric' => "CREATE OR REPLACE FUNCTION is_numeric(str TEXT) RETURNS BOOLEAN AS $$
+								DECLARE
+									v_res BOOLEAN := false;
+								BEGIN
+									SELECT str ~ '^(-)?[0-9]+(.[0-9]+)?$' INTO v_res;
+									RETURN v_res;
+								END;
+								$$ LANGUAGE plpgsql"
+		);
+
+		return $functions;
+	}
+
+	/**
 	 * Get the SQL to create a specific Piwik table
 	 *
 	 * @param string  $tableName
@@ -550,6 +571,11 @@ class Piwik_Db_Schema_Pgsql implements Piwik_Db_Schema_Interface
 			foreach ($sqls as $sql) {
 				$db->query($sql);
 			}
+		}
+
+		$functions = $this->getFunctionsCreateSql();
+		foreach ($functions as $name => $sql) {
+			$db->query($sql);
 		}
 	}
 
