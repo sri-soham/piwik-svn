@@ -411,17 +411,17 @@ class Piwik_Segment
     	$orderBy = preg_replace('/(log_visit|log_conversion|log_action)\./', 'log_inner.', $orderBy);
     	$groupBy = preg_replace('/(log_visit|log_conversion|log_action)\./', 'log_inner.', $groupBy);
     	
+		$selectColumns = implode(', ', $neededFields);
     	$from = "(
-			SELECT
-				".implode(",
-				", $neededFields)."
+			SELECT $selectColumns 
 			FROM
 				$from
 			WHERE
 				$where
-			GROUP BY log_visit.idvisit
+			GROUP BY $selectColumns
 				) AS log_inner";
 		
+			//GROUP BY log_visit.idvisit
 		$where = false;
 		return $this->buildSelectQuery($select, $from, $where, $orderBy, $groupBy);
     }

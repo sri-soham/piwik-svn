@@ -187,7 +187,10 @@ class Piwik_Actions_Archiving
 				AND log_visit.idsite = ?
 		 		AND log_visit.%s > 0";
 
-		$groupBy = "log_visit.%s, idaction";
+		$groupBy = "log_visit.%s";
+		if (!empty($extraSelects)) {
+			$groupBy .= ','.trim($extraSelects, ', ');
+		}
 
 		$this->archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy,
 			"visit_entry_idaction_url", $archiveProcessing, $rankingQuery);
@@ -236,7 +239,10 @@ class Piwik_Actions_Archiving
 		 		AND log_link_visit_action.time_spent_ref_action > 0
 		 		AND log_link_visit_action.%s > 0";
 
-		$groupBy = "log_link_visit_action.%s, idaction";
+		$groupBy = "log_link_visit_action.%s";
+		if (!empty($extraSelects)) {
+			$groupBy .= ', log_action.type, log_action.name';
+		}
 
 		$this->archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy,
 			"idaction_url_ref", $archiveProcessing, $rankingQuery);
@@ -284,7 +290,10 @@ class Piwik_Actions_Archiving
 		 		AND log_visit.idsite = ?
 		 		AND log_visit.%s > 0";
 
-		$groupBy = "log_visit.%s, idaction";
+		$groupBy = "log_visit.%s";
+		if (!empty($extraSelects)) {
+			$groupBy .= ','.trim($extraSelects, ', ');
+		}
 
 		$this->archiveDayQueryProcess($select, $from, $where, $orderBy, $groupBy,
 			"visit_exit_idaction_url", $archiveProcessing, $rankingQuery);
