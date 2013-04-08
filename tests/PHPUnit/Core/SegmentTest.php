@@ -185,9 +185,10 @@ class SegmentTest extends DatabaseTestCase
                     sum(log_inner.visit_total_actions) as nb_actions, max(log_inner.visit_total_actions) as max_actions, sum(log_inner.visit_total_time) as sum_visit_length
                 FROM
                     (
-                SELECT
+                SELECT DISTINCT
                     log_visit.visit_total_actions,
-                    log_visit.visit_total_time
+                    log_visit.visit_total_time,
+					log_visit.idvisit
                 FROM
                     ".Piwik_Common::prefixTable('log_visit')." AS log_visit
                     LEFT JOIN ".Piwik_Common::prefixTable('log_link_visit_action')." AS log_link_visit_action ON log_link_visit_action.idvisit = log_visit.idvisit
@@ -195,7 +196,6 @@ class SegmentTest extends DatabaseTestCase
                     ( log_visit.idvisit = ? )
                     AND
                     ( log_link_visit_action.custom_var_k1 = ? AND log_visit.visitor_returning = ? )
-                GROUP BY log_visit.idvisit
                     ) AS log_inner",
             "bind" => array(1, 'Test', 0));
         
@@ -288,7 +288,7 @@ class SegmentTest extends DatabaseTestCase
                     log_inner.*
                 FROM
                     (
-                SELECT
+                SELECT DISTINCT
                     log_visit.*
                 FROM
                     ".Piwik_Common::prefixTable('log_visit')." AS log_visit
@@ -297,7 +297,6 @@ class SegmentTest extends DatabaseTestCase
                     ( log_visit.idvisit = ? )
                     AND
                     ( log_conversion.idgoal = ? )
-                GROUP BY log_visit.idvisit
                     ) AS log_inner",
             "bind" => array(1, 1));
         
@@ -426,7 +425,7 @@ class SegmentTest extends DatabaseTestCase
                     log_inner.*
                 FROM
                     (
-                SELECT
+                SELECT DISTINCT
                     log_visit.*
                 FROM
                     ".Piwik_Common::prefixTable('log_visit')." AS log_visit
@@ -434,7 +433,6 @@ class SegmentTest extends DatabaseTestCase
                     LEFT JOIN ".Piwik_Common::prefixTable('log_conversion')." AS log_conversion ON log_conversion.idlink_va = log_link_visit_action.idlink_va AND log_conversion.idsite = log_link_visit_action.idsite
                 WHERE
                      log_conversion.idgoal = ? AND HOUR(log_visit.visit_last_action_time) = ? AND log_link_visit_action.custom_var_k1 = ?
-                GROUP BY log_visit.idvisit
                     ) AS log_inner",
             "bind" => array(1, 12, 'Test'));
         

@@ -399,6 +399,11 @@ class Piwik_Segment
     private function buildWrappedSelectQuery($select, $from, $where, $orderBy, $groupBy)
     { 
     	preg_match_all("/(log_visit|log_conversion|log_action).[a-z0-9_\*]+/", $select, $matches);
+		// add log_visit.idvisit only if the column is not present in the select list either
+		// explicitly (as log_visit.idvisit) or implicitly (as log_visit.*)
+		if (!(in_array('log_visit.*', $matches[0]) || in_array('log_visit.idvisit', $matches[0]))) {
+			$matches[0][] = 'log_visit.idvisit';
+		}
     	$neededFields = array_unique($matches[0]);
     	
     	if (count($neededFields) == 0)
@@ -413,12 +418,11 @@ class Piwik_Segment
     	
 		$selectColumns = implode(', ', $neededFields);
     	$from = "(
-			SELECT $selectColumns 
+			SELECT DISTINCT $selectColumns 
 			FROM
 				$from
 			WHERE
 				$where
-			GROUP BY $selectColumns
 				) AS log_inner";
 		
 			//GROUP BY log_visit.idvisit
