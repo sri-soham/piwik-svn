@@ -234,10 +234,22 @@ class Piwik_Db_DAO_Pgsql_Generic extends Piwik_Db_DAO_Generic
 	 *	casts numeric strings to numeric
 	 *	
 	 *	Empty strings are causing errors. For that reason 'CASE WHEN ... END' is used
+	 *	Added specific check of NULL. If the $colName is null, then null should be returned.
+	 *	If 0 is returned (as was done earlier) then the row would be counted for the averages,
+	 *	thereby causing discrepancies.
+	 *  id value
+	 *	1  10
+	 *  2  null
+	 *  3  20
+	 *  4  null
+	 *  5  60
+	 *	select avg(casttonumeric(value))
+	 *	   will return 18 without null check
+	 *     will return 30 with null check
 	 */
 	public function castToNumeric($colName)
 	{
-		return " (CASE WHEN $colName = '' THEN '0' WHEN is_numeric($colName) THEN $colName ELSE '0' END)::float ";
+		return " (CASE WHEN $colName IS NULL THEN NULL WHEN is_numeric($colName) THEN $colName ELSE '0' END)::float ";
 	}
 
 	public function optimizeTables($tables)
