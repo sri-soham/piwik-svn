@@ -59,7 +59,7 @@ class Piwik_Db_Helper_Pgsql_RankingQuery extends Piwik_Db_Helper_Mysql_RankingQu
 		$tmp_al = array(); // tmp after limit
 		foreach ($this->labelColumns as $column => $val) {
 			$tmp[] = $this->db->quoteIdentifier($column);
-			$tmp_al[] = "'-1' AS " . $this->db->quoteIdentifier($column);
+			$tmp_al[] = "'".$this->othersLabelValue."' AS ".$this->db->quoteIdentifier($column);
 		}
 		$labelColumnsString = implode(', ', $tmp);
 		$afterLimitLabelColumnsString = implode(', ', $tmp_al);

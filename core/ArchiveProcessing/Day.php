@@ -323,10 +323,11 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	 * @param bool|string   $joinLogActionOnColumn  column from log_link_visit_action that
 	 *                                              log_action should be joined on
 	 * @param bool|string   $addSelect  additional select clause
+	 * @param bool|string   $addGroupBy additional columns for the "group by" clause
 	 * @return mixed
 	 */
 	public function queryActionsByDimension($label, $where = '', $metrics = false, $orderBy = false,
-			$rankingQuery = null, $joinLogActionOnColumn = false, $addSelect = false)
+			$rankingQuery = null, $joinLogActionOnColumn = false, $addSelect = false, $addGroupBy = false)
 	{
 		$Generic = Piwik_Db_Factory::getGeneric($this->db);
 	    if(is_array($label))
@@ -351,6 +352,11 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        $select = $label . " AS label ";
 	        $groupBy = 'label';
 	    }
+
+		if ($addGroupBy !== false)
+		{
+			$groupBy .= ', ' . $addGroupBy;
+		}
 	    
 	    if(!empty($where))
 	    {
@@ -437,10 +443,11 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
      * @param string      $addSelect  Additional SELECT clause
      * @param bool        $addSelectGeneratesLabelColumn
      *                                Set to true if the $label column is generated in $addSelect.
+	 * @param bool|string $addGroupBy Additional columns for the GROUP BY clause
      * @return mixed
      */
     public function queryVisitsByDimension($label, $where = '', $metrics = false, $orderBy = false,
-            $rankingQuery = null, $addSelect = false, $addSelectGeneratesLabelColumn = false)
+            $rankingQuery = null, $addSelect = false, $addSelectGeneratesLabelColumn = false, $addGroupBy=false)
 	{
 	    if(is_array($label))
 	    {
@@ -462,6 +469,11 @@ class Piwik_ArchiveProcessing_Day extends Piwik_ArchiveProcessing
 	        $groupBy = 'label';
 	    }
 	    
+		if ($addGroupBy !== false)
+		{
+			$groupBy .= ', ' . $addGroupBy;
+		}
+
 	    if(!empty($where))
 	    {
 	    	$where = sprintf($where, "log_visit", "log_visit");

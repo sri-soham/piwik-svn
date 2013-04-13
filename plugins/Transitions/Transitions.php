@@ -61,6 +61,7 @@ class Piwik_Transitions extends Piwik_Plugin
 	{
 		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
 		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery->setOthersLabel('-1');
 		
 		// we generate a single column that contains the interesting data for each referrer.
 		// the reason we cannot group by referer_* becomes clear when we look at search engine keywords.
@@ -70,14 +71,14 @@ class Piwik_Transitions extends Piwik_Plugin
 		// the ranking query.
 		$dimension = 'referrer_data';
 		$rankingQuery->addLabelColumn('referrer_data');
-		$select = '
+		$select = "
 			CASE referer_type
-				WHEN '.Piwik_Common::REFERER_TYPE_DIRECT_ENTRY.' THEN ""
-				WHEN '.Piwik_Common::REFERER_TYPE_SEARCH_ENGINE.' THEN referer_keyword
-				WHEN '.Piwik_Common::REFERER_TYPE_WEBSITE.' THEN referer_url
-				WHEN '.Piwik_Common::REFERER_TYPE_CAMPAIGN.' THEN CONCAT(referer_name, " ", referer_keyword)
+				WHEN ".Piwik_Common::REFERER_TYPE_DIRECT_ENTRY." THEN ''
+				WHEN ".Piwik_Common::REFERER_TYPE_SEARCH_ENGINE." THEN referer_keyword
+				WHEN ".Piwik_Common::REFERER_TYPE_WEBSITE." THEN referer_url
+				WHEN ".Piwik_Common::REFERER_TYPE_CAMPAIGN." THEN CONCAT(referer_name, ' ', referer_keyword)
 			END AS referrer_data,
-			referer_type';
+			referer_type";
 		
 		// get one limited group per referrer type
 		$rankingQuery->partitionResultIntoMultipleGroups('referer_type', array(
@@ -87,12 +88,13 @@ class Piwik_Transitions extends Piwik_Plugin
 				Piwik_Common::REFERER_TYPE_CAMPAIGN
 			));
 		
-		$orderBy = '`'.Piwik_Archive::INDEX_NB_VISITS.'` DESC';
+		$orderBy = $archiveProcessing->C('INDEX_NB_VISITS').' DESC';
+		$addGroupBy = ' referer_type ';
 		$where = 'visit_entry_idaction_url = '.intval($idaction);
 		
 		$metrics = array(Piwik_Archive::INDEX_NB_VISITS);
 		$data = $archiveProcessing->queryVisitsByDimension($dimension, $where, $metrics, $orderBy,
-					$rankingQuery, $select, $selectGeneratesLabelColumn = true);
+					$rankingQuery, $select, $selectGeneratesLabelColumn = true, $addGroupBy);
 		
 		$referrerData = array();
 		$referrerSubData = array();
@@ -141,6 +143,7 @@ class Piwik_Transitions extends Piwik_Plugin
 		
 		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
 		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery->setOthersLabel('-1');
 		$rankingQuery->addLabelColumn(array('name', 'url_prefix'));
 		$rankingQuery->setColumnToMarkExcludedRows('is_self');
 		$rankingQuery->partitionResultIntoMultipleGroups('is_page', array(0, 1));
@@ -149,15 +152,16 @@ class Piwik_Transitions extends Piwik_Plugin
 			log_action.name, log_action.url_prefix,
 			CASE WHEN log_link_visit_action.idaction_url_ref = '.intval($idaction).' THEN 1 ELSE 0 END AS is_self,
 			CASE WHEN log_action.type = '.Piwik_Tracker_Action::TYPE_ACTION_URL.' THEN 1 ELSE 0 END AS is_page';
+		$addGroupBy = ' log_action.name, log_action.url_prefix, is_self, is_page ';
 		
 		$where = '
 			log_link_visit_action.idaction_url = '.intval($idaction);
 		
-		$orderBy = '`'.Piwik_Archive::INDEX_NB_ACTIONS.'` DESC';
+		$orderBy = $archiveProcessing->C('INDEX_NB_ACTIONS').' DESC';
 		
 		$metrics = array(Piwik_Archive::INDEX_NB_ACTIONS);
 		$data = $archiveProcessing->queryActionsByDimension(array($dimension), $where, $metrics, $orderBy,
-					$rankingQuery, $dimension, $addSelect);
+					$rankingQuery, $dimension, $addSelect, $addGroupBy);
 		
 		$nbPageviews = 0;
 		$previousPagesDataTable = new Piwik_DataTable;
@@ -216,20 +220,22 @@ class Piwik_Transitions extends Piwik_Plugin
 				
 		$rankingQuery = Piwik_Db_Factory::getHelper('RankingQuery');
 		$rankingQuery->setLimit($limitBeforeGrouping ? $limitBeforeGrouping : $this->limitBeforeGrouping);
+		$rankingQuery->setOthersLabel('-1');
 		$rankingQuery->addLabelColumn(array('name', 'url_prefix'));
 		$rankingQuery->partitionResultIntoMultipleGroups('type', array_keys($types));
 		
 		$addSelect = 'log_action.name, log_action.url_prefix, log_action.type';
+		$addGroupBy = $addSelect;
 		
 		$where = '
 			log_link_visit_action.idaction_url_ref = '.intval($idaction).' AND 
 			log_link_visit_action.idaction_url != '.intval($idaction);
 		
-		$orderBy = '`'.Piwik_Archive::INDEX_NB_ACTIONS.'` DESC';
+		$orderBy = 'idaction_url ASC, '.$archiveProcessing->C('INDEX_NB_ACTIONS').' DESC';
 		
 		$metrics = array(Piwik_Archive::INDEX_NB_ACTIONS);
 		$data = $archiveProcessing->queryActionsByDimension(array($dimension), $where, $metrics, $orderBy, 
-					$rankingQuery, $dimension, $addSelect);
+					$rankingQuery, $dimension, $addSelect, $addGroupBy);
 		
 		$this->totalTransitionsToFollowingActions = 0;
 		$dataTables = array();
